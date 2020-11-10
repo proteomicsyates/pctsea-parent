@@ -172,6 +172,7 @@
     </dependencies>
 
     <build>
+    	<finalName>pctsea-web</finalName>
         <defaultGoal>spring-boot:run</defaultGoal>
         <plugins>
             <plugin>
