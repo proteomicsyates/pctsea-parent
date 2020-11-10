@@ -1,0 +1,1 @@
+java -jar -Xms64m -Xmx4g pctsea-*.jar

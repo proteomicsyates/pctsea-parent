@@ -1,0 +1,237 @@
+Original	Salva	Casimir	Type	Subtype	Characteristic
+adipocyte	adipocyte	adipocyte	adipocyte		
+adrenocortical cell	adrenocortical cell	adrenocortical 	adrenocortical		
+alpha cell	alpha cell	alpha 	alpha		
+antigen presenting cell	antigen-presenting cell	antigen-presenting 	antigen-presenting		
+antigen-presenting cell	antigen-presenting cell	antigen-presenting 	antigen-presenting		
+astrocyte	astrocyte	astrocyte	astrocyte		
+astrocyte(bergmann glia)	astrocyte	astrocyte	astrocyte		
+at1 cell	at1 cell	at1 	at1		
+at2 cell	at2 cell	at2 	at2		
+pre b cell	b cell	b 	b		
+b cell	b cell	b 	b		
+b cell(unknown)	b cell	b 	b		
+b cell(plasmocyte)	b cell	plasmocyte b	b	plasmocyte	
+b cell (plasmocyte)	b cell	b 	b		
+beta cell	b cell	b 	b		
+b cell(centrocyte)	b cell	enterocyte b	b	enterocyte	
+proliferating b cell	b cell	proliferating b	b	proliferating	
+b cell (centrocyte)	b cell	b 	b		
+basal cell	basal cell	basal 	basal		
+proliferating alveolar bipotent progenitor cell	proliferating alveolar bipotent progenitor cell	proliferating bipotent_progenitor alveolar 	bipotent_progenitor	proliferating	
+alveolar bipotent/intermediate cell	alveolar bipotent/intermediate cell	alveolar bipotent/intermediate 	bipotent/intermediate	alveolar	
+cardiomyocyte	cardiomyocyte	cardiomyocyte	cardiomyocyte		
+atrial cardiomyocyte	atrial cardiomyocyte	atrial cardiomyocyte	cardiomyocyte	atrial	
+ventricle cardiomyocyte	ventricle cardiomyocyte	ventricle cardiomyocyte	cardiomyocyte	ventricle	
+cholangiocyte	cholangiocyte	cholangiocyte	cholangiocyte		
+chondrocyte	chondrocyte	chondrocyte	chondrocyte		
+hypertrophic chondrocyte	hypertrophic chondrocyte	hypertrophic chondrocyte	chondrocyte	hypertrophic	
+chromaffin cell	chromaffin cell	chromaffin 	chromaffin		
+intra-adrenal chromoblast	intra-adrenal chromoblast	intra-adrenal chromoblast	chromoblast	intra-adrenal	
+club cell	club cell	club 	club		
+collecting duct cell	collecting duct cell	collecting_duct 	collecting_duct		
+cytotrophoblast	cytotrophoblast	cytotrophoblast	cytotrophoblast		
+conventional dendritic cell	conventional dendritic cell	conventional dendritic 	dendritic	conventional	
+follicular dendritic cell	follicular dendritic cell	follicular dendritic 	dendritic	follicular	
+dendritic cell	dendritic cell	dendritic 	dendritic		
+plasmacytoid dendritic cell	plasmacytoid dendritic cell	plasmacytoid dendritic 	dendritic	plasmacytoid	
+distal tubule progenitor cell	distal tubule progenitor cell	progenitor distal_tubule	distal_tubule	progenitor	
+distal progenitor cell	distal progenitor cell	progenitor distal_tubule	distal_tubule	progenitor	
+endocardial cell	endocardial cell	endocardial 	endocardial		
+endocrine cell	endocrine cell	endocrine 	endocrine		
+endometrial cell	endometrial cell	endometrial 	endometrial		
+endothelial cell in emt	endothelial cell	epithelial_to_mesenchymal_transition endothelial 	endothelial	epithelial_to_mesenchymal_transition	
+artry endothelial cell	endothelial cell	atery endothelial 	endothelial	atery	
+microvascular endothelial cell	microvascular endothelial cell	microvascular endothelial 	endothelial	microvascular	
+endothelial cell (non-professional apc)	endothelial cell	non-professional_apc endothelial 	endothelial	non-professional_apc	
+endothelial progenitor cell	endothelial cell	progenitor endothelial 	endothelial	progenitor	
+glomerular endothelial cell	glomerular endothelial cell	glomerular endothelial 	endothelial	glomerular	
+sinusoidal endothelial cell	endothelial cell	sinusoidal endothelial 	endothelial	sinusoidal	
+lymphatic endothelial cell	endothelial cell	lymphatic endothelial 	endothelial	lymphatic	
+arterial endothelial cell	endothelial cell	arterial endothelial	endothelial	arterial	
+vascular endothelial cell	endothelial cell	vascular endothelial 	endothelial	vascular	
+endothelial cell	endothelial cell	endothelial 	endothelial		
+epithelial¨cmesenchymal transition	epithelial¨cmesenchymal transition	epithelial_to_mesenchymal_transition endothelial 	endothelial	epithelial_to_mesenchymal_transition	
+proliferating endothelial cell	endothelial cell	proliferating endothelial 	endothelial	proliferating	
+fenestrated endothelial cell	endothelial cell	fenestrated endothelial 	endothelial	fenestrated	
+enterocyte progenitor	enterocyte	progenitor enterocyte	enterocyte	progenitor	
+enterocyte	enterocyte	enterocyte	enterocyte		
+enteroendocrine cell	enteroendocrine cell	enteroendocrine 	enteroendocrine		
+eosinophil	eosinophil	eosinophil	eosinophil		
+ependymal cell	ependymal cell	ependymal 	ependymal		
+ciliated cell	ciliated cell	ciliated 	epithelial		ciliated
+duct cell	duct cell	duct 	epithelial		ductal
+ductal cell	ductal cell	ductal 	epithelial		ductal
+basal/epithelial cell	basal/epithelial cell	basal/epithelial 	epithelial	basal	
+retinal pigment epithelal cell	pigment cell	retinal_pigment epithelial	epithelial	retinal_pigment	
+adenocarcinoma epithelial cell	epithelial cell	adenocarcinoma epithelial 	epithelial	adenocarcinoma	
+epithelial	epithelial cell	epithelial 	epithelial		
+epithelial cell	epithelial cell	epithelial 	epithelial		
+mucous epithelial cell	epithelial cell	mucous epithelial	epithelial	mucous	
+mucosal aquamous epithelial cell	epithelial cell	aquamous mucosal epithelial 	epithelial	mucosal	aquamous
+unknown epithelial cell	epithelial cell	epithelial 	epithelial		
+inflammed epithelial cell	epithelial cell	inflamed epithelial	epithelial		inflamed
+secretory epithelial cell	secretory cell	secretory epithelial	epithelial	secretory	
+epithelial progenitor cell	epithelial cell	progenitor epithelial 	epithelial		progenitor
+lens epithelial cell	lens epithelial cell	lens epithelial 	epithelial	lens	
+ciliated epithelial cell	ciliated epithelial cell	ciliated epithelial 	epithelial	ciliated	
+vascular epithelial cell	epithelial cell	vascular epithelial	epithelial	vascular	
+oviductal epithelial cell	epithelial cell	oviductal epithelial	epithelial	oviductal	
+kidney epithelial cell	kidney epithelial cell	kidney epithelial 	epithelial	kidney	
+intermediate epithelial cell	epithelial cell	intermediate epithelial	epithelial	intermediate	
+ureteric epithelial cell	epithelial cell	ureteric epithelial 	epithelial	ureteric	
+luminal epithelium	luminal epithelium	luminal epithelium	epithelium	luminal	
+erythroid progenitor cell	erythroid progenitor cell	progenitor erythroid 	erythroid		progenitor
+erythroid cell	erythroid cell	erythroid 	erythroid		
+erythroid/basophil progenitor	erythroid/basophil progenitor	erythroid/basophil progenitor	erythroid	basophil	progenitor
+es	es	es	es		
+exocrine cell	exocrine cell	exocrine 	exocrine		
+zona fasciculata cell	zona fasciculata cell	zona fasciculata 	fasciculata	zona	
+fibroblast cell	fibroblast	fibroblast	fibroblast		
+fibroblast	fibroblast	fibroblast	fibroblast		
+proliferating fibroblast	fibroblast	proliferating fibroblast	fibroblast	proliferating	
+dermis fibroblast	fibroblast	fibroblast	fibroblast		
+thyroid follicular cell	thyroid follicular cell	thyroid follicular 	follicular	thyroid	
+ganglion cell	ganglion cell	ganglion 	ganglion		
+gastric chief cell	gastric chief cell	gastric_chief	gastric_chief		
+germ cell	germ cell	germ 	germ		
+primordial germ cell	primordial germ cell	intra-adrenal_ganglion primordial_germ	germ	intra-adrenal_ganglion	primordial
+proliferating radial glia	proliferating radial glia	proliferating radial glia	glia	radial	proliferating
+m¨¹ller glia	m¨¹ller glia	mueller glia	glia	mueller	
+radial glia	radial glia	radial glia	glia	radial	
+enteric glial cell	glial cell	glial 	glial		
+glial cell	glial cell	glial 	glial		
+goblet cell	goblet cell	goblet 	goblet		
+granulocyte	granulocyte	granulocyte	granulocyte		
+hepatocyte-like cell	hepatocyte-like cell	hepatocyte-like 	hepatoctye		like
+hepatocyte	hepatocyte	hepatocyte	hepatocyte		
+hofbauer cell	hofbauer cell	hofbauer 	hofbauer		
+hspc	hspc	hspc	hspc		
+ic-tran-pc	ic-tran-pc	ic-tran-pc	ic-tran-pc		
+intercalated cell	intercalated cell	intercalated 	intercalated		
+intermediated cell	intermediated cell	intermediated 	intermediated		
+interneuron	interneuron	interneuron	interneuron		
+interstitial cell	interstitial cell	interstitial 	interstitial		
+interstitial progenitor cell	interstitial progenitor cell	progenitor interstitial 	interstitial	progenitor	
+proliferating keratinocyte	keratinocyte	proliferating keratinocyte	keratinocyte	proliferating	
+kerationcyte	keratinocyte	keratinocyte	keratinocyte		
+keratinocyte	keratinocyte	keratinocyte	keratinocyte		
+natural killer cell	natural killer cell	natural killer 	killer	natural	
+d cell/ x/a cell	d cell/ x/a cell	d / x/a 	known		
+kuppfer cell	kupffer cell	kupffer 	kupffer		
+kupffer cell	kupffer cell	kupffer 	kupffer		
+fetal leydig cell	leydig cell	fetal leydig	leydig	fetal	
+loop of henle progenitor cell	loop of henle progenitor cell	progenitor loop_of_henle 	loop_of_henle		progenitor
+loop of henle(thick ascending limb)	loop of henle(thick ascending limb)	thick_ascending_limb loop_of_henle	loop_of_henle	thick_ascending_limb	
+loop of henle (thick ascending limb)	loop of henle (thick ascending limb)	thick_ascending_limb loop_of_henle	loop_of_henle	thick_ascending_limb	
+loop of henle	loop of henle	loop_of_henle	loop_of_henle		
+luminal cell	luminal cell	luminal 	luminal		
+lung mesenchyme cell (cardiopulmonary progenitor)	lung mesenchyme cell (cardiopulmonary progenitor)	progenitor cardiopulmonary lung_mesenchyme	lung_mesenchyme	cardiopulmonary	progenitor
+proliferating lung mesenchyme cell	proliferating lung mesenchyme cell	proliferating lung_mesenchyme 	lung_mesenchyme	proliferating	
+lymphocyte	lymphocyte	lymphocyte	lymphocyte		
+lymphoid progenitor cell	lymphoid progenitor cell	lymphoid progenitor 	lymphoid		progenitor
+m1 macrophage	macrophage	m1 macrophage	macrophage	m1	
+macrophage	macrophage	macrophage	macrophage		
+motile liver macrophage	macrophage	motile_liver macrophage	macrophage	motile_liver	
+m2 macrophage	macrophage	m2 macrophage	macrophage	m2	
+mast cell	mast cell	mast 	mast		
+mast	mast cell	mast 	mast		
+mast progenitor cell	mast cell	progenitor mast 	mast		progenitor
+megakaryocyte/erythroid progenitor	megakaryocyte/erythtoid progenitor cell	 progenitor  megakaryocyte/erythtoid	megakaryocyte	erythroid	progenitor
+megakaryocyte	megakaryocyte	megakaryocyte	megakaryocyte		
+megakaryocyte/erythtoid progenitor cell	megakaryocyte/erythtoid progenitor cell	progenitor megakaryocyte/erythtoid	megakaryocyte	erythtoid	progenitor
+melanocyte	melanocyte	melanocyte	melanocyte		
+mesangial cell	mesangial cell	mesangial 	mesangial		
+mesenchymal cell	mesenchymal cell	mesenchymal 	mesenchymal		
+nephrogenic mesenchyme cell	nephrogenic mesenchyme cell	nephrogenic mesenchyme 	mesenchyme	nephrogenic	
+endocervix mesothelial cell	mesothelial cell	endocervix mesothelial 	mesothelial	endocervix	
+mesothelial cell	mesothelial cell	mesothelial 	mesothelial		
+proliferating mesothelial cell	mesothelial cell	proliferating mesothelial 	mesothelial		proliferating
+cervical mesothelial cell	mesothelial cell	cervical mesothelial 	mesothelial	cervical	
+microglia	microglia	microglia	microglia		
+proliferating monocyte	monocyte	proliferating monocyte	monocyte		proliferating
+monocyte	monocyte	monocyte	monocyte		
+monocyte/dc progenitor	monocyte/dc progenitor	monocyte/dc progenitor	monocyte/dc		progenitor
+mt high	mt high	mt_high	mt_high		
+mt-gene high cell	mt-gene high cell	mt_high 	mt_high		
+gastric mucosa cell	gastric mucosa cell	gastric mucosa 	mucous	gastric	
+mucous neck cell	mucous neck cell	neck mucous	mucous	neck	
+multipotential progenitor cell	multipotential progenitor cell	multipotential progenitor 	multipotential		progenitor
+fast skeletal muscle cell	muscle cell	fast skeletal muscle 	muscle	skeletal	fast
+myogenic precursor cell	myogenic precursor cell	progenitor muscle 	muscle		progenitor
+muscle progenitor cell	muscle cell	progenitor muscle 	muscle		progenitor
+striated muscle cell	striated muscle cell	striated muscle	muscle	striated	
+ureteric smooth muscle cell	muscle cell	muscle 	muscle		
+proliferating smooth muscle cell	muscle cell	proliferating smooth muscle	muscle	smooth	proliferating
+smooth muscle cell	smooth muscle cell	smooth muscle 	muscle	smooth	
+vascular smooth muscle cell	muscle cell	vascular smooth muscle	muscle	smooth	vascular
+airway smooth muscle cell	muscle cell	airway smooth_muscle 	muscle	smooth	airway
+myeloid progenitor cell	myeloid cell	progenitor myeloid	myeloid	progenitor	
+myeloid cell	myeloid cell	myeloid 	myeloid		
+myocyte	myocyte	myocyte	myocyte		
+myoepithelial cell	myoepithelial cell	myoepithelial 	myoepithelial		
+myofibroblast	myofibroblast	myofibroblast	myofibroblast		
+enteric nerval cell	enteric nerval cell	enteric neron	neron	enteric	
+neuroendocrine cell	neuroendocrine cell	neuroendocrine 	neuroendocrine		
+sympathetic neuron	sympathetic neuron	sympathetic neuron	neuron	sympathetic	
+intra-adrenal ganglion neuron	neuron	intra-adrenal_ganglion neuron	neuron	intra-adrenal_ganglion	
+excitatory neuron	neuron	excitatory neuron	neuron	excitatory	
+proliferating intra-adrenal ganglion neuron	neuron	proliferating intra-adrenal_ganglion neuron	neuron	intra-adrenal_ganglion	proliferating
+neuron	neuron	neuron	neuron		
+motor neuron	motor neuron	motor neuron	neuron	motor	
+inhibitory neuron	neuron	inhibitory neuron	neuron	inhibitory	
+neutrophil	neutrophil	neutrophil	neutrophil		
+neutriophil	neutrophil	neutrophil	neutrophil		
+nk cell	nk cell	nk 	nk		
+oligodendrocyte	oligodendrocyte	oligodendrocyte	oligodendrocyte		
+oligodendrocyte progenitor cell	oligodendrocyte	progenitor oligodendrocyte	oligodendrocyte		progenitor
+myelinating oligodendrocyte	oligodendrocyte	myelinating oligodendrocyte	oligodendrocyte		myelinating
+osteoblast	osteoblast	osteoblast	osteoblast		
+osteoclast	osteoclast	osteoclast	osteoclast		
+paneth cell	paneth cell	paneth 	paneth		
+parietal cell	parietal cell	parietal 	parietal		
+pericyte	pericyte	pericyte	pericyte		
+pit cell	pit cell	pit 	pit		
+podocyte	podocyte	podocyte	podocyte		
+principle cell	principle cell	principle 	principle		
+proliferating cell	proliferating cell	proliferating 			proliferating
+proximal progenitor cell	proximal progenitor cell	progenitor proximal 	proximal_tubule		progenitor
+proximal tubule progenitor cell	proximal tubule progenitor cell	progenitor proximal_tubule 	proximal_tubule		progenitor
+purkinje cell	purkinje cell	purkinje 	purkinje		
+retinal progenitor cell	retinal progenitor cell	retinal progenitor 	retinal		progenitor
+s-shaped body cell	s-shaped body cell	s-shaped_body 	s-shaped_body		
+s-shaped body medial cell	s-shaped body medial cell	s-shaped_body_medial 	s-shaped_body_medial		
+immature sertoli cell(pre-sertoli cell)	immature sertoli cell(pre-sertoli cell)	immature sertoli	sertoli		immature
+sertoli cell	sertoli cell	sertoli 	sertoli		
+spermatocyte	spermatocyte	spermatocyte	spermatocyte		
+stomach fundus cell	stomach fundus cell	stomach_fundus 	stomach_fundus		
+immune response stromal cell	stromal cell	immune_response stromal 	stromal		immune_response
+stromal cell	stromal cell	stromal 	stromal		
+proliferating stromal cell	stromal cell	proliferating stromal	stromal		proliferating
+inflammatory stromal cell	stromal cell	inflammatory stromal 	stromal		inflammatory
+superficial cell	superficial cell	superficial 	superficial		
+syncytiotrophoblast	syncytiotrophoblast cell	syncytiotrophoblast 	syncytiotrophoblast		
+syncytiotrophoblast cell	syncytiotrophoblast cell	syncytiotrophoblast 	syncytiotrophoblast		
+activated t cell	t cell	activated t	t		activated
+proliferating t cell	t cell	proliferating t	t		proliferating
+cd8 t cell	t cell	cd8 t	t	cd8	
+cd8	cd8	cd8 t	t	cd8	
+cd4	cd4	cd4 t	t	cd4	
+cd8+ t cell	t cell	cd8 t	t	cd8	
+effector t cell	effector t cell	effector t 	t	effector	
+t cell	t cell	t 	t		
+tendon cell	tendon cell	tendon 	tendon		
+theca cell	theca cell	theca 	theca		
+adipose tissue	adipose tissue	adipose tissue	tissue	adipose	
+treg cell	treg cell	treg 	treg		
+villous trophoblast cell	trophoblast cell	villous trophoblast	trophoblast	villous	
+extravillous trophoblast	extravillous trophoblast	extravillous trophoblast	trophoblast	extravillous	
+proximal tubule cell	proximal tubule cell	proximal tubule 	tubule	proximal	
+distal tubule cell	distal tubule cell	distal tubule 	tubule	distal	
+unknown	unknown	unknown	unknown		
+0	0	0	unknown		
+ureteric bud cell	ureteric bud cell	bud ureteric	ureteric	bud	
+urothelial cell	urothelial cell	urothelial 	urothelial		
+absorptive cell	absorptive cell	absorptive 	unknown		absorptive
+acniar cell	acniar cell	acniar 	unknown		acniar
+inflammatory cell	inflammatory cell	inflammatory 	unknown		inflammatory
