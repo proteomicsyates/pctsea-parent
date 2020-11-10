@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>edu.scripps.yates</groupId>
-	<artifactId>pctsea</artifactId>
+	<artifactId>pctsea-cl</artifactId>
 	<version>0.0.2-SNAPSHOT</version>
-	<name>pCtSEA</name>
+	<name>pctsea-cl</name>
 	<description>Proteomic Cell Type Set Enrichment Analysis</description>
 
 	<properties>
