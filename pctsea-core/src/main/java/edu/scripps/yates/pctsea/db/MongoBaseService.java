@@ -1,6 +1,9 @@
 package edu.scripps.yates.pctsea.db;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -11,11 +14,14 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.convert.MongoConverter;
 import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.core.query.Collation;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import com.mongodb.BasicDBObject;
+
+import gnu.trove.map.hash.THashMap;
 
 @Service
 public class MongoBaseService {
@@ -32,6 +38,25 @@ public class MongoBaseService {
 		final Query query = new BasicQuery("{ gene : '" + gene + "'}").collation(collation);
 		final List<Expression> find = mongoTemplate.find(query, Expression.class);
 		return find;
+	}
+
+	public Map<String, List<Expression>> getExpressionByGenes(Collection<String> genes) {
+		final Criteria criteria = new Criteria("gene").in(genes);
+		final Query query = new Query();
+		query.addCriteria(criteria);
+		final List<Expression> expressions = mongoTemplate.find(query, Expression.class);
+		final Map<String, List<Expression>> ret = new THashMap<String, List<Expression>>();
+		for (final Expression expression : expressions) {
+			final String gene = expression.getGene().toUpperCase();
+			if (!ret.containsKey(gene)) {
+				final ArrayList<Expression> list = new ArrayList<Expression>();
+				list.add(expression);
+				ret.put(gene, list);
+			} else {
+				ret.get(gene).add(expression);
+			}
+		}
+		return ret;
 	}
 
 	public List<Expression> saveExpressions(List<Expression> entities) {

@@ -48,6 +48,7 @@ import org.slf4j.LoggerFactory;
 
 import edu.scripps.yates.pctsea.correlation.CorrelationThreshold;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
+import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.CellTypeClassification;
@@ -132,12 +133,16 @@ public class PCTSEA {
 	private StatusListener statusListener;
 
 	private String currentTimeStamp;
+
+	private final MongoBaseService mongoBaseService;
 	public static String projectTag; // tag of the project o
 
 	public PCTSEA(InputParameters inputParameters, ExpressionMongoRepository expressionMongoRepo,
-			SingleCellMongoRepository singleCellMongoRepo) {
+			SingleCellMongoRepository singleCellMongoRepo, MongoBaseService mongoBaseService) {
 		this.expressionMongoRepo = expressionMongoRepo;
 		this.singleCellMongoRepo = singleCellMongoRepo;
+		this.mongoBaseService = mongoBaseService;
+
 		this.correlationThreshold = new CorrelationThreshold(inputParameters.getMinCorrelation());
 		this.cellTypeBranches
 				.addAll(CellTypeBranch.parseCellTypeBranchesString(inputParameters.getCellTypesClassification()));
@@ -155,9 +160,11 @@ public class PCTSEA {
 
 	}
 
-	public PCTSEA(ExpressionMongoRepository expressionMongoRepo, SingleCellMongoRepository singleCellMongoRepo) {
+	public PCTSEA(ExpressionMongoRepository expressionMongoRepo, SingleCellMongoRepository singleCellMongoRepo,
+			MongoBaseService mongoBaseService) {
 		this.expressionMongoRepo = expressionMongoRepo;
 		this.singleCellMongoRepo = singleCellMongoRepo;
+		this.mongoBaseService = mongoBaseService;
 	}
 
 	/**
@@ -211,7 +218,7 @@ public class PCTSEA {
 			final String datasetName = "";
 			final List<SingleCell> singleCellList = getSingleCellListFromDB(datasetName);
 
-			interactorExpressions = new InteractorsExpressionsRetriever(this.expressionMongoRepo,
+			interactorExpressions = new InteractorsExpressionsRetriever(this.expressionMongoRepo, this.mongoBaseService,
 					this.experimentExpressionFile, projectTag);
 
 			// calculate correlations

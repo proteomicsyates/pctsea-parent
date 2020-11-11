@@ -10,6 +10,7 @@ import org.apache.commons.cli.ParseException;
 
 import edu.scripps.yates.pctsea.correlation.CorrelationThreshold;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
+import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.InputParameters;
@@ -20,10 +21,10 @@ import edu.scripps.yates.utilities.swing.SomeErrorInParametersOcurred;
 public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private final PCTSEA pctsea;
 
-	public PCTSEACommandLine(String[] args, ExpressionMongoRepository emr, SingleCellMongoRepository scmr)
-			throws ParseException, DoNotInvokeRunMethod, SomeErrorInParametersOcurred {
+	public PCTSEACommandLine(String[] args, ExpressionMongoRepository emr, SingleCellMongoRepository scmr,
+			MongoBaseService mbs) throws ParseException, DoNotInvokeRunMethod, SomeErrorInParametersOcurred {
 		super(args);
-		pctsea = new PCTSEA(emr, scmr);
+		pctsea = new PCTSEA(emr, scmr, mbs);
 	}
 
 	@Override

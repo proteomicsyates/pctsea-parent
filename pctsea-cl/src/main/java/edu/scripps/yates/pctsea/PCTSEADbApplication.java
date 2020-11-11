@@ -104,7 +104,7 @@ public class PCTSEADbApplication implements CommandLineRunner {
 			if (args[0].equals("test")) {
 				return;
 			}
-		} else if (args[0].equals("HCL")) {
+		} else if (args.length > 0 && args[0].equals("HCL")) {
 			final File expressionFolder = new File(args[1]);
 			final File metadataFolder = new File(args[2]);
 			int batchSize = 5000;
@@ -124,7 +124,7 @@ public class PCTSEADbApplication implements CommandLineRunner {
 
 		PCTSEACommandLine c = null;
 		try {
-			c = new PCTSEACommandLine(args, emr, scmr);
+			c = new PCTSEACommandLine(args, emr, scmr, mbs);
 
 			c.safeRun();
 
