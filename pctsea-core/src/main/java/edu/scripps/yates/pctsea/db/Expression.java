@@ -27,22 +27,22 @@ public class Expression implements Serializable {
 
 	}
 
-	public Expression(SingleCell cell, String gene, float expression, String projectTag) {
+	public Expression(SingleCell cell, String gene, float expression, String datasetTag) {
 		super();
 		this.cellName = cell.getName();
 		this.cellType = cell.getType();
 		this.gene = gene;
 		this.expression = expression;
-		this.projectTag = projectTag;
+		this.projectTag = datasetTag;
 	}
 
-	public Expression(String cellName, String cellType, String gene, float expression, String projectTag) {
+	public Expression(String cellName, String cellType, String gene, float expression, String datasetTag) {
 		super();
 		this.cellName = cellName;
 		this.setCellType(cellType);
 		this.gene = gene;
 		this.expression = expression;
-		this.projectTag = projectTag;
+		this.projectTag = datasetTag;
 	}
 
 	public String getId() {
@@ -96,8 +96,8 @@ public class Expression implements Serializable {
 		return projectTag;
 	}
 
-	public void setProjectTag(String projectTag) {
-		this.projectTag = projectTag;
+	public void setProjectTag(String datasetTag) {
+		this.projectTag = datasetTag;
 	}
 
 	public String getCellType() {

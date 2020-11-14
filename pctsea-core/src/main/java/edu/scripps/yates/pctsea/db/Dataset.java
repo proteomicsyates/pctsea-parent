@@ -5,7 +5,7 @@ import java.io.Serializable;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 
-public class Project implements Serializable {
+public class Dataset implements Serializable {
 
 	/**
 	 * 
@@ -19,11 +19,11 @@ public class Project implements Serializable {
 	private String name;
 	private String reference;
 
-	public Project() {
+	public Dataset() {
 
 	}
 
-	public Project(String tag, String name, String reference) {
+	public Dataset(String tag, String name, String reference) {
 		super();
 		this.tag = tag;
 		this.name = name;

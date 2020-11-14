@@ -1,9 +1,9 @@
 package edu.scripps.yates.pctsea.db;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Inject;
 
@@ -40,10 +40,19 @@ public class MongoBaseService {
 		return find;
 	}
 
-	public Map<String, List<Expression>> getExpressionByGenes(Collection<String> genes) {
+	public MongoTemplate getMongoTemplate() {
+		return mongoTemplate;
+	}
+
+	public Map<String, List<Expression>> getExpressionByGenes(Set<String> genes, Set<String> datasets) {
+
 		final Criteria criteria = new Criteria("gene").in(genes);
 		final Query query = new Query();
+		query.fields().exclude("cellType").exclude("cell");
 		query.addCriteria(criteria);
+		if (datasets != null && !datasets.isEmpty()) {
+			criteria.and("datasetTag").in(datasets);
+		}
 		final List<Expression> expressions = mongoTemplate.find(query, Expression.class);
 		final Map<String, List<Expression>> ret = new THashMap<String, List<Expression>>();
 		for (final Expression expression : expressions) {

@@ -3,33 +3,49 @@ package edu.scripps.yates.pctsea;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.ParseException;
+import org.apache.log4j.Logger;
 
 import edu.scripps.yates.pctsea.correlation.CorrelationThreshold;
+import edu.scripps.yates.pctsea.db.Dataset;
+import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.InputParameters;
+import edu.scripps.yates.pctsea.model.PCTSEAResult;
+import edu.scripps.yates.utilities.dates.DatesUtil;
 import edu.scripps.yates.utilities.swing.CommandLineProgramGuiEnclosable;
 import edu.scripps.yates.utilities.swing.DoNotInvokeRunMethod;
 import edu.scripps.yates.utilities.swing.SomeErrorInParametersOcurred;
+import gnu.trove.set.hash.THashSet;
 
 public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private final PCTSEA pctsea;
+	private DatasetMongoRepository dmr;
+	private final Logger log = Logger.getLogger(PCTSEACommandLine.class);
 
-	public PCTSEACommandLine(String[] args, ExpressionMongoRepository emr, SingleCellMongoRepository scmr,
-			MongoBaseService mbs) throws ParseException, DoNotInvokeRunMethod, SomeErrorInParametersOcurred {
+	public PCTSEACommandLine(String[] args, DatasetMongoRepository dmr, ExpressionMongoRepository emr,
+			SingleCellMongoRepository scmr, MongoBaseService mbs)
+			throws ParseException, DoNotInvokeRunMethod, SomeErrorInParametersOcurred {
 		super(args);
 		pctsea = new PCTSEA(emr, scmr, mbs);
 	}
 
 	@Override
 	public void run() {
-		this.pctsea.run();
+		final PCTSEAResult result = this.pctsea.run();
+		log.info("PCTSEA got some results in "
+				+ DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime()));
+		log.info("Results file created at: " + result.getResultsFile());
+		if (result.getUrlToViewer() != null) {
+			log.info("Also, results can be visualized at: " + result.getUrlToViewer());
+		}
 	}
 
 	@Override
@@ -45,6 +61,12 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 
 		} else {
 			errorInParameters("prefix name for the output files is missing");
+		}
+		if (cmd.hasOption(InputParameters.EMAIL)) {
+			this.pctsea.setEmail(cmd.getOptionValue(InputParameters.EMAIL));
+
+		} else {
+			// we will not be able to send the email with the results
 		}
 		if (cmd.hasOption(InputParameters.EEF)) {
 			File experimentExpressionFile = new File(cmd.getOptionValue(InputParameters.EEF));
@@ -80,11 +102,11 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 
 		}
 		pctsea.setCorrelationThreshold(correlationThreshold);
-		double minNumberExpressedGenesInCell = 2.0;
+		int minNumberExpressedGenesInCell = 4;
 		if (cmd.hasOption(InputParameters.MIN_GENES_CELLS)) {
 			final String mgcString = cmd.getOptionValue(InputParameters.MIN_GENES_CELLS);
 			try {
-				minNumberExpressedGenesInCell = Double.valueOf(mgcString);
+				minNumberExpressedGenesInCell = Integer.valueOf(mgcString);
 
 				if (minNumberExpressedGenesInCell < 0.0) {
 					throw new IllegalArgumentException();
@@ -94,7 +116,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 				e.printStackTrace();
 				errorInParameters("option '=" + InputParameters.MIN_GENES_CELLS + "' ('"
 						+ cmd.getOptionValue(InputParameters.MIN_GENES_CELLS)
-						+ "') is not valid. Valid values are positive integers or a real number between 0 and 1 representing a percentage (i.e. 0.1 will correspond to 10%)");
+						+ "') is not valid. Valid values are positive integers.");
 			}
 
 		}
@@ -162,11 +184,39 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			plotNegativeEnrichedCellTypes = true;
 		}
 		pctsea.setPlotNegativeEnrichedCellTypes(plotNegativeEnrichedCellTypes);
+
+		//
+		if (cmd.hasOption(InputParameters.DATASETS)) {
+			final Set<String> datasets = parseDatasets(cmd.getOptionValue(InputParameters.DATASETS));
+			pctsea.setDatasets(datasets);
+		} else {
+			// considering to use all datasets
+		}
+		//
+		if (cmd.hasOption(InputParameters.EMAIL)) {
+			pctsea.setEmail(cmd.getOptionValue(InputParameters.EMAIL));
+		} else {
+			// we dont send email
+		}
+	}
+
+	private Set<String> parseDatasets(String datasetsString) {
+		final Set<String> ret = new THashSet<String>();
+		if (datasetsString.contains(",")) {
+			final String[] split = datasetsString.split(",");
+			for (final String string : split) {
+				ret.add(string.trim());
+			}
+		} else {
+			ret.add(datasetsString.trim());
+		}
+		return ret;
+
 	}
 
 	@Override
 	public String printCommandLineSintax() {
-		return "-out [prefix] -eef [experimental expression file]";
+		return "-out [prefix] -eef [experimental expression file]\n Available datasets: " + getAvailableDatasets();
 	}
 
 	@Override
@@ -224,6 +274,26 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		final Option optionOnlyPlotPositiveEnrichedCellTypes = new Option(InputParameters.PLOT_NEGATIVE_ENRICHED, false,
 				"If present, plots associated with cell types with negative enrichment scores will be included in the output PDF report.");
 		options.add(optionOnlyPlotPositiveEnrichedCellTypes);
+		//
+		final Option email = new Option(InputParameters.EMAIL, true,
+				"If the system supports it, a link to view the results will be sent to the email address provided.");
+		options.add(email);
+		//
+		final Option datasets = new Option(InputParameters.DATASETS, true,
+				"Comma separated values of the dataset againts you want to analyze your data.");
+		options.add(datasets);
 		return options;
+	}
+
+	private String getAvailableDatasets() {
+		final StringBuilder sb = new StringBuilder();
+		final List<Dataset> findAll = this.dmr.findAll();
+		for (final Dataset dataset : findAll) {
+			if (!"".equals(sb.toString())) {
+				sb.append(",");
+			}
+			sb.append(dataset.getTag());
+		}
+		return sb.toString();
 	}
 }

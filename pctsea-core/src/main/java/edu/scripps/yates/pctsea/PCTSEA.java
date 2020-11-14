@@ -6,7 +6,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URL;
 import java.text.DecimalFormat;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,20 +49,25 @@ import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.io.Files;
+
 import edu.scripps.yates.pctsea.correlation.CorrelationThreshold;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
+import edu.scripps.yates.pctsea.db.PctseaRunLog;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.CellTypeClassification;
 import edu.scripps.yates.pctsea.model.GeneOccurrence;
 import edu.scripps.yates.pctsea.model.InputParameters;
+import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.pctsea.model.charts.ChartsGenerated;
 import edu.scripps.yates.pctsea.model.charts.DoubleCategoryItemLabelGenerator;
 import edu.scripps.yates.pctsea.model.charts.IntegerCategoryItemLabelGenerator;
 import edu.scripps.yates.pctsea.model.charts.LabelGenerator;
 import edu.scripps.yates.pctsea.model.charts.LabeledXYDataset;
+import edu.scripps.yates.pctsea.utils.EmailUtil;
 import edu.scripps.yates.pctsea.utils.MyPrintStream;
 import edu.scripps.yates.pctsea.utils.PCTSEAUtils;
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
@@ -114,7 +122,7 @@ public class PCTSEA {
 	private File experimentExpressionFile;
 //	private File singleCellsMetadataFile;
 	private CorrelationThreshold correlationThreshold;
-	private double minNumberExpressedGenesInCell;
+	private int minNumberExpressedGenesInCell;
 	private final boolean takeZerosForCorrelation = false;
 	private String prefix;
 
@@ -135,18 +143,28 @@ public class PCTSEA {
 	private String currentTimeStamp;
 
 	private final MongoBaseService mongoBaseService;
-	public static String projectTag; // tag of the project o
+
+	private String email;
+
+	private Set<String> datasets;
+	// we will get the values of this environment variables from the system in order
+	// to know where to keep the results files and where to redirect to the viewer
+	public static String finalResultsFolderEnvironmentVariable = "PCTSEA_RESULTS_FOLDER";
+	public final String finalResultsFolder;
+	public static String resultsViewerURLEnvironmentVariable = "PCTSEA_VIEWER_URL";
+	public final String resultsViewerURL;
 
 	public PCTSEA(InputParameters inputParameters, ExpressionMongoRepository expressionMongoRepo,
 			SingleCellMongoRepository singleCellMongoRepo, MongoBaseService mongoBaseService) {
 		this.expressionMongoRepo = expressionMongoRepo;
 		this.singleCellMongoRepo = singleCellMongoRepo;
 		this.mongoBaseService = mongoBaseService;
-
+		finalResultsFolder = System.getenv(finalResultsFolderEnvironmentVariable);
+		resultsViewerURL = System.getenv(resultsViewerURLEnvironmentVariable);
 		this.correlationThreshold = new CorrelationThreshold(inputParameters.getMinCorrelation());
 		this.cellTypeBranches
 				.addAll(CellTypeBranch.parseCellTypeBranchesString(inputParameters.getCellTypesClassification()));
-		this.experimentExpressionFile = inputParameters.getInputDataFile();
+		this.experimentExpressionFile = new File(inputParameters.getInputDataFile());
 		this.generateCharts = inputParameters.isGenerateCharts();
 		this.loadRandomDistributionsIfExist = inputParameters.isLoadRandom();
 		this.maxIterations = inputParameters.getNumPermutations();
@@ -165,6 +183,8 @@ public class PCTSEA {
 		this.expressionMongoRepo = expressionMongoRepo;
 		this.singleCellMongoRepo = singleCellMongoRepo;
 		this.mongoBaseService = mongoBaseService;
+		finalResultsFolder = System.getenv(finalResultsFolderEnvironmentVariable);
+		resultsViewerURL = System.getenv(resultsViewerURLEnvironmentVariable);
 	}
 
 	/**
@@ -193,9 +213,14 @@ public class PCTSEA {
 
 	}
 
-	public File run() {
+	public PCTSEAResult run() {
 		// first of all create a time stamp
 		currentTimeStamp = createTimeStamp(originalPrefix);
+		final PctseaRunLog runLog = new PctseaRunLog();
+
+		runLog.setTimeStamp(currentTimeStamp);
+		runLog.setStarted(ZonedDateTime.now(ZoneId.systemDefault()));
+		runLog.setInputParameters(getInputParameters());
 		if (statusListener != null) {
 			// redirect output to textarea status
 			System.setOut(new MyPrintStream(new StatusListenerOutputStream(statusListener)));
@@ -203,7 +228,16 @@ public class PCTSEA {
 		}
 		Exception errorMessage = null;
 		final File zipOutputFile = getZipOutputFile();
+		// create a copy of the file for the viewer
+		final File resultsFileForViewer = new File(
+				this.finalResultsFolder + File.separator + FilenameUtils.getName(zipOutputFile.getAbsolutePath()));
+
+		// create PCTSEAResult object
+		PCTSEAResult result = null;
 		try {
+			final URL urlToViewer = new URL(resultsViewerURL + "/?results="
+					+ FilenameUtils.getBaseName(resultsFileForViewer.getAbsolutePath()));
+			result = new PCTSEAResult(zipOutputFile, resultsFileForViewer, urlToViewer, runLog);
 			if (this.generateCharts) {
 				ChartsGenerated.getNewInstance();
 			}
@@ -215,11 +249,13 @@ public class PCTSEA {
 //			if (true) {
 //				return;
 //			}
-			final String datasetName = "";
-			final List<SingleCell> singleCellList = getSingleCellListFromDB(datasetName);
+
+			final List<SingleCell> singleCellList = getSingleCellListFromDB(datasets);
 
 			interactorExpressions = new InteractorsExpressionsRetriever(this.expressionMongoRepo, this.mongoBaseService,
-					this.experimentExpressionFile, projectTag);
+					this.experimentExpressionFile, datasets);
+			// log
+			runLog.setNumInputGenes(interactorExpressions.getInteractorsGeneIDs().size());
 
 			// calculate correlations
 			final int numCellsPassingCorrelationThreshold = correlateSingleCellsToInteractors(singleCellList,
@@ -300,7 +336,8 @@ public class PCTSEA {
 				printGenesInvolvedInCorrelations(cellTypeClassifications, correlationThreshold);
 
 			}
-			return zipOutputFile;
+
+			return result;
 		} catch (final IOException e) {
 			errorMessage = e;
 			throw new RuntimeException(e);
@@ -334,10 +371,26 @@ public class PCTSEA {
 						// create tar.gz with all output files
 						printGZipOutputFile(getCurrentTimeStampFolder(), zipOutputFile);
 
-//						final int numDeletedFiles = deleteFilesOnFolderContectRecursively(
-//								new File(getCurrentTimeStampPath()), zipOutputFile, false);
-//						log.info(numDeletedFiles + " files deleted after adding them to the zip file");
+						boolean copied = false;
+						try {
+							Files.copy(zipOutputFile, resultsFileForViewer);
+							copied = true;
+						} catch (final IOException e) {
+							e.printStackTrace();
+							log.error("Error making copy of the results for the viewer: " + e.getMessage());
+						} catch (final IllegalArgumentException e) {
+							e.printStackTrace();
+						}
+						// set finish time
+						runLog.setFinished(ZonedDateTime.now(ZoneId.systemDefault()));
 
+						if (!copied) {
+							result.setResultsFileForViewer(null);
+							result.setUrlToViewer(null);
+						}
+						if (runLog.getInputParameters().getEmail() != null) {
+							EmailUtil.sendEmailWithResults(result);
+						}
 					} catch (final IOException e) {
 						e.printStackTrace();
 						log.error("Error writing PDF file with charts: " + e.getMessage());
@@ -347,6 +400,23 @@ public class PCTSEA {
 				log.info("Finishing now.");
 			}
 		}
+	}
+
+	private InputParameters getInputParameters() {
+		final InputParameters inputParameters = new InputParameters();
+		inputParameters.setCellTypesClassification(CellTypeBranch.getStringSeparated(cellTypeBranches, ","));
+		inputParameters.setEmail(email);
+		inputParameters.setGenerateCharts(generateCharts);
+		inputParameters.setInputDataFile(FilenameUtils.getName(this.experimentExpressionFile.getAbsolutePath()));
+		inputParameters.setLoadRandom(loadRandomDistributionsIfExist);
+		inputParameters.setMinCellsPerCellType(minCellsPerCellTypeForPDF);
+		inputParameters.setMinCorrelation(this.correlationThreshold.getThresholdValue());
+		inputParameters.setMinGenesCells(Double.valueOf(this.minNumberExpressedGenesInCell).intValue());
+		inputParameters.setDatasets(this.datasets);
+		inputParameters.setNumPermutations(this.maxIterations);
+		inputParameters.setOutputPrefix(prefix);
+		inputParameters.setPlotNegativeEnriched(plotNegativeEnrichedCellTypes);
+		return inputParameters;
 	}
 
 	public static final FastDateFormat dateFormatter = FastDateFormat.getInstance("yyyy-MM-dd_HH-mm-ss");
@@ -824,16 +894,20 @@ public class PCTSEA {
 
 	}
 
-	private List<SingleCell> getSingleCellListFromDB(String datasetName) {
-		// TODO use datasetName to get the appropriate singleCells
+	private List<SingleCell> getSingleCellListFromDB(Set<String> datasets) {
 		final long t0 = System.currentTimeMillis();
 		log.info("Getting single cells from DB");
 
 		final List<SingleCell> ret = new ArrayList<SingleCell>();
-		final List<edu.scripps.yates.pctsea.db.SingleCell> singleCellsFromDB = this.singleCellMongoRepo.findAll();
-		final long t1 = System.currentTimeMillis();
-		log.info(singleCellsFromDB.size() + " single cells read from DB in "
-				+ DatesUtil.getDescriptiveTimeFromMillisecs(t1 - t0));
+		final List<edu.scripps.yates.pctsea.db.SingleCell> singleCellsFromDB = new ArrayList<edu.scripps.yates.pctsea.db.SingleCell>();
+		if (datasets != null) {
+			for (final String dataset : datasets) {
+				singleCellsFromDB.addAll(this.singleCellMongoRepo.findByDatasetTag(dataset));
+			}
+		} else {
+			singleCellsFromDB.addAll(this.singleCellMongoRepo.findAll());
+		}
+
 		int cellID = 0;
 		for (final edu.scripps.yates.pctsea.db.SingleCell singleCelldb : singleCellsFromDB) {
 			cellID++;
@@ -842,9 +916,9 @@ public class PCTSEA {
 			ret.add(sc);
 			SingleCellsMetaInformationReader.addSingleCell(sc);
 		}
-		final long t2 = System.currentTimeMillis();
-		log.info(ret.size() + " single cells converted to pctsea objects in "
-				+ DatesUtil.getDescriptiveTimeFromMillisecs(t2 - t1));
+		final long t1 = System.currentTimeMillis();
+		log.info(ret.size() + " single cells read from database in "
+				+ DatesUtil.getDescriptiveTimeFromMillisecs(t1 - t0));
 
 		return ret;
 	}
@@ -1114,7 +1188,7 @@ public class PCTSEA {
 			CellTypeBranch cellTypeBranch, CorrelationThreshold correlationThreshold,
 			boolean loadRandomDistributionsIfExist, boolean generateCharts, int minCellsPerCellTypeForPDF,
 			boolean plotNegativeEnrichedCellTypes, int maxIterations, boolean takeZerosForCorrelation,
-			double minNumberExpressedGenesInCell) throws IOException {
+			int minNumberExpressedGenesInCell) throws IOException {
 
 		// as well as the correlations
 		final TIntDoubleMap correlationsBySingleCellID = new TIntDoubleHashMap();
@@ -1374,7 +1448,7 @@ public class PCTSEA {
 	 */
 	private void printCellTypeClassifications(List<CellTypeClassification> cellTypeClassifications,
 			List<SingleCell> singleCellList, CorrelationThreshold correlationThreshold,
-			double minNumberExpressedGenesInCell) throws IOException {
+			int minNumberExpressedGenesInCell) throws IOException {
 		log.info("Printing output table...");
 		// sort cell type classifications by the enrichment score significancy, but
 		// keeping the negative scores at the end
@@ -1582,6 +1656,7 @@ public class PCTSEA {
 	 */
 	private String getParametersString() {
 		final StringBuilder sb = new StringBuilder();
+		sb.append(InputParameters.EMAIL + " = " + email + "\n");
 		sb.append(InputParameters.OUT + " = " + originalPrefix + "\n");
 		sb.append(InputParameters.PERM + " = " + this.maxIterations + "\n");
 		sb.append(InputParameters.EEF + " = " + this.experimentExpressionFile.getAbsolutePath() + "\n");
@@ -1724,7 +1799,7 @@ public class PCTSEA {
 			InteractorsExpressionsRetriever interactorExpressions, CorrelationThreshold correlationThreshold,
 			CellTypeBranch cellTypeBranch, boolean writeCorrelationsFile, boolean outputToLog,
 			boolean getExpressionsUsedForCorrelation, boolean takeZerosForCorrelation,
-			double minNumberExpressedGenesInCell) throws IOException {
+			int minNumberExpressedGenesInCell) throws IOException {
 		final File correlationsOutputFile = getCorrelationsOutputFile();
 		final int originalNumCells = singleCellList.size();
 		int numPositiveCorrelated = 0;
@@ -1736,7 +1811,7 @@ public class PCTSEA {
 		if (writeCorrelationsFile) {
 			correlationsFileWriter = new FileWriter(correlationsOutputFile);
 			correlationsFileWriter.write(
-					"Cell\tCell type\tPearson's correlation\tValues correlated\tgenes\t# genes\tgene expression variance on cell\n");
+					"cell\tcell_type\tpearsons_corr\tvalues_correlated\tgenes\tnum_genes\tgene_expression_variance_on_cell\n");
 		}
 		final Iterator<SingleCell> cellsIterator = singleCellList.iterator();
 		while (cellsIterator.hasNext()) {
@@ -2114,7 +2189,7 @@ public class PCTSEA {
 		this.correlationThreshold = correlationThreshold2;
 	}
 
-	public void setMinNumberExpressedGenesInCell(double minNumberExpressedGenesInCell2) {
+	public void setMinNumberExpressedGenesInCell(int minNumberExpressedGenesInCell2) {
 		this.minNumberExpressedGenesInCell = minNumberExpressedGenesInCell2;
 	}
 
@@ -2144,6 +2219,14 @@ public class PCTSEA {
 
 	public void setStatusListener(StatusListener statusListener) {
 		this.statusListener = statusListener;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public void setDatasets(Set<String> datasets2) {
+		this.datasets = datasets2;
 	}
 
 }

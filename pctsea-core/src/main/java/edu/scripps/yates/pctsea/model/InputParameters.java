@@ -1,12 +1,12 @@
 package edu.scripps.yates.pctsea.model;
 
-import java.io.File;
+import java.util.Set;
 
 import javax.validation.constraints.NotNull;
 
 public class InputParameters {
-
-	private File inputDataFile;
+	private String email;
+	private String inputDataFile;
 	private double minCorrelation;
 	private int minGenesCells;
 	@NotNull
@@ -17,7 +17,8 @@ public class InputParameters {
 	private boolean generateCharts;
 	private int minCellsPerCellType;
 	private boolean plotNegativeEnriched;
-
+	private Set<String> datasets;
+	public static final String EMAIL = "email";
 	public static final String OUT = "out";
 	public static final String PERM = "perm";
 	public static final String EEF = "eef";
@@ -28,12 +29,13 @@ public class InputParameters {
 	public static final String LOAD_RANDOM = "load_random";
 	public static final String PLOT_NEGATIVE_ENRICHED = "plot_negative_enriched";
 	public static final String MIN_CELLS_PER_CELL_TYPE = "min_cells_per_cell_type";
+	public static final String DATASETS = "datasets";
 
-	public File getInputDataFile() {
+	public String getInputDataFile() {
 		return inputDataFile;
 	}
 
-	public void setInputDataFile(File inputDataFile) {
+	public void setInputDataFile(String inputDataFile) {
 		this.inputDataFile = inputDataFile;
 	}
 
@@ -107,5 +109,21 @@ public class InputParameters {
 
 	public void setPlotNegativeEnriched(boolean plotNegativeEnriched) {
 		this.plotNegativeEnriched = plotNegativeEnriched;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public Set<String> getDatasets() {
+		return datasets;
+	}
+
+	public void setDatasets(Set<String> datasets) {
+		this.datasets = datasets;
 	}
 }

@@ -17,15 +17,17 @@ public class SingleCell implements Serializable {
 	private String name;
 	private String type;
 	private String biomaterial;
+	private String datasetTag;
 
 	public SingleCell() {
 
 	}
 
-	public SingleCell(String name, String type, String biomaterial) {
+	public SingleCell(String name, String type, String biomaterial, String datasetTag) {
 		this.name = name;
 		this.type = type;
 		this.biomaterial = biomaterial;
+		this.datasetTag = datasetTag;
 	}
 
 	public String getId() {
@@ -58,5 +60,13 @@ public class SingleCell implements Serializable {
 
 	public void setBiomaterial(String biomaterial) {
 		this.biomaterial = biomaterial;
+	}
+
+	public String getDatasetTag() {
+		return datasetTag;
+	}
+
+	public void setDatasetTag(String datasetTag) {
+		this.datasetTag = datasetTag;
 	}
 }

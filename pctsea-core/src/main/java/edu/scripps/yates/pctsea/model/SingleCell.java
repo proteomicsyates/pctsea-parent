@@ -255,13 +255,13 @@ public class SingleCell {
 	 * @return
 	 */
 	public double calculateCorrelation(InteractorsExpressionsRetriever interactorExpressions,
-			boolean takeZerosInCorrelation, double minNumInteractorsForCorrelation,
+			boolean takeZerosInCorrelation, int minNumInteractorsForCorrelation,
 			boolean getExpressionsUsedForCorrelation) {
-		// in case of having a percentage
-		if (minNumInteractorsForCorrelation <= 1.0) {
-			final int numInteractors = interactorExpressions.getInteractorsGeneIDs().size();
-			minNumInteractorsForCorrelation = numInteractors * minNumInteractorsForCorrelation;
-		}
+//		// in case of having a percentage
+//		if (minNumInteractorsForCorrelation <= 1.0) {
+//			final int numInteractors = interactorExpressions.getInteractorsGeneIDs().size();
+//			minNumInteractorsForCorrelation = numInteractors * minNumInteractorsForCorrelation;
+//		}
 
 		final TIntList geneIDs = interactorExpressions.getInteractorsGeneIDs();
 		if (minNumInteractorsForCorrelation > geneIDs.size()) {

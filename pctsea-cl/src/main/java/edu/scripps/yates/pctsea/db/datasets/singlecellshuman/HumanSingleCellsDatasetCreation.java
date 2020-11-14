@@ -16,10 +16,10 @@ import java.util.zip.GZIPInputStream;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
 
+import edu.scripps.yates.pctsea.db.Dataset;
+import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.Expression;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
-import edu.scripps.yates.pctsea.db.Project;
-import edu.scripps.yates.pctsea.db.ProjectMongoRepository;
 import edu.scripps.yates.pctsea.db.SingleCell;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
@@ -35,7 +35,7 @@ public class HumanSingleCellsDatasetCreation {
 
 	private final File singleCellExpressionFolder;
 	private int BATCH_SIZE = 1000;
-	private final ProjectMongoRepository projectMongoRepo;
+	private final DatasetMongoRepository projectMongoRepo;
 	private final SingleCellMongoRepository singleCellMongoRepository;
 	private final MongoBaseService mongoBaseService;
 
@@ -43,7 +43,7 @@ public class HumanSingleCellsDatasetCreation {
 	private static long id = 0;
 
 	public HumanSingleCellsDatasetCreation(File singleCellExpressionFolder, File annotationRMBatchFolder,
-			ProjectMongoRepository projectMongoRepo, SingleCellMongoRepository singleCellMongoRepository,
+			DatasetMongoRepository projectMongoRepo, SingleCellMongoRepository singleCellMongoRepository,
 			MongoBaseService mongoBaseService, Integer batchSize) throws IOException {
 		// read single cells
 		new SingleCellsMetaInformationReader(annotationRMBatchFolder);
@@ -58,7 +58,7 @@ public class HumanSingleCellsDatasetCreation {
 
 	public void run() throws IOException {
 		final long t0 = System.currentTimeMillis();
-		final Project project = new Project();
+		final Dataset project = new Dataset();
 		project.setTag("HCL");
 		project.setName("Construction of a human cell landscape at single-cell level");
 		project.setReference("https://doi.org/10.1038/s41586-020-2157-4");
@@ -72,7 +72,7 @@ public class HumanSingleCellsDatasetCreation {
 		System.out.println("It took " + DatesUtil.getDescriptiveTimeFromMillisecs(t1));
 	}
 
-	private void readExpressionValuesByInteractorGenes(Project project) throws IOException {
+	private void readExpressionValuesByInteractorGenes(Dataset project) throws IOException {
 
 		final File[] files = singleCellExpressionFolder.listFiles(new FilenameFilter() {
 
@@ -130,7 +130,7 @@ public class HumanSingleCellsDatasetCreation {
 
 	}
 
-	private List<Expression> readSingleCellGZipFileAndSaveSingleCells(File file, Project project) throws IOException {
+	private List<Expression> readSingleCellGZipFileAndSaveSingleCells(File file, Dataset dataset) throws IOException {
 
 		if (singleCellsInDB == null) {
 
@@ -173,7 +173,7 @@ public class HumanSingleCellsDatasetCreation {
 
 						continue;
 					}
-					final String gene = split[0].replace("\"", "");
+					final String gene = split[0].replace("\"", "").toUpperCase();
 //					for (final String header : indexByHeader.keySet()) {
 
 					for (int i = 0; i < headers.length; i++) {
@@ -188,7 +188,7 @@ public class HumanSingleCellsDatasetCreation {
 								final String biomaterial = getSingleCellBiomaterial(singleCellName);
 								SingleCell singleCelldb = null;
 								if (!singleCellByNames.containsKey(singleCellName)) {
-									singleCelldb = new SingleCell(singleCellName, type, biomaterial);
+									singleCelldb = new SingleCell(singleCellName, type, biomaterial, dataset.getTag());
 									singleCellList.add(singleCelldb);
 									singleCellByNames.put(singleCellName, singleCelldb);
 								} else {
@@ -200,7 +200,7 @@ public class HumanSingleCellsDatasetCreation {
 								sce.setCell(singleCelldb);
 								sce.setGene(gene);
 								sce.setExpression(expressionValue);
-								sce.setProjectTag(project.getTag());
+								sce.setProjectTag(dataset.getTag());
 								sces.add(sce);
 //								if (sces.size() >= 100) {
 //									break;

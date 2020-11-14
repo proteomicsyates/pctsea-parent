@@ -2,11 +2,9 @@ package edu.scripps.yates.pctsea.views.analyze;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,6 +24,7 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.H4;
@@ -48,8 +47,10 @@ import com.vaadin.flow.router.Route;
 
 import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
+import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.InputParameters;
+import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.pctsea.util.VaadinUtil;
 import edu.scripps.yates.pctsea.utils.StatusListener;
 import edu.scripps.yates.pctsea.views.main.MainView;
@@ -84,7 +85,10 @@ public class AnalyzeView extends VerticalLayout {
 	private SingleCellMongoRepository scmr;
 	@Autowired
 	private ExpressionMongoRepository emr;
+	@Autowired
+	private MongoBaseService mbs;
 	private Runnable backgroundProcess;
+	private final HorizontalLayout resultsPanel;
 
 	public AnalyzeView() {
 		setId("analyze-view");
@@ -123,7 +127,7 @@ public class AnalyzeView extends VerticalLayout {
 				.withValidator(prefix -> !"".equals(prefix), "Prefix is required")
 				.bind(InputParameters::getOutputPrefix, InputParameters::setOutputPrefix);
 		binder.forField(this.minGenesCells).asRequired("Required").withValidator(num -> num >= 1, "Minimum is 1")
-				.bind(InputParameters::getMinGenesCells, InputParameters::setMinCellsPerCellType);
+				.bind(InputParameters::getMinGenesCells, InputParameters::setMinGenesCells);
 		binder.forField(this.numPermutations).asRequired("Required")
 				.withValidator(num -> num >= 10, "Minimum number of permutations: 10")
 				.bind(InputParameters::getNumPermutations, InputParameters::setNumPermutations);
@@ -137,6 +141,10 @@ public class AnalyzeView extends VerticalLayout {
 			submit();
 		});
 
+		resultsPanel = new HorizontalLayout();
+		resultsPanel.add(
+				"Results will appear here as soon as the analysis is done. Also, an email will be sent to the provided email adress.");
+		add(resultsPanel);
 		initializeInputParamsToDefaults();
 		statusArea.getStyle().set("minHeight", "150px");
 		statusArea.setWidthFull();
@@ -156,11 +164,12 @@ public class AnalyzeView extends VerticalLayout {
 			return;
 		}
 		final InputParameters inputParameters = binder.getBean();
+		// TODO
 		inputParameters.setCellTypesClassification("TYPE");
 		inputParameters.setLoadRandom(false);
 		inputParameters.setGenerateCharts(true);
 		inputParameters.setPlotNegativeEnriched(false);
-		inputParameters.setInputDataFile(inputFile);
+		inputParameters.setInputDataFile(inputFile.getAbsolutePath());
 		startPCTSEAAnalysis(inputParameters);
 		Notification.show("Run starting...");
 
@@ -168,7 +177,7 @@ public class AnalyzeView extends VerticalLayout {
 
 	private void startPCTSEAAnalysis(InputParameters inputParameters) {
 //		showSpinnerDialog();
-		final PCTSEA pTCPctsea = new PCTSEA(inputParameters, emr, scmr);
+		final PCTSEA pTCPctsea = new PCTSEA(inputParameters, emr, scmr, mbs);
 		pTCPctsea.setStatusListener(new StatusListener() {
 
 			@Override
@@ -185,30 +194,20 @@ public class AnalyzeView extends VerticalLayout {
 			public void run() {
 
 				getUI().get().access(() -> AnalyzeView.this.submitButton.setEnabled(false));
-				final File resultsFile = pTCPctsea.run();
+				final PCTSEAResult results = pTCPctsea.run();
 				getUI().get().access(() -> AnalyzeView.this.submitButton.setEnabled(true));
-				copyResultToShinyFolder(resultsFile);
-				showLinkToResults(resultsFile);
+				showLinkToResults(results.getUrlToViewer());
 			}
 		};
 		backgroundProcess.run();
 
 	}
 
-	protected void showLinkToResults(File resultsFile) {
-		// TODO Auto-generated method stub
-
-	}
-
-	protected void copyResultToShinyFolder(File resultsFile) {
-		final File outputFile = new File("C:\\Users\\salvador\\eclipse-workspace\\pctsea-parent\\pctseaweb\\shinyR");
-		try {
-			IOUtils.copy(new FileInputStream(resultsFile), new FileOutputStream(outputFile));
-		} catch (final FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (final IOException e) {
-			e.printStackTrace();
-		}
+	protected void showLinkToResults(URL url) {
+		final Anchor link = new Anchor(url.toString(), url.toString());
+		resultsPanel.removeAll();
+		resultsPanel.add("Access your results at: ");
+		resultsPanel.add(link);
 	}
 
 	protected void showMessage(String statusMessage) {
@@ -225,8 +224,9 @@ public class AnalyzeView extends VerticalLayout {
 		this.minCorrelation.setMin(0.0);
 		//
 		this.minGenesCells.setValue(defaultMinGenes);
-		this.minGenesCells.setHelperText(
-				"Minimum number of proteins that should have a non-zero expression value in a cell. Minimum value: 1");
+		this.minGenesCells
+				.setHelperText("Minimum number of proteins that should have a non-zero expression value in a cell. "
+						+ "Minimum value: 1");
 		this.minGenesCells.setMin(1);
 		//
 		this.numPermutations.setValue(defaultPermutations);

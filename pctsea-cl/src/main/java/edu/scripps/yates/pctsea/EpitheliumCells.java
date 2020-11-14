@@ -22,11 +22,11 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import edu.scripps.yates.pctsea.db.Dataset;
+import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.Expression;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
-import edu.scripps.yates.pctsea.db.Project;
-import edu.scripps.yates.pctsea.db.ProjectMongoRepository;
 import edu.scripps.yates.pctsea.db.SingleCell;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
@@ -58,7 +58,7 @@ public class EpitheliumCells implements CommandLineRunner {
 	private File singleCellMetadataFile;
 	private final int BATCH_SIZE = 10000;
 	@Autowired
-	private ProjectMongoRepository projectMongoRepo;
+	private DatasetMongoRepository datasetsMongoRepo;
 	@Autowired
 	private MongoBaseService mongoBaseService;
 	@Autowired
@@ -66,7 +66,7 @@ public class EpitheliumCells implements CommandLineRunner {
 	@Autowired
 	private ExpressionMongoRepository expressionMongoRepo;
 
-	private Project project;
+	private Dataset dataset;
 
 	private String biomaterial;
 
@@ -83,28 +83,29 @@ public class EpitheliumCells implements CommandLineRunner {
 		singleCellExpressionTableFile = new File(args[1]);
 
 		final long t0 = System.currentTimeMillis();
-		project = new Project();
-		project.setName("A single cell atlas of the airway epithelium reveals the CFTR-rich pulmonary ionocyte");
-		project.setReference("https://doi.org/10.1038/s41586-018-0394-6");
-		final List<Project> projectsDB = projectMongoRepo.findByName(project.getName());
-		if (projectsDB.isEmpty()) {
-			projectMongoRepo.save(project);
+		dataset = new Dataset();
+		dataset.setTag("GSE102580");
+		dataset.setName("Single cell atlas of the airway epithelium");
+		dataset.setReference("https://doi.org/10.1038/s41586-018-0394-6");
+		final List<Dataset> datasetsDB = datasetsMongoRepo.findByTag(dataset.getTag());
+		if (datasetsDB.isEmpty()) {
+			datasetsMongoRepo.save(dataset);
 		} else {
-			project = projectsDB.get(0);
+			dataset = datasetsDB.get(0);
 		}
 
-		readExpressionValuesByInteractorGenes(project);
+		readExpressionValuesByInteractorGenes(dataset);
 		System.out.println("Everything ok!!");
 		final long t1 = System.currentTimeMillis() - t0;
 		System.out.println("It took " + DatesUtil.getDescriptiveTimeFromMillisecs(t1));
 	}
 
-	private void readExpressionValuesByInteractorGenes(Project project) throws IOException {
+	private void readExpressionValuesByInteractorGenes(Dataset dataset) throws IOException {
 
 		// read metadata
-		final Map<String, SingleCell> cellsByCellID = readCells(singleCellMetadataFile);
+		final Map<String, SingleCell> cellsByCellID = readCells(singleCellMetadataFile, dataset);
 		saveSingleCells(cellsByCellID.values());
-		final List<Expression> sces = readExpressions(singleCellExpressionTableFile, cellsByCellID, project);
+		final List<Expression> sces = readExpressions(singleCellExpressionTableFile, cellsByCellID, dataset);
 
 		saveExpressions(sces);
 
@@ -221,7 +222,7 @@ public class EpitheliumCells implements CommandLineRunner {
 	}
 
 	private List<Expression> readExpressions(File singleCellExpressionsFile,
-			Map<String, SingleCell> singleCellsByCellID, Project project) throws IOException {
+			Map<String, SingleCell> singleCellsByCellID, Dataset project) throws IOException {
 		log.info("Reading expressions of genes on cells");
 		final List<Expression> ret = new ArrayList<Expression>();
 		BufferedReader r = null;
@@ -266,7 +267,7 @@ public class EpitheliumCells implements CommandLineRunner {
 		return ret;
 	}
 
-	private Map<String, SingleCell> readCells(File singleCellMetadataFile2) throws IOException {
+	private Map<String, SingleCell> readCells(File singleCellMetadataFile2, Dataset dataset) throws IOException {
 		final Map<String, SingleCell> ret = new THashMap<String, SingleCell>();
 		final List<String> lines = Files.readAllLines(singleCellMetadataFile.toPath());
 		TObjectIntMap<String> indexesByColumnName = null;
@@ -284,7 +285,8 @@ public class EpitheliumCells implements CommandLineRunner {
 				final int cellIndex = Integer.valueOf(split[indexesByColumnName.get("")].trim());
 				final String cellBarCode = split[indexesByColumnName.get("barcode")].trim();
 				final String cellClassification = split[indexesByColumnName.get("clusters_Fig1")].trim();
-				final SingleCell singleCell = new SingleCell(cellBarCode, cellClassification, biomaterial);
+				final SingleCell singleCell = new SingleCell(cellBarCode, cellClassification, biomaterial,
+						dataset.getTag());
 				cellTypes.add(singleCell.getType());
 				singleCell.setId(String.valueOf(cellIndex));
 				ret.put(singleCell.getId(), singleCell);
@@ -303,7 +305,7 @@ public class EpitheliumCells implements CommandLineRunner {
 		return ret;
 	}
 
-	private List<Expression> readSingleCellGZipFile(File file, Project project) throws IOException {
+	private List<Expression> readSingleCellGZipFile(File file, Dataset dataset) throws IOException {
 //		final THashMap<String, TObjectIntMap<String>> expressionsByCell = new THashMap<String, TObjectIntMap<String>>();
 		BufferedReader br = null;
 		final List<SingleCell> singleCellList = new ArrayList<SingleCell>();
@@ -342,7 +344,7 @@ public class EpitheliumCells implements CommandLineRunner {
 
 								SingleCell singleCelldb = null;
 								if (!singleCellByNames.containsKey(singleCellName)) {
-									singleCelldb = new SingleCell(singleCellName, type, biomaterial);
+									singleCelldb = new SingleCell(singleCellName, type, biomaterial, dataset.getTag());
 									singleCellList.add(singleCelldb);
 									singleCellByNames.put(singleCellName, singleCelldb);
 								} else {
@@ -354,7 +356,7 @@ public class EpitheliumCells implements CommandLineRunner {
 								sce.setCell(singleCelldb);
 								sce.setGene(gene);
 								sce.setExpression(expressionValue);
-								sce.setProjectTag(project.getTag());
+								sce.setProjectTag(dataset.getTag());
 								sces.add(sce);
 //								if (sces.size() >= 100) {
 //									break;

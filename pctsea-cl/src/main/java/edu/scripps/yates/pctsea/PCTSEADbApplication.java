@@ -11,10 +11,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
-import edu.scripps.yates.pctsea.db.ProjectMongoRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
+import edu.scripps.yates.pctsea.db.datasets.singlecellshuman.GeneToUpperCase;
 import edu.scripps.yates.pctsea.db.datasets.singlecellshuman.HumanSingleCellsDatasetCreation;
 import edu.scripps.yates.utilities.swing.DoNotInvokeRunMethod;
 
@@ -22,7 +23,7 @@ import edu.scripps.yates.utilities.swing.DoNotInvokeRunMethod;
 public class PCTSEADbApplication implements CommandLineRunner {
 	private final static boolean FORCE_DB_LOCAL = true;
 	@Autowired
-	private ProjectMongoRepository pmr;
+	private DatasetMongoRepository pmr;
 	@Autowired
 	private SingleCellMongoRepository scmr;
 	@Autowired
@@ -37,7 +38,7 @@ public class PCTSEADbApplication implements CommandLineRunner {
 		// application-remoteTunnel.properties which uses a different db port
 		final String mongoTunnelPort = "MONGO_TUNNEL_PORT";
 		boolean useTunnelProperties = false;
-		PCTSEA.projectTag = "HCL";
+
 		final Map<String, String> getenv = System.getenv();
 		final String port = getenv.get(mongoTunnelPort);
 		if (port != null) {
@@ -103,6 +104,10 @@ public class PCTSEADbApplication implements CommandLineRunner {
 		if (args.length == 1) {
 			if (args[0].equals("test")) {
 				return;
+			} else if (args[0].equals("gene_to_uppercase")) {
+				final GeneToUpperCase geneToUpperCase = new GeneToUpperCase(mbs, emr);
+				geneToUpperCase.run();
+				return;
 			}
 		} else if (args.length > 0 && args[0].equals("HCL")) {
 			final File expressionFolder = new File(args[1]);
@@ -124,7 +129,7 @@ public class PCTSEADbApplication implements CommandLineRunner {
 
 		PCTSEACommandLine c = null;
 		try {
-			c = new PCTSEACommandLine(args, emr, scmr, mbs);
+			c = new PCTSEACommandLine(args, pmr, emr, scmr, mbs);
 
 			c.safeRun();
 

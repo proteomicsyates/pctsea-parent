@@ -34,8 +34,8 @@ public class MongoDBCreator {
 		ensureSingleCellTypeIndex();
 		ensureSingleCellBiomaterialIndex();
 		ensureSingleCellNameIndex();
-		if (!template.collectionExists(Project.class)) {
-			template.createCollection(Project.class);
+		if (!template.collectionExists(Dataset.class)) {
+			template.createCollection(Dataset.class);
 		}
 		ensureProjectNameIndex();
 		ensureProjectTagIndex();
@@ -44,13 +44,13 @@ public class MongoDBCreator {
 	private void ensureProjectNameIndex() {
 		final Collation collation = Collation.of(Locale.ENGLISH).caseLevel(false).strength(2);
 		final Index index = new Index().on("name", Direction.ASC).collation(collation).unique();
-		template.indexOps(Project.class).ensureIndex(index);
+		template.indexOps(Dataset.class).ensureIndex(index);
 	}
 
 	private void ensureProjectTagIndex() {
 		final Collation collation = Collation.of(Locale.ENGLISH).caseLevel(false).strength(2);
 		final Index index = new Index().on("tag", Direction.ASC).collation(collation).unique();
-		template.indexOps(Project.class).ensureIndex(index);
+		template.indexOps(Dataset.class).ensureIndex(index);
 	}
 
 	private void ensureExpressionProjectIndex() {
@@ -97,7 +97,10 @@ public class MongoDBCreator {
 
 	private void ensureExpressionGeneIndex() {
 		final Collation collation = Collation.of(Locale.ENGLISH).caseLevel(false).strength(2);
-		final Index index = new Index().on("gene", Direction.ASC).collation(collation);
+		final Index index = new Index().on("gene", Direction.ASC).collation(collation)
+				.named("my_gene_index_with_collation");
 		template.indexOps(Expression.class).ensureIndex(index);
+		final Index index2 = new Index().on("gene", Direction.ASC).named("my_gene_index_simple");
+		template.indexOps(Expression.class).ensureIndex(index2);
 	}
 }
