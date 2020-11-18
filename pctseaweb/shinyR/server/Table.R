@@ -1,36 +1,8 @@
 
-createPlotWithCorrelations <- function(table, correlation_threshold, cell_type){
-  req(table)
-  # create a new column that says whether the correlation pass the threshold or not
-  table[,"positive"] <- table$Pearson.s.correlation > correlation_threshold
-  # remove correlations that are NaN
-  table <- table[!is.na(table$Pearson.s.correlation),]
-  # create a rank column
-  table[, "rank"] <- c(1:length(table[,1]))
-  # title
-  my_title <- "Ranks of cells by Pearson's correlation"
-  # filter by cell type
-  if(!missing(cell_type)){
-    if(!sjmisc::is_empty(cell_type)){
-      table <- table[table$Cell.type == cell_type,]
-      my_title <- paste("Ranks of cells of type '",cell_type,  "' by Pearson's correlation", sep="")
-    }else{
-      return()
-    }
-  }
-  ggplot(data = table,
-         aes(
-           x = rank,
-           y = Pearson.s.correlation,
-           group = positive,
-           fill = positive)) + # color by Comprador
-    labs(title = my_title, x = "cell #", y = "Pearson's correlation") +
-    geom_line(aes(color=positive))+
-    theme_classic()
-}
 
 createPlotWithScoreCalculation <- function(table, cell_type){
-  req(cell_type)
+  req(table, cell_type)
+  browser()
   table <- table[table$cell_type == cell_type, ]
   type <- table[table$type_or_other == 'TYPE', ]
   type <- type %>% select( 3:ncol(.) )
@@ -55,10 +27,13 @@ createPlotWithScoreCalculation <- function(table, cell_type){
     ylim(0,1)
 }
 
+enrichment_file <- reactiveVal()
 # select the enrichment file
-enrichment_file <- eventReactive(rv$unziped_files,{
-  folder = rv$unziped_files
-  paste(folder, .Platform$file.sep, list.files(folder, pattern = ".*cell_types_enrichment.txt")[1], sep = "")
+observeEvent(unziped_files(),{
+  browser()
+  folder <- unziped_files
+  folder <- paste(folder, .Platform$file.sep, list.files(folder, pattern = ".*cell_types_enrichment.txt")[1], sep = "")
+  enrichment_file(folder)
 })
 # read enrichment file into a table in background
 enrichment_table <- eventReactive(enrichment_file(),{
@@ -73,23 +48,24 @@ enrichment_table <- eventReactive(enrichment_file(),{
   detail = "Please wait for a few seconds..."
   )
 })
+
 # plot the table as soon as is loaded
 output$enrichmentDataTable <- renderDataTable({
   enrichment_table()
 },
-options = list(pageLength = 20)
+options = list(pageLength = 10)
 )
 
-cellTypes = reactive({
-  table <- rv$enrichmentTable
+# having the table, enable us to get the unique cell types
+observeEvent(enrichment_table(),{
+  table <- enrichment_table()
   req(table)
   table = table[table$ews>0,]
-  table <- table[!is.na(table$Cell.type),]
-  unique_cell_types = unique(rv$enrichmentTable$Cell.type)
-  unique_cell_types <- sort(unique_cell_types)
-  unique_cell_types
-})
-observe({
+  table <- table[!is.na(table$cell_type),]
+  unique_cell_types = unique(table$cell_type)
+  unique_cell_types <- c("",sort(unique_cell_types))
   updateSelectInput(session, "selectCellType",
-                    choices = cellTypes())
+                    choices = unique_cell_types)
 })
+
+

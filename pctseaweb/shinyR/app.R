@@ -206,11 +206,10 @@ server <- function(input, output, session) {
 
 
     rv <- reactiveValues(errorMessage="",
-                         enrichmentTable=NULL,
-                         correlationsTable=NULL,
                          scoresCalculationsTable=NULL,
                          unziped_files=NULL
     )
+    unziped_files <- reactiveVal()
     output$data_loaded <- reactive({FALSE})
     outputOptions(output, "data_loaded", suspendWhenHidden = FALSE)
 
@@ -227,7 +226,7 @@ server <- function(input, output, session) {
             setProgress(message = "Unzipping results...", value = 0)
             unzip(newZipFilepath, exdir = folderTo)
             setProgress(message = "Results unzipped", value = 1)
-            rv$unziped_files <- folderTo
+            unziped_files(folderTo)
         },
         detail = "This just will take a few seconds"
         )
@@ -236,8 +235,9 @@ server <- function(input, output, session) {
 
 
     # select the scores file
-    scores_file <- eventReactive(rv$unziped_files,{
-        folder = rv$unziped_files
+    scores_file <- eventReactive(unziped_files(),{
+        browser()
+        folder = unziped_files()
         paste(folder, .Platform$file.sep, list.files(folder, pattern = ".*score_calculations.txt")[1], sep = "")
     })
     # read the file
@@ -255,7 +255,14 @@ server <- function(input, output, session) {
     output$cellTypeCorrelationsPlot <- renderPlot(createPlotWithCorrelations(isolate({rv$correlationsTable}), 0.1, input$selectCellType))
 
     output$cellTypeScoreCalculationPlot <- renderPlot(createPlotWithScoreCalculation(isolate({rv$scoresCalculationsTable}), input$selectCellType))
+
+
 }
+
+
 
 # Run the application
 shinyApp(ui = ui, server = server, options = ( launch.browser = TRUE))
+
+
+

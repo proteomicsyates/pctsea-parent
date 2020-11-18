@@ -24,6 +24,9 @@ public class MongoDBCreator {
 		if (!template.collectionExists(Expression.class)) {
 			template.createCollection(Expression.class);
 		}
+		if (!template.collectionExists(PctseaRunLog.class)) {
+			template.createCollection(PctseaRunLog.class);
+		}
 		ensureExpressionGeneIndex();
 		ensureExpressionProjectIndex();
 		ensureExpressionCellTypeIndex();
@@ -34,6 +37,7 @@ public class MongoDBCreator {
 		ensureSingleCellTypeIndex();
 		ensureSingleCellBiomaterialIndex();
 		ensureSingleCellNameIndex();
+		ensureSingleCellDatasetTagIndex();
 		if (!template.collectionExists(Dataset.class)) {
 			template.createCollection(Dataset.class);
 		}
@@ -59,14 +63,14 @@ public class MongoDBCreator {
 		template.indexOps(Expression.class).ensureIndex(index);
 	}
 
-	private void ensureExpressionGeneAndProjectIndex() {
-		final Collation collation = Collation.of(Locale.ENGLISH).caseLevel(false).strength(2);
-		final Index index = new Index().on("projectTag", Direction.ASC).collation(collation);
-		template.indexOps(Expression.class).ensureIndex(index);
-	}
-
 	private void ensureSingleCellNameIndex() {
 		final Index index = new Index("name", Direction.ASC).unique();
+		template.indexOps(SingleCell.class).ensureIndex(index);
+
+	}
+
+	private void ensureSingleCellDatasetTagIndex() {
+		final Index index = new Index("datasetTag", Direction.ASC);
 		template.indexOps(SingleCell.class).ensureIndex(index);
 
 	}

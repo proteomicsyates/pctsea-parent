@@ -383,6 +383,8 @@ public class PCTSEA {
 						}
 						// set finish time
 						runLog.setFinished(ZonedDateTime.now(ZoneId.systemDefault()));
+						// save log
+						mongoBaseService.getMongoTemplate().save(runLog);
 
 						if (!copied) {
 							result.setResultsFileForViewer(null);
