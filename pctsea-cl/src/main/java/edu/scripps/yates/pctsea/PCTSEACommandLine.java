@@ -287,12 +287,14 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 
 	private String getAvailableDatasets() {
 		final StringBuilder sb = new StringBuilder();
-		final List<Dataset> findAll = this.dmr.findAll();
-		for (final Dataset dataset : findAll) {
-			if (!"".equals(sb.toString())) {
-				sb.append(",");
+		if (this.dmr != null) {
+			final List<Dataset> findAll = this.dmr.findAll();
+			for (final Dataset dataset : findAll) {
+				if (!"".equals(sb.toString())) {
+					sb.append(",");
+				}
+				sb.append(dataset.getTag());
 			}
-			sb.append(dataset.getTag());
 		}
 		return sb.toString();
 	}
