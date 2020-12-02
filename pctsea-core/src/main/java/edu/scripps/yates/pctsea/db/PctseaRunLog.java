@@ -1,6 +1,6 @@
 package edu.scripps.yates.pctsea.db;
 
-import java.time.ZonedDateTime;
+import java.util.Date;
 
 import org.springframework.data.annotation.Id;
 
@@ -9,8 +9,8 @@ import edu.scripps.yates.pctsea.model.InputParameters;
 public class PctseaRunLog {
 	@Id
 	private String id;
-	private ZonedDateTime started;
-	private ZonedDateTime finished;
+	private Date started;
+	private Date finished;
 	private String timeStamp;
 	private int numInputGenes;
 	private InputParameters inputParameters;
@@ -27,11 +27,11 @@ public class PctseaRunLog {
 		this.id = id;
 	}
 
-	public ZonedDateTime getStarted() {
+	public Date getStarted() {
 		return started;
 	}
 
-	public void setStarted(ZonedDateTime started) {
+	public void setStarted(Date started) {
 		this.started = started;
 	}
 
@@ -63,11 +63,11 @@ public class PctseaRunLog {
 		return inputParameters;
 	}
 
-	public ZonedDateTime getFinished() {
+	public Date getFinished() {
 		return finished;
 	}
 
-	public void setFinished(ZonedDateTime finished) {
+	public void setFinished(Date finished) {
 		this.finished = finished;
 	}
 }

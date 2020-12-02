@@ -48,6 +48,7 @@ import com.vaadin.flow.router.Route;
 import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
+import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
@@ -86,6 +87,8 @@ public class AnalyzeView extends VerticalLayout {
 	@Autowired
 	private ExpressionMongoRepository emr;
 	@Autowired
+	private PctseaRunLogRepository runLogsRepo;
+	@Autowired
 	private MongoBaseService mbs;
 	private Runnable backgroundProcess;
 	private final HorizontalLayout resultsPanel;
@@ -123,15 +126,15 @@ public class AnalyzeView extends VerticalLayout {
 		binder = new Binder<>(InputParameters.class);
 		final InputParameters inputParameters = new InputParameters();
 		binder.setBean(inputParameters);
-		binder.forField(this.outputPrefix).asRequired("Required")
+		binder.forField(outputPrefix).asRequired("Required")
 				.withValidator(prefix -> !"".equals(prefix), "Prefix is required")
 				.bind(InputParameters::getOutputPrefix, InputParameters::setOutputPrefix);
-		binder.forField(this.minGenesCells).asRequired("Required").withValidator(num -> num >= 1, "Minimum is 1")
+		binder.forField(minGenesCells).asRequired("Required").withValidator(num -> num >= 1, "Minimum is 1")
 				.bind(InputParameters::getMinGenesCells, InputParameters::setMinGenesCells);
-		binder.forField(this.numPermutations).asRequired("Required")
+		binder.forField(numPermutations).asRequired("Required")
 				.withValidator(num -> num >= 10, "Minimum number of permutations: 10")
 				.bind(InputParameters::getNumPermutations, InputParameters::setNumPermutations);
-		binder.forField(this.minCorrelation).asRequired("Required")
+		binder.forField(minCorrelation).asRequired("Required")
 				.withValidator(num -> num >= 0.0, "Minimum correlation is 0.0")
 				.withValidator(num -> num <= 1.0, "Maximum correlation is 1.0")
 				.bind(InputParameters::getMinCorrelation, InputParameters::setMinCorrelation);
@@ -177,7 +180,7 @@ public class AnalyzeView extends VerticalLayout {
 
 	private void startPCTSEAAnalysis(InputParameters inputParameters) {
 //		showSpinnerDialog();
-		final PCTSEA pTCPctsea = new PCTSEA(inputParameters, emr, scmr, mbs);
+		final PCTSEA pTCPctsea = new PCTSEA(inputParameters, emr, scmr, runLogsRepo, mbs);
 		pTCPctsea.setStatusListener(new StatusListener() {
 
 			@Override
@@ -193,9 +196,9 @@ public class AnalyzeView extends VerticalLayout {
 			@Override
 			public void run() {
 
-				getUI().get().access(() -> AnalyzeView.this.submitButton.setEnabled(false));
+				getUI().get().access(() -> submitButton.setEnabled(false));
 				final PCTSEAResult results = pTCPctsea.run();
-				getUI().get().access(() -> AnalyzeView.this.submitButton.setEnabled(true));
+				getUI().get().access(() -> submitButton.setEnabled(true));
 				showLinkToResults(results.getUrlToViewer());
 			}
 		};
@@ -211,34 +214,34 @@ public class AnalyzeView extends VerticalLayout {
 	}
 
 	protected void showMessage(String statusMessage) {
-		this.statusArea.setValue(this.statusArea.getValue() + "\n" + statusMessage);
+		statusArea.setValue(statusArea.getValue() + "\n" + statusMessage);
 	}
 
 	private void initializeInputParamsToDefaults() {
 		//
 		outputPrefix.setHelperText("All output files will be named with that prefix on them");
 		//
-		this.minCorrelation.setHelperText("Values from 0.0 to 1.0");
-		this.minCorrelation.setValue(defaultMinCorrelation);
-		this.minCorrelation.setMax(1.0);
-		this.minCorrelation.setMin(0.0);
+		minCorrelation.setHelperText("Values from 0.0 to 1.0");
+		minCorrelation.setValue(defaultMinCorrelation);
+		minCorrelation.setMax(1.0);
+		minCorrelation.setMin(0.0);
 		//
-		this.minGenesCells.setValue(defaultMinGenes);
-		this.minGenesCells
+		minGenesCells.setValue(defaultMinGenes);
+		minGenesCells
 				.setHelperText("Minimum number of proteins that should have a non-zero expression value in a cell. "
 						+ "Minimum value: 1");
-		this.minGenesCells.setMin(1);
+		minGenesCells.setMin(1);
 		//
-		this.numPermutations.setValue(defaultPermutations);
-		this.numPermutations.setMin(10);
-		this.numPermutations.setHelperText(
+		numPermutations.setValue(defaultPermutations);
+		numPermutations.setMin(10);
+		numPermutations.setHelperText(
 				"Number of permutations for calculating significance of the enrichment scores, being a value of 1000 reasonable. Minimum value: 10");
 		//
-		this.upload.setMaxFiles(1);
+		upload.setMaxFiles(1);
 		final int maxFileSizeInBytes = 100 * 1024 * 1024; // 100Mb
-		this.upload.setMaxFileSize(maxFileSizeInBytes);
-		this.upload.setMinWidth("25em");
-		this.upload.setDropAllowed(true);
+		upload.setMaxFileSize(maxFileSizeInBytes);
+		upload.setMinWidth("25em");
+		upload.setDropAllowed(true);
 
 		upload.addFileRejectedListener(event -> {
 			VaadinUtil.showErrorDialog(event.getErrorMessage());
@@ -259,7 +262,7 @@ public class AnalyzeView extends VerticalLayout {
 
 			} catch (final Exception e) {
 				VaadinUtil.showErrorDialog("Error validating input file: " + e.getMessage());
-				this.inputFile = null;
+				inputFile = null;
 			}
 		});
 //		upload.addSucceededListener(event -> {
@@ -361,9 +364,9 @@ public class AnalyzeView extends VerticalLayout {
 //		email.setErrorMessage("Please enter a valid email address");
 
 		formLayout.add(minCorrelation);
-		formLayout.add(this.minGenesCells);
-		formLayout.add(this.outputPrefix);
-		formLayout.add(this.numPermutations);
+		formLayout.add(minGenesCells);
+		formLayout.add(outputPrefix);
+		formLayout.add(numPermutations);
 		return formLayout;
 	}
 

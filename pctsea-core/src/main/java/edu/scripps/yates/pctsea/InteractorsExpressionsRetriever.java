@@ -12,7 +12,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
-import org.apache.log4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import edu.scripps.yates.annotations.uniprot.UniprotProteinLocalRetriever;
 import edu.scripps.yates.pctsea.db.Expression;
@@ -40,7 +40,7 @@ import gnu.trove.map.hash.TObjectIntHashMap;
 import gnu.trove.set.hash.THashSet;
 
 public class InteractorsExpressionsRetriever {
-	private final static Logger log = Logger.getLogger(InteractorsExpressionsRetriever.class);
+	private final static org.slf4j.Logger log = LoggerFactory.getLogger(InteractorsExpressionsRetriever.class);
 	private final TIntObjectMap<Gene> genesById = new TIntObjectHashMap<Gene>();
 	private final TIntFloatMap interactorExpressionsInOurExperiment = new TIntFloatHashMap();
 	private final TIntList geneIDs = new TIntArrayList();
@@ -209,15 +209,20 @@ public class InteractorsExpressionsRetriever {
 		System.out.println(geneIDsByGeneNameMap.size() + " - " + geneNamesByGeneIDMap.size());
 		final Set<String> singleCellNames = new THashSet<String>();
 		final List<String> genesNotFound = new ArrayList<String>();
-		final ProgressCounter counter = new ProgressCounter(inputProteinGeneList.size(),
-				ProgressPrintingType.PERCENTAGE_STEPS, 0, true);
-		counter.setSuffix("Getting expression profiles of interest...");
 
 		final Set<String> genes = getGenesFromInputList(inputProteinGeneList);
 
-		final Map<String, List<Expression>> expressionByGenes = mongoBaseService.getExpressionByGenes(genes, datasets);
-		for (final String geneName : expressionByGenes.keySet()) {
-			final List<Expression> expressions = expressionByGenes.get(geneName);
+		final ProgressCounter counter = new ProgressCounter(genes.size(), ProgressPrintingType.PERCENTAGE_STEPS, 0,
+				true);
+		counter.setSuffix("Getting expression profiles of interest...");
+		for (final String geneName : genes) {
+
+			final List<Expression> expressions = mongoBaseService.getExpressionByGene(geneName, datasets);
+			counter.increment();
+			final String printIfNecessary = counter.printIfNecessary();
+			if (!"".equals(printIfNecessary)) {
+				log.info(printIfNecessary);
+			}
 			// it already has an id associated from the call to getGenesFromInputList
 			final int geneID = geneIDsByGeneNameMap.get(geneName);
 			if (expressions == null || expressions.isEmpty()) {
@@ -230,10 +235,7 @@ public class InteractorsExpressionsRetriever {
 			geneIDs.add(geneID);
 
 			for (final Expression expression : expressions) {
-				if (datasets != null && !datasets.contains(expression.getProjectTag())) {
-//					System.out.println(projectID + " different than " + expression.getProject().getId());
-					continue;
-				}
+
 				final float interactorExpressionInSingleCell = expression.getExpression();
 				final String singleCellName = expression.getCellName();
 				singleCellNames.add(singleCellName);

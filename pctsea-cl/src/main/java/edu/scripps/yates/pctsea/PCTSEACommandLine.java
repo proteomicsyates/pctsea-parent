@@ -15,6 +15,7 @@ import edu.scripps.yates.pctsea.db.Dataset;
 import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
+import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.InputParameters;
@@ -31,15 +32,15 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private final Logger log = Logger.getLogger(PCTSEACommandLine.class);
 
 	public PCTSEACommandLine(String[] args, DatasetMongoRepository dmr, ExpressionMongoRepository emr,
-			SingleCellMongoRepository scmr, MongoBaseService mbs)
+			SingleCellMongoRepository scmr, PctseaRunLogRepository runLog, MongoBaseService mbs)
 			throws ParseException, DoNotInvokeRunMethod, SomeErrorInParametersOcurred {
 		super(args);
-		pctsea = new PCTSEA(emr, scmr, mbs);
+		pctsea = new PCTSEA(emr, scmr, runLog, mbs);
 	}
 
 	@Override
 	public void run() {
-		final PCTSEAResult result = this.pctsea.run();
+		final PCTSEAResult result = pctsea.run();
 		log.info("PCTSEA got some results in "
 				+ DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime()));
 		log.info("Results file created at: " + result.getResultsFile());
@@ -57,13 +58,13 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	protected void initToolFromCommandLineOptions(CommandLine cmd) throws SomeErrorInParametersOcurred {
 
 		if (cmd.hasOption(InputParameters.OUT)) {
-			this.pctsea.setPrefix(cmd.getOptionValue(InputParameters.OUT));
+			pctsea.setPrefix(cmd.getOptionValue(InputParameters.OUT));
 
 		} else {
 			errorInParameters("prefix name for the output files is missing");
 		}
 		if (cmd.hasOption(InputParameters.EMAIL)) {
-			this.pctsea.setEmail(cmd.getOptionValue(InputParameters.EMAIL));
+			pctsea.setEmail(cmd.getOptionValue(InputParameters.EMAIL));
 
 		} else {
 			// we will not be able to send the email with the results
@@ -216,7 +217,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 
 	@Override
 	public String printCommandLineSintax() {
-		return "-out [prefix] -eef [experimental expression file]\n Available datasets: " + getAvailableDatasets();
+		return "-out [prefix] -eef [experimental expression file]\n";
 	}
 
 	@Override
@@ -280,14 +281,14 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		options.add(email);
 		//
 		final Option datasets = new Option(InputParameters.DATASETS, true,
-				"Comma separated values of the dataset againts you want to analyze your data.");
+				"Comma separated values of the dataset against you want to analyze your data.");
 		options.add(datasets);
 		return options;
 	}
 
 	private String getAvailableDatasets() {
 		final StringBuilder sb = new StringBuilder();
-		final List<Dataset> findAll = this.dmr.findAll();
+		final List<Dataset> findAll = dmr.findAll();
 		for (final Dataset dataset : findAll) {
 			if (!"".equals(sb.toString())) {
 				sb.append(",");

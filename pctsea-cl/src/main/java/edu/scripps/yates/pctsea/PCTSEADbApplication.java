@@ -14,6 +14,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
+import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.db.datasets.singlecellshuman.GeneToUpperCase;
 import edu.scripps.yates.pctsea.db.datasets.singlecellshuman.HumanSingleCellsDatasetCreation;
@@ -28,34 +29,33 @@ public class PCTSEADbApplication implements CommandLineRunner {
 	private SingleCellMongoRepository scmr;
 	@Autowired
 	private MongoBaseService mbs;
-
+	@Autowired
+	private PctseaRunLogRepository runLogsRepo;
 	@Autowired
 	private ExpressionMongoRepository emr;
+
+	private final static String MONGO_TUNNEL_PORT_ENV_VAR = "PCTSEA_MONGO_TUNNEL_PORT";
+	private final static String PCTSEA_DB_SERVER_HOST_ENV_VAR = "PCTSEA_DB_SERVER_HOST";
 
 	public static void main(String[] args) {
 
 		// if we find the envirnoment variable MONGO_TUNNEL_PORT, it will use the
 		// application-remoteTunnel.properties which uses a different db port
-		final String mongoTunnelPort = "MONGO_TUNNEL_PORT";
-		boolean useTunnelProperties = false;
 
 		final Map<String, String> getenv = System.getenv();
-		final String port = getenv.get(mongoTunnelPort);
-		if (port != null) {
-			System.out.println(mongoTunnelPort + ":" + port);
-			if (!FORCE_DB_LOCAL && port.equals("27017")) {
-				useTunnelProperties = true;
-
-			}
-		}
+		final String port = getenv.get(MONGO_TUNNEL_PORT_ENV_VAR);
+		final String pctseaMongoDBServerHost = getenv.get(PCTSEA_DB_SERVER_HOST_ENV_VAR);
 
 		final SpringApplicationBuilder builder = new SpringApplicationBuilder(PCTSEADbApplication.class);
 		builder.headless(false);
-		if (useTunnelProperties) {
-			System.out.println(
-					"SSH tunnel configuration detected. Using application-remoteTunnel.properties files to connect to remote MongoDB");
-			builder.properties("spring.config.location=classpath:/application-remoteTunnel.properties")
-					.logStartupInfo(true);
+		if (pctseaMongoDBServerHost != null) {
+			System.out.println("Production environment. Using spring.data.mongodb.host:" + pctseaMongoDBServerHost);
+			builder.properties("spring.data.mongodb.host:" + pctseaMongoDBServerHost).logStartupInfo(true);
+		} else if (port != null && !FORCE_DB_LOCAL) {
+			System.out.println("SSH tunnel configuration detected. Using spring.data.mongodb.port:" + port);
+			builder
+//			.properties("spring.config.location=classpath:/application-remoteTunnel.properties")
+					.properties("spring.data.mongodb.port:" + port).logStartupInfo(true);
 		} else {
 			builder.logStartupInfo(false);
 		}
@@ -67,6 +67,13 @@ public class PCTSEADbApplication implements CommandLineRunner {
 		final Properties properties = new Properties();
 		properties.load(
 				PCTSEADbApplication.class.getClassLoader().getResourceAsStream("application-remoteTunnel.properties"));
+		return properties;
+	}
+
+	private static Properties getPropertiesForConnectionToSealion() throws IOException {
+		final Properties properties = new Properties();
+		properties.load(PCTSEADbApplication.class.getClassLoader()
+				.getResourceAsStream("application-connection-to-sealion.properties"));
 		return properties;
 	}
 
@@ -129,7 +136,7 @@ public class PCTSEADbApplication implements CommandLineRunner {
 
 		PCTSEACommandLine c = null;
 		try {
-			c = new PCTSEACommandLine(args, pmr, emr, scmr, mbs);
+			c = new PCTSEACommandLine(args, pmr, emr, scmr, runLogsRepo, mbs);
 
 			c.safeRun();
 

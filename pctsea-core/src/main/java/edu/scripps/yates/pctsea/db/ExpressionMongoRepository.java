@@ -10,7 +10,7 @@ public interface ExpressionMongoRepository extends MongoRepository<Expression, S
 
 	// in this way, we ensure that the index using collation that ignore case is
 	// used
-	@Query(collation = "{locale:'en',strength:2}")
+//	@Query(collation = "{locale:'en',strength:2}")
 	public List<Expression> findByGene(String gene);
 
 	public List<Expression> findByGeneLikeAndProjectTagLike(String gene, String projectTag);

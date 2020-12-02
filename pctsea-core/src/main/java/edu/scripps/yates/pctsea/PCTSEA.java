@@ -5,13 +5,13 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.URL;
 import java.text.DecimalFormat;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -19,6 +19,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -55,6 +56,7 @@ import edu.scripps.yates.pctsea.correlation.CorrelationThreshold;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.PctseaRunLog;
+import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.CellTypeClassification;
@@ -107,9 +109,12 @@ import tagbio.umap.metric.EuclideanMetric;
 
 public class PCTSEA {
 
-	public ExpressionMongoRepository expressionMongoRepo;
+	private final ExpressionMongoRepository expressionMongoRepo;
 
-	public SingleCellMongoRepository singleCellMongoRepo;
+	private final SingleCellMongoRepository singleCellMongoRepo;
+	private final PctseaRunLogRepository runLogsRepo;
+	private final MongoBaseService mongoBaseService;
+
 	private final static org.slf4j.Logger log = LoggerFactory.getLogger(PCTSEA.class);
 //	private final static File filesfolder = new File(
 //			"C:\\Users\\salvador\\Desktop\\casimir\\SARS_Cov2\\singlecell_human");
@@ -142,49 +147,51 @@ public class PCTSEA {
 
 	private String currentTimeStamp;
 
-	private final MongoBaseService mongoBaseService;
-
 	private String email;
 
 	private Set<String> datasets;
 	// we will get the values of this environment variables from the system in order
 	// to know where to keep the results files and where to redirect to the viewer
-	public static String finalResultsFolderEnvironmentVariable = "PCTSEA_RESULTS_FOLDER";
-	public final String finalResultsFolder;
+	public static String resultsViewerFinalFolderEnvironmentVariable = "PCTSEA_VIEWER_RESULTS_FOLDER";
+	public final String finalResultsFolderViewer;
 	public static String resultsViewerURLEnvironmentVariable = "PCTSEA_VIEWER_URL";
 	public final String resultsViewerURL;
 
 	public PCTSEA(InputParameters inputParameters, ExpressionMongoRepository expressionMongoRepo,
-			SingleCellMongoRepository singleCellMongoRepo, MongoBaseService mongoBaseService) {
+			SingleCellMongoRepository singleCellMongoRepo, PctseaRunLogRepository runLogsRepo,
+			MongoBaseService mongoBaseService) {
 		this.expressionMongoRepo = expressionMongoRepo;
 		this.singleCellMongoRepo = singleCellMongoRepo;
 		this.mongoBaseService = mongoBaseService;
-		finalResultsFolder = System.getenv(finalResultsFolderEnvironmentVariable);
+		this.runLogsRepo = runLogsRepo;
+		finalResultsFolderViewer = System.getenv(resultsViewerFinalFolderEnvironmentVariable);
 		resultsViewerURL = System.getenv(resultsViewerURLEnvironmentVariable);
-		this.correlationThreshold = new CorrelationThreshold(inputParameters.getMinCorrelation());
-		this.cellTypeBranches
+		correlationThreshold = new CorrelationThreshold(inputParameters.getMinCorrelation());
+		cellTypeBranches
 				.addAll(CellTypeBranch.parseCellTypeBranchesString(inputParameters.getCellTypesClassification()));
-		this.experimentExpressionFile = new File(inputParameters.getInputDataFile());
-		this.generateCharts = inputParameters.isGenerateCharts();
-		this.loadRandomDistributionsIfExist = inputParameters.isLoadRandom();
-		this.maxIterations = inputParameters.getNumPermutations();
-		this.minCellsPerCellTypeForPDF = inputParameters.getMinCellsPerCellType();
-		this.minNumberExpressedGenesInCell = inputParameters.getMinGenesCells();
+		experimentExpressionFile = new File(inputParameters.getInputDataFile());
+		generateCharts = inputParameters.isGenerateCharts();
+		loadRandomDistributionsIfExist = inputParameters.isLoadRandom();
+		maxIterations = inputParameters.getNumPermutations();
+		minCellsPerCellTypeForPDF = inputParameters.getMinCellsPerCellType();
+		minNumberExpressedGenesInCell = inputParameters.getMinGenesCells();
 		// we check validity of prefix as file name
-		this.prefix = FileUtils.checkInvalidCharacterNameForFileName(inputParameters.getOutputPrefix());
-		if (!this.prefix.equals(inputParameters.getOutputPrefix())) {
+		prefix = FileUtils.checkInvalidCharacterNameForFileName(inputParameters.getOutputPrefix());
+		if (!prefix.equals(inputParameters.getOutputPrefix())) {
 			throw new IllegalArgumentException("Prefix contains invalid characters");
 		}
 
 	}
 
 	public PCTSEA(ExpressionMongoRepository expressionMongoRepo, SingleCellMongoRepository singleCellMongoRepo,
-			MongoBaseService mongoBaseService) {
+			PctseaRunLogRepository runLogsRepo, MongoBaseService mongoBaseService) {
 		this.expressionMongoRepo = expressionMongoRepo;
 		this.singleCellMongoRepo = singleCellMongoRepo;
 		this.mongoBaseService = mongoBaseService;
-		finalResultsFolder = System.getenv(finalResultsFolderEnvironmentVariable);
+		this.runLogsRepo = runLogsRepo;
+		finalResultsFolderViewer = System.getenv(resultsViewerFinalFolderEnvironmentVariable);
 		resultsViewerURL = System.getenv(resultsViewerURLEnvironmentVariable);
+
 	}
 
 	/**
@@ -208,8 +215,8 @@ public class PCTSEA {
 //	}
 
 	private void setCellTypeBranch(CellTypeBranch cellTypeBranch2) {
-		this.cellTypeBranch = cellTypeBranch2;
-		this.prefix = originalPrefix + "_" + cellTypeBranch.name();
+		cellTypeBranch = cellTypeBranch2;
+		prefix = originalPrefix + "_" + cellTypeBranch.name();
 
 	}
 
@@ -219,8 +226,10 @@ public class PCTSEA {
 		final PctseaRunLog runLog = new PctseaRunLog();
 
 		runLog.setTimeStamp(currentTimeStamp);
-		runLog.setStarted(ZonedDateTime.now(ZoneId.systemDefault()));
+		runLog.setStarted(getDateNow());
 		runLog.setInputParameters(getInputParameters());
+		// save to repo
+		runLogsRepo.save(runLog);
 		if (statusListener != null) {
 			// redirect output to textarea status
 			System.setOut(new MyPrintStream(new StatusListenerOutputStream(statusListener)));
@@ -229,16 +238,21 @@ public class PCTSEA {
 		Exception errorMessage = null;
 		final File zipOutputFile = getZipOutputFile();
 		// create a copy of the file for the viewer
-		final File resultsFileForViewer = new File(
-				this.finalResultsFolder + File.separator + FilenameUtils.getName(zipOutputFile.getAbsolutePath()));
-
+		File resultsFileForViewer = null;
+		if (finalResultsFolderViewer != null) {
+			resultsFileForViewer = new File(
+					finalResultsFolderViewer + File.separator + FilenameUtils.getName(zipOutputFile.getAbsolutePath()));
+		}
 		// create PCTSEAResult object
 		PCTSEAResult result = null;
 		try {
-			final URL urlToViewer = new URL(resultsViewerURL + "/?results="
-					+ FilenameUtils.getBaseName(resultsFileForViewer.getAbsolutePath()));
+			URL urlToViewer = null;
+			if (resultsViewerURL != null) {
+				urlToViewer = new URL(resultsViewerURL + "/?results="
+						+ FilenameUtils.getBaseName(resultsFileForViewer.getAbsolutePath()));
+			}
 			result = new PCTSEAResult(zipOutputFile, resultsFileForViewer, urlToViewer, runLog);
-			if (this.generateCharts) {
+			if (generateCharts) {
 				ChartsGenerated.getNewInstance();
 			}
 //			// read input files
@@ -252,8 +266,8 @@ public class PCTSEA {
 
 			final List<SingleCell> singleCellList = getSingleCellListFromDB(datasets);
 
-			interactorExpressions = new InteractorsExpressionsRetriever(this.expressionMongoRepo, this.mongoBaseService,
-					this.experimentExpressionFile, datasets);
+			interactorExpressions = new InteractorsExpressionsRetriever(expressionMongoRepo, mongoBaseService,
+					experimentExpressionFile, datasets);
 			// log
 			runLog.setNumInputGenes(interactorExpressions.getInteractorsGeneIDs().size());
 
@@ -301,7 +315,7 @@ public class PCTSEA {
 
 				///////////////////////////////////////////////
 				calculateEnrichmentScore(cellTypeClassifications, singleCellsPassingCorrelationThreshold,
-						cellTypeBranch, true, false, true, false, this.generateCharts, this.minCellsPerCellTypeForPDF,
+						cellTypeBranch, true, false, true, false, generateCharts, minCellsPerCellTypeForPDF,
 						plotNegativeEnrichedCellTypes);
 
 				// calculate significance by cell types permutations
@@ -343,18 +357,18 @@ public class PCTSEA {
 			throw new RuntimeException(e);
 		} finally {
 			if (errorMessage != null) {
-				if (this.savingFiles != null && !this.savingFiles.isDone()) {
-					this.savingFiles.cancel(true);
+				if (savingFiles != null && !savingFiles.isDone()) {
+					savingFiles.cancel(true);
 				}
 
 			} else {
-				if (this.savingFiles != null) {
-					if (!this.savingFiles.isDone()) {
+				if (savingFiles != null) {
+					if (!savingFiles.isDone()) {
 
 						log.info("Waiting for thread creating charts to finish...");
 					}
 					try {
-						this.savingFiles.get();
+						savingFiles.get();
 					} catch (final InterruptedException e1) {
 						log.error("Thread creating charts has been interrupted: " + e1.getMessage());
 					} catch (final ExecutionException e1) {
@@ -365,26 +379,28 @@ public class PCTSEA {
 					try {
 						log.info("Writting charts into PDF files...");
 						ChartsGenerated.getInstance().saveChartsAsPDF();
-						log.info("PDFs with all charts written at: '" + resultsSubfolder.getAbsolutePath() + "'");
+						log.info("PDFs created");
 						// add pdf file to tar file
 
 						// create tar.gz with all output files
 						printGZipOutputFile(getCurrentTimeStampFolder(), zipOutputFile);
 
 						boolean copied = false;
-						try {
-							Files.copy(zipOutputFile, resultsFileForViewer);
-							copied = true;
-						} catch (final IOException e) {
-							e.printStackTrace();
-							log.error("Error making copy of the results for the viewer: " + e.getMessage());
-						} catch (final IllegalArgumentException e) {
-							e.printStackTrace();
+						if (resultsFileForViewer != null) {
+							try {
+								Files.copy(zipOutputFile, resultsFileForViewer);
+								copied = true;
+							} catch (final IOException e) {
+								e.printStackTrace();
+								log.error("Error making copy of the results for the viewer: " + e.getMessage());
+							} catch (final IllegalArgumentException e) {
+								e.printStackTrace();
+							}
 						}
 						// set finish time
-						runLog.setFinished(ZonedDateTime.now(ZoneId.systemDefault()));
-						// save log
-						mongoBaseService.getMongoTemplate().save(runLog);
+						runLog.setFinished(getDateNow());
+						// update log
+						runLogsRepo.save(runLog);
 
 						if (!copied) {
 							result.setResultsFileForViewer(null);
@@ -404,18 +420,22 @@ public class PCTSEA {
 		}
 	}
 
+	private Date getDateNow() {
+		return Calendar.getInstance(TimeZone.getDefault()).getTime();
+	}
+
 	private InputParameters getInputParameters() {
 		final InputParameters inputParameters = new InputParameters();
 		inputParameters.setCellTypesClassification(CellTypeBranch.getStringSeparated(cellTypeBranches, ","));
 		inputParameters.setEmail(email);
 		inputParameters.setGenerateCharts(generateCharts);
-		inputParameters.setInputDataFile(FilenameUtils.getName(this.experimentExpressionFile.getAbsolutePath()));
+		inputParameters.setInputDataFile(FilenameUtils.getName(experimentExpressionFile.getAbsolutePath()));
 		inputParameters.setLoadRandom(loadRandomDistributionsIfExist);
 		inputParameters.setMinCellsPerCellType(minCellsPerCellTypeForPDF);
-		inputParameters.setMinCorrelation(this.correlationThreshold.getThresholdValue());
-		inputParameters.setMinGenesCells(Double.valueOf(this.minNumberExpressedGenesInCell).intValue());
-		inputParameters.setDatasets(this.datasets);
-		inputParameters.setNumPermutations(this.maxIterations);
+		inputParameters.setMinCorrelation(correlationThreshold.getThresholdValue());
+		inputParameters.setMinGenesCells(Double.valueOf(minNumberExpressedGenesInCell).intValue());
+		inputParameters.setDatasets(datasets);
+		inputParameters.setNumPermutations(maxIterations);
 		inputParameters.setOutputPrefix(prefix);
 		inputParameters.setPlotNegativeEnriched(plotNegativeEnrichedCellTypes);
 		return inputParameters;
@@ -473,7 +493,24 @@ public class PCTSEA {
 
 	private void printGZipOutputFile(File folder, File zipFile) throws IOException {
 		log.info("Compacting output files in single zip file...");
+		// move out the correlations file so that is not included in the zip file
+		final File tempFile = File.createTempFile("correlations", "txt");
+		final String fileName = FilenameUtils.getName(getCorrelationsOutputFile().getAbsolutePath());
+		final File correlationsFile = folder.listFiles(new FilenameFilter() {
+
+			@Override
+			public boolean accept(File dir, String name) {
+
+				if (name.equals(fileName)) {
+					return true;
+				}
+				return false;
+			}
+		})[0];
+		Files.move(correlationsFile, tempFile);
 		ZipManager.addFileToZipFile(folder, zipFile, true);
+		// move back
+		Files.move(tempFile, correlationsFile);
 
 		log.info("Compressed file created at: " + zipFile.getAbsolutePath() + " ("
 				+ FileUtils.getDescriptiveSizeFromBytes(zipFile.length()) + ")");
@@ -667,7 +704,7 @@ public class PCTSEA {
 	 */
 	private void createDistributionOfCorrelationsOverRankedCells(List<SingleCell> singleCellList,
 			CorrelationThreshold correlationThreshold) {
-		if (this.generateCharts) {
+		if (generateCharts) {
 			PCTSEAUtils.sortByDescendingCorrelation(singleCellList);
 			final XYSeriesCollection dataset = new XYSeriesCollection();
 			final XYSeries positiveCorrelations = new XYSeries("corr >= " + correlationThreshold.getThresholdValue());
@@ -715,7 +752,7 @@ public class PCTSEA {
 	 * @param singleCellList
 	 */
 	private void createHistogramOfCorrelatingGenes(List<SingleCell> singleCellList, Double minCorrelation) {
-		if (this.generateCharts) {
+		if (generateCharts) {
 			final DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 			final TIntIntMap map = new TIntIntHashMap();
 			int totalCells = 0;
@@ -904,10 +941,10 @@ public class PCTSEA {
 		final List<edu.scripps.yates.pctsea.db.SingleCell> singleCellsFromDB = new ArrayList<edu.scripps.yates.pctsea.db.SingleCell>();
 		if (datasets != null) {
 			for (final String dataset : datasets) {
-				singleCellsFromDB.addAll(this.singleCellMongoRepo.findByDatasetTag(dataset));
+				singleCellsFromDB.addAll(singleCellMongoRepo.findByDatasetTag(dataset));
 			}
 		} else {
-			singleCellsFromDB.addAll(this.singleCellMongoRepo.findAll());
+			singleCellsFromDB.addAll(singleCellMongoRepo.findAll());
 		}
 
 		int cellID = 0;
@@ -1432,8 +1469,8 @@ public class PCTSEA {
 	 * @return
 	 */
 	private File getCurrentTimeStampFolder() {
-		final String currenttimeStampPath = this.experimentExpressionFile.getParent() + File.separator
-				+ currentTimeStamp + File.separator;
+		final String currenttimeStampPath = experimentExpressionFile.getParent() + File.separator + currentTimeStamp
+				+ File.separator;
 		final File file = new File(currenttimeStampPath);
 		file.mkdirs();
 		return file;
@@ -1660,16 +1697,16 @@ public class PCTSEA {
 		final StringBuilder sb = new StringBuilder();
 		sb.append(InputParameters.EMAIL + " = " + email + "\n");
 		sb.append(InputParameters.OUT + " = " + originalPrefix + "\n");
-		sb.append(InputParameters.PERM + " = " + this.maxIterations + "\n");
-		sb.append(InputParameters.EEF + " = " + this.experimentExpressionFile.getAbsolutePath() + "\n");
-		sb.append(InputParameters.CHARTS + " = " + this.generateCharts + "\n");
-		sb.append(InputParameters.MIN_CORRELATION + " = " + this.correlationThreshold.getThresholdValue() + "\n");
-		sb.append(InputParameters.MIN_GENES_CELLS + " = " + this.minNumberExpressedGenesInCell + "\n");
+		sb.append(InputParameters.PERM + " = " + maxIterations + "\n");
+		sb.append(InputParameters.EEF + " = " + experimentExpressionFile.getAbsolutePath() + "\n");
+		sb.append(InputParameters.CHARTS + " = " + generateCharts + "\n");
+		sb.append(InputParameters.MIN_CORRELATION + " = " + correlationThreshold.getThresholdValue() + "\n");
+		sb.append(InputParameters.MIN_GENES_CELLS + " = " + minNumberExpressedGenesInCell + "\n");
 		sb.append(InputParameters.CELL_TYPES_CLASSIFICATION + " = "
-				+ CellTypeBranch.getStringSeparated(this.cellTypeBranches, ",") + "\n");
-		sb.append(InputParameters.LOAD_RANDOM + " = " + this.loadRandomDistributionsIfExist + "\n");
-		sb.append(InputParameters.MIN_CELLS_PER_CELL_TYPE + " = " + this.minCellsPerCellTypeForPDF + "\n");
-		sb.append(InputParameters.PLOT_NEGATIVE_ENRICHED + " = " + this.plotNegativeEnrichedCellTypes + "\n");
+				+ CellTypeBranch.getStringSeparated(cellTypeBranches, ",") + "\n");
+		sb.append(InputParameters.LOAD_RANDOM + " = " + loadRandomDistributionsIfExist + "\n");
+		sb.append(InputParameters.MIN_CELLS_PER_CELL_TYPE + " = " + minCellsPerCellTypeForPDF + "\n");
+		sb.append(InputParameters.PLOT_NEGATIVE_ENRICHED + " = " + plotNegativeEnrichedCellTypes + "\n");
 		return sb.toString();
 	}
 
@@ -2166,7 +2203,7 @@ public class PCTSEA {
 	}
 
 	private File getCorrelationsOutputFile() {
-		return new File(getCurrentTimeStampPath() + prefix + "_single_cell_correlations.txt");
+		return new File(getCurrentTimeStampPath() + originalPrefix + "_single_cell_correlations.txt");
 	}
 
 	private File getGeneExpressionOutputFile(String geneName, CorrelationThreshold correlationThreshold) {
@@ -2180,43 +2217,43 @@ public class PCTSEA {
 			throw new IllegalArgumentException("Prefix contains invalid characters");
 		}
 		this.prefix = prefix;
-		this.originalPrefix = prefix;
+		originalPrefix = prefix;
 	}
 
 	public void setExperimentExpressionFile(File experimentExpressionFile2) {
-		this.experimentExpressionFile = experimentExpressionFile2;
+		experimentExpressionFile = experimentExpressionFile2;
 	}
 
 	public void setCorrelationThreshold(CorrelationThreshold correlationThreshold2) {
-		this.correlationThreshold = correlationThreshold2;
+		correlationThreshold = correlationThreshold2;
 	}
 
 	public void setMinNumberExpressedGenesInCell(int minNumberExpressedGenesInCell2) {
-		this.minNumberExpressedGenesInCell = minNumberExpressedGenesInCell2;
+		minNumberExpressedGenesInCell = minNumberExpressedGenesInCell2;
 	}
 
 	public void setLoadRandomDistributionsIfExist(boolean loadRandomDistributionsIfExist2) {
-		this.loadRandomDistributionsIfExist = loadRandomDistributionsIfExist2;
+		loadRandomDistributionsIfExist = loadRandomDistributionsIfExist2;
 	}
 
 	public void setMaxIterations(int maxIterations2) {
-		this.maxIterations = maxIterations2;
+		maxIterations = maxIterations2;
 	}
 
 	public void setCellTypesBranches(List<CellTypeBranch> cellTypeBranches2) {
-		this.cellTypeBranches.addAll(cellTypeBranches2);
+		cellTypeBranches.addAll(cellTypeBranches2);
 	}
 
 	public void setGenerateCharts(boolean generateCharts2) {
-		this.generateCharts = generateCharts2;
+		generateCharts = generateCharts2;
 	}
 
 	public void setMinCellsPerCellTypeForPDF(int minCellsPerCellTypeForPDF2) {
-		this.minCellsPerCellTypeForPDF = minCellsPerCellTypeForPDF2;
+		minCellsPerCellTypeForPDF = minCellsPerCellTypeForPDF2;
 	}
 
 	public void setPlotNegativeEnrichedCellTypes(boolean plotNegativeEnrichedCellTypes2) {
-		this.plotNegativeEnrichedCellTypes = plotNegativeEnrichedCellTypes2;
+		plotNegativeEnrichedCellTypes = plotNegativeEnrichedCellTypes2;
 	}
 
 	public void setStatusListener(StatusListener statusListener) {
@@ -2228,7 +2265,7 @@ public class PCTSEA {
 	}
 
 	public void setDatasets(Set<String> datasets2) {
-		this.datasets = datasets2;
+		datasets = datasets2;
 	}
 
 }
