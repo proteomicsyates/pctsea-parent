@@ -2,11 +2,14 @@ package edu.scripps.yates.pctsea;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -18,11 +21,12 @@ import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.db.datasets.singlecellshuman.GeneToUpperCase;
 import edu.scripps.yates.pctsea.db.datasets.singlecellshuman.HumanSingleCellsDatasetCreation;
+import edu.scripps.yates.utilities.strings.StringUtils;
 import edu.scripps.yates.utilities.swing.DoNotInvokeRunMethod;
 
 @SpringBootApplication
 public class PCTSEADbApplication implements CommandLineRunner {
-	private final static boolean FORCE_DB_LOCAL = true;
+	private final static org.slf4j.Logger log = LoggerFactory.getLogger(PCTSEADbApplication.class);
 	@Autowired
 	private DatasetMongoRepository pmr;
 	@Autowired
@@ -34,33 +38,64 @@ public class PCTSEADbApplication implements CommandLineRunner {
 	@Autowired
 	private ExpressionMongoRepository emr;
 
-	private final static String MONGO_TUNNEL_PORT_ENV_VAR = "PCTSEA_MONGO_TUNNEL_PORT";
-	private final static String PCTSEA_DB_SERVER_HOST_ENV_VAR = "PCTSEA_DB_SERVER_HOST";
-
+	/**
+	 * Use --spring.data.mongodb.host=myhost.domain.com and
+	 * spring.data.mongodb.port=88888 to override the default DB connection to
+	 * MongoDB that is in localhost and port 27017
+	 * 
+	 * @param args
+	 */
 	public static void main(String[] args) {
+		log.info("Starting app with input params: " + getStringFromParams(args));
 
-		// if we find the envirnoment variable MONGO_TUNNEL_PORT, it will use the
-		// application-remoteTunnel.properties which uses a different db port
-
-		final Map<String, String> getenv = System.getenv();
-		final String port = getenv.get(MONGO_TUNNEL_PORT_ENV_VAR);
-		final String pctseaMongoDBServerHost = getenv.get(PCTSEA_DB_SERVER_HOST_ENV_VAR);
+		/////////////////////////////////////////////////////
 
 		final SpringApplicationBuilder builder = new SpringApplicationBuilder(PCTSEADbApplication.class);
 		builder.headless(false);
-		if (pctseaMongoDBServerHost != null) {
-			System.out.println("Production environment. Using spring.data.mongodb.host:" + pctseaMongoDBServerHost);
-			builder.properties("spring.data.mongodb.host:" + pctseaMongoDBServerHost).logStartupInfo(true);
-		} else if (port != null && !FORCE_DB_LOCAL) {
-			System.out.println("SSH tunnel configuration detected. Using spring.data.mongodb.port:" + port);
-			builder
-//			.properties("spring.config.location=classpath:/application-remoteTunnel.properties")
-					.properties("spring.data.mongodb.port:" + port).logStartupInfo(true);
-		} else {
-			builder.logStartupInfo(false);
-		}
-		final ConfigurableApplicationContext run = builder.build().run(args);
 
+//		System.out.println("Using spring.data.mongodb.host:" + pctseaMongoDBServerHost);
+//		System.out.println("Using spring.data.mongodb.port:" + pctseaMongoHost);
+//		builder.properties("spring.data.mongodb.host:" + pctseaMongoDBServerHost)// + ",spring.data.mongodb.port:" +
+//																					// port)
+		log.info("Building Spring application...");
+		final SpringApplication springApp = builder.logStartupInfo(true).build();
+		log.info("Spring application built");
+		// remove spring params to not interfere with the pctsea params
+//		args = removeSpringParams(args);
+		final ConfigurableApplicationContext context = springApp.run(args);
+
+	}
+
+	private static String getStringFromParams(String[] args) {
+		return StringUtils.getSeparatedValueStringFromChars(args, ",");
+	}
+
+	private static String[] removeSpringParams(String[] args) {
+		final List<String> ret = new ArrayList<String>();
+		for (int i = 0; i < args.length; i++) {
+			if (args[i].startsWith("--spring.")) {
+				i++; // skip this and the next
+				continue;
+			} else {
+				ret.add(args[i]);
+			}
+		}
+		return ret.toArray(new String[0]);
+	}
+
+	private static String getParam(String[] args, String param) {
+		for (int i = 0; i < args.length; i++) {
+			if (args[i].equals("-" + param)) {
+				if (i + 1 < args.length) {
+					return args[i + 1];
+				}
+			}
+		}
+		return null;
+	}
+
+	private static boolean containsParam(String[] args, String param) {
+		return getParam(args, param) != null;
 	}
 
 	private static Properties getPropertiesForTunnel() throws IOException {
@@ -136,6 +171,7 @@ public class PCTSEADbApplication implements CommandLineRunner {
 
 		PCTSEACommandLine c = null;
 		try {
+			args = removeSpringParams(args);
 			c = new PCTSEACommandLine(args, pmr, emr, scmr, runLogsRepo, mbs);
 
 			c.safeRun();
