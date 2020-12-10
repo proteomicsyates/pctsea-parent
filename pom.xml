@@ -7,7 +7,7 @@
   <build/>
   <modules>
   	<module>pctsea-core</module>
-  	<module>pctseaweb</module>
+  	<module>pctsea-web</module>
 	<module>pctsea-cl</module>
   </modules>
 </project>

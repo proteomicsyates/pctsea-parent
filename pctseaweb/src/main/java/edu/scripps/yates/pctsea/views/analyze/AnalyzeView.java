@@ -35,6 +35,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.TabVariant;
 import com.vaadin.flow.component.tabs.Tabs;
+import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextArea;
@@ -65,6 +66,7 @@ public class AnalyzeView extends VerticalLayout {
 	private final NumberField minCorrelation = new NumberField("Minimum Pearson's correlation");
 	private final IntegerField minGenesCells = new IntegerField("Minimum number of proteins");
 	private final TextField outputPrefix = new TextField("Prefix for all output files", "experiment1");
+	private final EmailField email = new EmailField("Email", "your_email@domain.com");
 	private final IntegerField numPermutations = new IntegerField("Number of permutations", "1000");
 	MemoryBuffer buffer = new MemoryBuffer();
 	private final Upload upload = new Upload(buffer);
@@ -138,6 +140,7 @@ public class AnalyzeView extends VerticalLayout {
 				.withValidator(num -> num >= 0.0, "Minimum correlation is 0.0")
 				.withValidator(num -> num <= 1.0, "Maximum correlation is 1.0")
 				.bind(InputParameters::getMinCorrelation, InputParameters::setMinCorrelation);
+		binder.forField(email).asRequired("Required").bind(InputParameters::getEmail, InputParameters::setEmail);
 
 		cancelButton.addClickListener(e -> clearForm());
 		submitButton.addClickListener(e -> {
@@ -180,6 +183,7 @@ public class AnalyzeView extends VerticalLayout {
 
 	private void startPCTSEAAnalysis(InputParameters inputParameters) {
 //		showSpinnerDialog();
+		checkInputParameters(inputParameters);
 		final PCTSEA pTCPctsea = new PCTSEA(inputParameters, emr, scmr, runLogsRepo, mbs);
 		pTCPctsea.setStatusListener(new StatusListener() {
 
@@ -203,6 +207,14 @@ public class AnalyzeView extends VerticalLayout {
 			}
 		};
 		backgroundProcess.run();
+
+	}
+
+	private void checkInputParameters(InputParameters inputParameters) {
+		final String outputPrefix = inputParameters.getOutputPrefix();
+		if (outputPrefix == null) {
+			throw new IllegalArgumentException("Output prefix cannot be empty");
+		}
 
 	}
 
@@ -350,6 +362,7 @@ public class AnalyzeView extends VerticalLayout {
 		bean.setMinGenesCells(defaultMinGenes);
 		bean.setMinCorrelation(defaultMinCorrelation);
 		bean.setNumPermutations(defaultPermutations);
+		bean.setEmail(null);
 		binder.setBean(bean);
 		inputFileDataTab.setEnabled(false);
 		inputFileDataTabContent.removeAll();
@@ -367,6 +380,7 @@ public class AnalyzeView extends VerticalLayout {
 		formLayout.add(minGenesCells);
 		formLayout.add(outputPrefix);
 		formLayout.add(numPermutations);
+		formLayout.add(email);
 		return formLayout;
 	}
 
