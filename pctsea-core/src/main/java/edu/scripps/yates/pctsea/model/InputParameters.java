@@ -5,6 +5,29 @@ import java.util.Set;
 import javax.validation.constraints.NotNull;
 
 public class InputParameters {
+	@Override
+	public String toString() {
+		return "InputParameters [writeCorrelationsFile=" + writeCorrelationsFile + ", email=" + email
+				+ ", inputDataFile=" + inputDataFile + ", minCorrelation=" + minCorrelation + ", minGenesCells="
+				+ minGenesCells + ", outputPrefix=" + outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations="
+				+ numPermutations + ", cellTypesClassification=" + cellTypesClassification + ", generateCharts="
+				+ generateCharts + ", minCellsPerCellType=" + minCellsPerCellType + ", plotNegativeEnriched="
+				+ plotNegativeEnriched + ", datasets=" + getSeparatedValueString(datasets, ",") + "]";
+	}
+
+	private String getSeparatedValueString(Set<String> datasets2, String separator) {
+		final StringBuilder sb = new StringBuilder();
+		if (datasets2 != null) {
+			for (final String dataset : datasets2) {
+				if (!"".equals(sb.toString())) {
+					sb.append(separator);
+				}
+				sb.append(dataset);
+			}
+		}
+		return sb.toString();
+	}
+
 	private String email;
 	private String inputDataFile;
 	private double minCorrelation;
@@ -18,6 +41,7 @@ public class InputParameters {
 	private int minCellsPerCellType;
 	private boolean plotNegativeEnriched;
 	private Set<String> datasets;
+	private boolean writeCorrelationsFile;
 	public static final String EMAIL = "email";
 	public static final String OUT = "out";
 	public static final String PERM = "perm";
@@ -30,6 +54,7 @@ public class InputParameters {
 	public static final String PLOT_NEGATIVE_ENRICHED = "plot_negative_enriched";
 	public static final String MIN_CELLS_PER_CELL_TYPE = "min_cells_per_cell_type";
 	public static final String DATASETS = "datasets";
+	public static final String WRITE_CORRELATIONS = "write_correlations";
 
 	public String getInputDataFile() {
 		return inputDataFile;
@@ -125,5 +150,13 @@ public class InputParameters {
 
 	public void setDatasets(Set<String> datasets) {
 		this.datasets = datasets;
+	}
+
+	public boolean isWriteCorrelationsFile() {
+		return writeCorrelationsFile;
+	}
+
+	public void setWriteCorrelationsFile(boolean writeCorrelationsFile) {
+		this.writeCorrelationsFile = writeCorrelationsFile;
 	}
 }

@@ -157,9 +157,12 @@ public class PCTSEA {
 	public static String resultsViewerURLEnvironmentVariable = "PCTSEA_VIEWER_URL";
 	public final String resultsViewerURL;
 
+	private boolean writeCorrelationsFile = false;
+
 	public PCTSEA(InputParameters inputParameters, ExpressionMongoRepository expressionMongoRepo,
 			SingleCellMongoRepository singleCellMongoRepo, PctseaRunLogRepository runLogsRepo,
 			MongoBaseService mongoBaseService) {
+		log.info("Hello in constructor of pctsea");
 		this.expressionMongoRepo = expressionMongoRepo;
 		this.singleCellMongoRepo = singleCellMongoRepo;
 		this.mongoBaseService = mongoBaseService;
@@ -175,6 +178,7 @@ public class PCTSEA {
 		maxIterations = inputParameters.getNumPermutations();
 		minCellsPerCellTypeForPDF = inputParameters.getMinCellsPerCellType();
 		minNumberExpressedGenesInCell = inputParameters.getMinGenesCells();
+		writeCorrelationsFile = inputParameters.isWriteCorrelationsFile();
 		// we check validity of prefix as file name
 		prefix = FileUtils.checkInvalidCharacterNameForFileName(inputParameters.getOutputPrefix());
 		if (!prefix.equals(inputParameters.getOutputPrefix())) {
@@ -221,6 +225,8 @@ public class PCTSEA {
 	}
 
 	public PCTSEAResult run() {
+		logInputParams(getInputParameters());
+
 		// first of all create a time stamp
 		currentTimeStamp = createTimeStamp(originalPrefix);
 		final PctseaRunLog runLog = new PctseaRunLog();
@@ -273,7 +279,7 @@ public class PCTSEA {
 
 			// calculate correlations
 			final int numCellsPassingCorrelationThreshold = correlateSingleCellsToInteractors(singleCellList,
-					interactorExpressions, correlationThreshold, cellTypeBranch, true, true, true,
+					interactorExpressions, correlationThreshold, cellTypeBranch, writeCorrelationsFile, true, true,
 					takeZerosForCorrelation, minNumberExpressedGenesInCell);
 			if (numCellsPassingCorrelationThreshold == 0) {
 				throw new IllegalArgumentException(
@@ -418,6 +424,11 @@ public class PCTSEA {
 				log.info("Finishing now.");
 			}
 		}
+	}
+
+	private void logInputParams(InputParameters inputParameters) {
+		log.info("Input parameters: " + inputParameters);
+
 	}
 
 	private Date getDateNow() {
@@ -2237,6 +2248,7 @@ public class PCTSEA {
 	}
 
 	public void setMaxIterations(int maxIterations2) {
+		log.info("Setting maxIterations to " + maxIterations2);
 		maxIterations = maxIterations2;
 	}
 
@@ -2268,4 +2280,11 @@ public class PCTSEA {
 		datasets = datasets2;
 	}
 
+	public boolean isWriteCorrelationsFile() {
+		return writeCorrelationsFile;
+	}
+
+	public void setWriteCorrelationsFile(boolean writeCorrelationsFile) {
+		this.writeCorrelationsFile = writeCorrelationsFile;
+	}
 }

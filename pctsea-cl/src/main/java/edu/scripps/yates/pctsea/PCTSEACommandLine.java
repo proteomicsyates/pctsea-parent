@@ -30,22 +30,56 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private final PCTSEA pctsea;
 	private DatasetMongoRepository dmr;
 	private final Logger log = Logger.getLogger(PCTSEACommandLine.class);
+	private String prefix;
+	private String email;
+	private File experimentExpressionFile;
+	private CorrelationThreshold correlationThreshold;
+	private int minNumberExpressedGenesInCell;
+	private boolean loadRandomDistributionsIfExist;
+	private int maxIterations;
+	private List<CellTypeBranch> cellTypeBranches;
+	private boolean generateCharts;
+	private int minCellsPerCellTypeForPDF;
+	private boolean plotNegativeEnrichedCellTypes;
+	private Set<String> datasets;
+	private boolean writeCorrelationsFile;
 
 	public PCTSEACommandLine(String[] args, DatasetMongoRepository dmr, ExpressionMongoRepository emr,
 			SingleCellMongoRepository scmr, PctseaRunLogRepository runLog, MongoBaseService mbs)
 			throws ParseException, DoNotInvokeRunMethod, SomeErrorInParametersOcurred {
 		super(args);
 		pctsea = new PCTSEA(emr, scmr, runLog, mbs);
+		pctsea.setPrefix(prefix);
+		pctsea.setEmail(email);
+		pctsea.setExperimentExpressionFile(experimentExpressionFile);
+		pctsea.setCorrelationThreshold(correlationThreshold);
+		pctsea.setMinNumberExpressedGenesInCell(minNumberExpressedGenesInCell);
+		pctsea.setLoadRandomDistributionsIfExist(loadRandomDistributionsIfExist);
+		pctsea.setMaxIterations(maxIterations);
+		pctsea.setCellTypesBranches(cellTypeBranches);
+		pctsea.setGenerateCharts(generateCharts);
+		pctsea.setMinCellsPerCellTypeForPDF(minCellsPerCellTypeForPDF);
+		pctsea.setPlotNegativeEnrichedCellTypes(plotNegativeEnrichedCellTypes);
+		pctsea.setDatasets(datasets);
+		pctsea.setWriteCorrelationsFile(writeCorrelationsFile);
 	}
 
 	@Override
 	public void run() {
-		final PCTSEAResult result = pctsea.run();
-		log.info("PCTSEA got some results in "
-				+ DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime()));
-		log.info("Results file created at: " + result.getResultsFile());
-		if (result.getUrlToViewer() != null) {
-			log.info("Also, results can be visualized at: " + result.getUrlToViewer());
+		try {
+			System.setProperty("java.awt.headless", "true");
+			final PCTSEAResult result = pctsea.run();
+			log.info("PCTSEA got some results in "
+					+ DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime()));
+			log.info("Results file created at: " + result.getResultsFile());
+			if (result.getUrlToViewer() != null) {
+				log.info("Also, results can be visualized at: " + result.getUrlToViewer());
+			}
+		} catch (final Exception e) {
+			e.printStackTrace();
+			log.error("Error in PCTSEA:", e);
+			log.error("Error message: " + e.getMessage());
+			throw e;
 		}
 	}
 
@@ -58,19 +92,19 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	protected void initToolFromCommandLineOptions(CommandLine cmd) throws SomeErrorInParametersOcurred {
 
 		if (cmd.hasOption(InputParameters.OUT)) {
-			pctsea.setPrefix(cmd.getOptionValue(InputParameters.OUT));
+			prefix = cmd.getOptionValue(InputParameters.OUT);
 
 		} else {
 			errorInParameters("prefix name for the output files is missing");
 		}
 		if (cmd.hasOption(InputParameters.EMAIL)) {
-			pctsea.setEmail(cmd.getOptionValue(InputParameters.EMAIL));
+			email = cmd.getOptionValue(InputParameters.EMAIL);
 
 		} else {
 			// we will not be able to send the email with the results
 		}
 		if (cmd.hasOption(InputParameters.EEF)) {
-			File experimentExpressionFile = new File(cmd.getOptionValue(InputParameters.EEF));
+			experimentExpressionFile = new File(cmd.getOptionValue(InputParameters.EEF));
 			final File parentFile = experimentExpressionFile.getParentFile();
 			if (parentFile == null || !experimentExpressionFile.exists()) {
 				experimentExpressionFile = new File(
@@ -81,12 +115,12 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 				errorInParameters("experimental_expression_file '-" + InputParameters.EEF + "' '"
 						+ cmd.getOptionValue(InputParameters.EEF) + "' doesn't exist or is not found");
 			}
-			pctsea.setExperimentExpressionFile(experimentExpressionFile);
+
 		} else {
 			errorInParameters("experimental_expression_file is missing");
 		}
 
-		CorrelationThreshold correlationThreshold = new CorrelationThreshold(0.1);
+		correlationThreshold = new CorrelationThreshold(0.1);
 		if (cmd.hasOption(InputParameters.MIN_CORRELATION)) {
 			try {
 				correlationThreshold = new CorrelationThreshold(
@@ -102,8 +136,8 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			}
 
 		}
-		pctsea.setCorrelationThreshold(correlationThreshold);
-		int minNumberExpressedGenesInCell = 4;
+
+		minNumberExpressedGenesInCell = 4;
 		if (cmd.hasOption(InputParameters.MIN_GENES_CELLS)) {
 			final String mgcString = cmd.getOptionValue(InputParameters.MIN_GENES_CELLS);
 			try {
@@ -121,15 +155,13 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			}
 
 		}
-		pctsea.setMinNumberExpressedGenesInCell(minNumberExpressedGenesInCell);
 
-		boolean loadRandomDistributionsIfExist = false;
+		loadRandomDistributionsIfExist = false;
 		if (cmd.hasOption(InputParameters.LOAD_RANDOM)) {
 			loadRandomDistributionsIfExist = true;
 		}
-		pctsea.setLoadRandomDistributionsIfExist(loadRandomDistributionsIfExist);
 
-		int maxIterations = 1000;
+		maxIterations = 10;
 		if (cmd.hasOption(InputParameters.PERM)) {
 			try {
 				maxIterations = Integer.valueOf(cmd.getOptionValue(InputParameters.PERM));
@@ -141,9 +173,8 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 						"Error in value for option '-" + InputParameters.PERM + "'. It must be a positive integer");
 			}
 		}
-		pctsea.setMaxIterations(maxIterations);
 
-		final List<CellTypeBranch> cellTypeBranches = new ArrayList<CellTypeBranch>();
+		cellTypeBranches = new ArrayList<CellTypeBranch>();
 
 		if (cmd.hasOption(InputParameters.CELL_TYPES_CLASSIFICATION)) {
 			final String optionValue = cmd.getOptionValue(InputParameters.CELL_TYPES_CLASSIFICATION);
@@ -157,15 +188,13 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		} else {
 			cellTypeBranches.add(CellTypeBranch.TYPE);
 		}
-		pctsea.setCellTypesBranches(cellTypeBranches);
 
-		boolean generateCharts = false;
+		generateCharts = false;
 		if (cmd.hasOption(InputParameters.CHARTS)) {
 			generateCharts = true;
 		}
-		pctsea.setGenerateCharts(generateCharts);
 
-		int minCellsPerCellTypeForPDF = 0;
+		minCellsPerCellTypeForPDF = 0;
 		if (cmd.hasOption(InputParameters.MIN_CELLS_PER_CELL_TYPE)) {
 			try {
 				minCellsPerCellTypeForPDF = Integer
@@ -174,31 +203,37 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 					throw new NumberFormatException();
 				}
 			} catch (final NumberFormatException e) {
-				errorInParameters(
-						"Error in value for option '-min_cells_per_cell_type'. It must be a positive integer");
+				log.error(e);
+				errorInParameters("Error in value for option '-" + InputParameters.MIN_CELLS_PER_CELL_TYPE
+						+ "'. It must be a positive integer");
 			}
 		}
-		pctsea.setMinCellsPerCellTypeForPDF(minCellsPerCellTypeForPDF);
 
-		boolean plotNegativeEnrichedCellTypes = false;
+		plotNegativeEnrichedCellTypes = false;
 		if (cmd.hasOption(InputParameters.PLOT_NEGATIVE_ENRICHED)) {
 			plotNegativeEnrichedCellTypes = true;
 		}
-		pctsea.setPlotNegativeEnrichedCellTypes(plotNegativeEnrichedCellTypes);
 
 		//
 		if (cmd.hasOption(InputParameters.DATASETS)) {
-			final Set<String> datasets = parseDatasets(cmd.getOptionValue(InputParameters.DATASETS));
-			pctsea.setDatasets(datasets);
+			datasets = parseDatasets(cmd.getOptionValue(InputParameters.DATASETS));
+
 		} else {
 			// considering to use all datasets
 		}
-		//
-		if (cmd.hasOption(InputParameters.EMAIL)) {
-			pctsea.setEmail(cmd.getOptionValue(InputParameters.EMAIL));
-		} else {
-			// we dont send email
+		// write correlations file
+		writeCorrelationsFile = true;
+		if (cmd.hasOption(InputParameters.WRITE_CORRELATIONS)) {
+			try {
+				writeCorrelationsFile = Boolean
+						.valueOf(cmd.getOptionValue(InputParameters.WRITE_CORRELATIONS).toLowerCase());
+			} catch (final Exception e) {
+				log.error(e);
+				errorInParameters("Error in value for option '-" + InputParameters.WRITE_CORRELATIONS
+						+ "'. It must be either true or false.");
+			}
 		}
+
 	}
 
 	private Set<String> parseDatasets(String datasetsString) {
@@ -283,6 +318,11 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		final Option datasets = new Option(InputParameters.DATASETS, true,
 				"Comma separated values of the dataset against you want to analyze your data.");
 		options.add(datasets);
+
+		final Option writeCorrelationsFileOpton = new Option(InputParameters.WRITE_CORRELATIONS, true,
+				"Whether to write or not a file with the correlation values between all single cells and the input data. Default value if not provided: true.");
+		options.add(writeCorrelationsFileOpton);
+
 		return options;
 	}
 
