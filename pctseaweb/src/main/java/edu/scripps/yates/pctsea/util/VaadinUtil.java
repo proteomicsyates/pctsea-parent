@@ -68,7 +68,7 @@ public class VaadinUtil {
 	public static Component createTextComponent(InputStream stream) {
 		String text;
 		try {
-			text = IOUtils.toString(stream, StandardCharsets.UTF_8);
+			text = IOUtils.toString(stream, StandardCharsets.UTF_8.name());
 		} catch (final IOException e) {
 			text = "exception reading stream";
 		}
