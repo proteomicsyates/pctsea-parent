@@ -16,6 +16,7 @@ import org.jfree.data.xy.XYDataset;
 
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.utilities.files.FileUtils;
+import edu.scripps.yates.utilities.pi.ConcurrentUtil;
 
 public class PCTSEAUtils {
 	public static String parseGeneName(String geneName) {
@@ -59,6 +60,7 @@ public class PCTSEAUtils {
 			for (int datasetIndex = 0; datasetIndex < xyplot.getDatasetCount(); datasetIndex++) {
 				final XYDataset dataset = xyplot.getDataset(datasetIndex);
 				for (int seriesIndex = 0; seriesIndex < dataset.getSeriesCount(); seriesIndex++) {
+					ConcurrentUtil.sleep(1L);
 					final Comparable seriesKey = dataset.getSeriesKey(seriesIndex);
 					for (int itemIndex = 0; itemIndex < dataset.getItemCount(seriesIndex); itemIndex++) {
 						final double x = dataset.getXValue(seriesIndex, itemIndex);
@@ -72,6 +74,7 @@ public class PCTSEAUtils {
 			for (int datasetIndex = 0; datasetIndex < categoryPlot.getDatasetCount(); datasetIndex++) {
 				final CategoryDataset dataset = categoryPlot.getDataset(datasetIndex);
 				for (int rowIndex = 0; rowIndex < dataset.getRowCount(); rowIndex++) {
+					ConcurrentUtil.sleep(1L);
 					final Comparable rowKey = dataset.getRowKey(rowIndex);
 					for (int columnIndex = 0; columnIndex < dataset.getColumnCount(); columnIndex++) {
 						final Comparable columnKey = dataset.getColumnKey(columnIndex);

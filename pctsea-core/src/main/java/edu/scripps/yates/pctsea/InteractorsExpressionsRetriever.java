@@ -24,6 +24,7 @@ import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
 import edu.scripps.yates.utilities.annotations.uniprot.UniprotEntryUtil;
 import edu.scripps.yates.utilities.annotations.uniprot.xml.Entry;
 import edu.scripps.yates.utilities.fasta.FastaParser;
+import edu.scripps.yates.utilities.pi.ConcurrentUtil;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
 import edu.scripps.yates.utilities.progresscounter.ProgressPrintingType;
 import edu.scripps.yates.utilities.strings.StringUtils;
@@ -349,6 +350,7 @@ public class InteractorsExpressionsRetriever {
 			String line = null;
 			int numLine = 0;
 			while ((line = reader.readLine()) != null) {
+				ConcurrentUtil.sleep(1L);
 				if ("".equals(line.trim())) {
 					continue;
 				}

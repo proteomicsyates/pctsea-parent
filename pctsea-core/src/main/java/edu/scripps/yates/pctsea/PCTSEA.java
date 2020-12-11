@@ -86,6 +86,7 @@ import edu.scripps.yates.utilities.maths.Histogram;
 import edu.scripps.yates.utilities.maths.Maths;
 import edu.scripps.yates.utilities.maths.PValueCorrection;
 import edu.scripps.yates.utilities.maths.PValueCorrectionType;
+import edu.scripps.yates.utilities.pi.ConcurrentUtil;
 import edu.scripps.yates.utilities.pi.ParIterator;
 import edu.scripps.yates.utilities.pi.ParIterator.Schedule;
 import edu.scripps.yates.utilities.pi.ParIteratorFactory;
@@ -179,10 +180,13 @@ public class PCTSEA {
 		minCellsPerCellTypeForPDF = inputParameters.getMinCellsPerCellType();
 		minNumberExpressedGenesInCell = inputParameters.getMinGenesCells();
 		writeCorrelationsFile = inputParameters.isWriteCorrelationsFile();
+		email = inputParameters.getEmail();
 		// we check validity of prefix as file name
-		prefix = FileUtils.checkInvalidCharacterNameForFileName(inputParameters.getOutputPrefix());
-		if (!prefix.equals(inputParameters.getOutputPrefix())) {
-			throw new IllegalArgumentException("Prefix contains invalid characters");
+		if (inputParameters.getOutputPrefix() != null) {
+			prefix = FileUtils.checkInvalidCharacterNameForFileName(inputParameters.getOutputPrefix());
+			if (!prefix.equals(inputParameters.getOutputPrefix())) {
+				throw new IllegalArgumentException("Prefix contains invalid characters");
+			}
 		}
 
 	}
@@ -240,6 +244,8 @@ public class PCTSEA {
 			// redirect output to textarea status
 			System.setOut(new MyPrintStream(new StatusListenerOutputStream(statusListener)));
 			System.setErr(new MyPrintStream(new StatusListenerOutputStream(statusListener)));
+			log.info("Testing output");
+			System.out.println("Testing output 2");
 		}
 		Exception errorMessage = null;
 		final File zipOutputFile = getZipOutputFile();
@@ -253,7 +259,7 @@ public class PCTSEA {
 		PCTSEAResult result = null;
 		try {
 			URL urlToViewer = null;
-			if (resultsViewerURL != null) {
+			if (finalResultsFolderViewer != null && resultsViewerURL != null) {
 				urlToViewer = new URL(resultsViewerURL + "/?results="
 						+ FilenameUtils.getBaseName(resultsFileForViewer.getAbsolutePath()));
 			}
@@ -289,6 +295,7 @@ public class PCTSEA {
 			// discard single cells that have negative correlation
 			final Iterator<SingleCell> iterator = singleCellList.iterator();
 			while (iterator.hasNext()) {
+				ConcurrentUtil.sleep(1L);
 				final SingleCell cell = iterator.next();
 				if (cell.getCorrelation() < 0) {
 					iterator.remove();
@@ -306,6 +313,7 @@ public class PCTSEA {
 
 			// do the calculations per cellTypeBranch
 			for (final CellTypeBranch cellTypeBranch : cellTypeBranches) {
+				ConcurrentUtil.sleep(1L);
 				setCellTypeBranch(cellTypeBranch);
 				// calculate hypergeometric statistics
 				final List<CellTypeClassification> cellTypeClassifications = calculateHyperGeometricStatistics(
@@ -354,13 +362,15 @@ public class PCTSEA {
 //				SingleCell.printCellTypeMapping(getCellTypesMappingOutputFile());
 				// export file with genes involved in the correlations per cell type
 				printGenesInvolvedInCorrelations(cellTypeClassifications, correlationThreshold);
-
 			}
 
 			return result;
 		} catch (final IOException e) {
 			errorMessage = e;
 			throw new RuntimeException(e);
+		} catch (final RuntimeException e) {
+			errorMessage = e;
+			throw e;
 		} finally {
 			if (errorMessage != null) {
 				if (savingFiles != null && !savingFiles.isDone()) {
@@ -491,15 +501,23 @@ public class PCTSEA {
 
 	private void printGeneExpression(List<SingleCell> singleCellsPassingCorrelationThreshold, String geneName,
 			CorrelationThreshold correlationThreshold) throws IOException {
-		final FileWriter fw = new FileWriter(getGeneExpressionOutputFile(geneName, correlationThreshold));
-		fw.write("single_cell\tcell_type\tbiomaterial\tcorrelation\texpression\n");
-		for (final SingleCell singleCell : singleCellsPassingCorrelationThreshold) {
-			final int ace2CellID = SingleCellsMetaInformationReader.getSingleCellIDBySingleCellName(geneName);
-			final float expressionValue = singleCell.getGeneExpressionValue(ace2CellID);
-			fw.write(singleCell.getName() + "\t" + singleCell.getCellType(cellTypeBranch) + "\t"
-					+ singleCell.getBiomaterial() + "\t" + singleCell.getCorrelation() + "\t" + expressionValue + "\n");
+		FileWriter fw = null;
+		try {
+			fw = new FileWriter(getGeneExpressionOutputFile(geneName, correlationThreshold));
+			fw.write("single_cell\tcell_type\tbiomaterial\tcorrelation\texpression\n");
+			for (final SingleCell singleCell : singleCellsPassingCorrelationThreshold) {
+				ConcurrentUtil.sleep(1L);
+				final int ace2CellID = SingleCellsMetaInformationReader.getSingleCellIDBySingleCellName(geneName);
+				final float expressionValue = singleCell.getGeneExpressionValue(ace2CellID);
+				fw.write(singleCell.getName() + "\t" + singleCell.getCellType(cellTypeBranch) + "\t"
+						+ singleCell.getBiomaterial() + "\t" + singleCell.getCorrelation() + "\t" + expressionValue
+						+ "\n");
+			}
+		} finally {
+			if (fw != null) {
+				fw.close();
+			}
 		}
-		fw.close();
 	}
 
 	private void printGZipOutputFile(File folder, File zipFile) throws IOException {
@@ -530,23 +548,28 @@ public class PCTSEA {
 	private void printGenesInvolvedInCorrelations(List<CellTypeClassification> cellTypeClassifications,
 			CorrelationThreshold correlationThreshold) throws IOException {
 		final File outputFile = getGenesInvolvedInCorrelationsOutputFile();
-		final FileWriter fw = new FileWriter(outputFile);
-		// header
+		FileWriter fw = null;
+		try {
+			fw = new FileWriter(outputFile);
+			// header
+			fw.write("cell_type\tgene\tocurrence\n");
 
-		fw.write("cell_type\tgene\tocurrence\n");
-
-		// table
-		for (final CellTypeClassification cellType : cellTypeClassifications) {
-			final List<GeneOccurrence> geneOccurrences = cellType
-					.getRankingOfGenesThatContributedToTheCorrelation(correlationThreshold);
-			for (final GeneOccurrence geneOccurrence : geneOccurrences) {
-				fw.write(cellType.getName() + "\t" + geneOccurrence.getGene() + "\t" + geneOccurrence.getOccurrence()
-						+ "\n");
+			// table
+			for (final CellTypeClassification cellType : cellTypeClassifications) {
+				final List<GeneOccurrence> geneOccurrences = cellType
+						.getRankingOfGenesThatContributedToTheCorrelation(correlationThreshold);
+				for (final GeneOccurrence geneOccurrence : geneOccurrences) {
+					ConcurrentUtil.sleep(1L);
+					fw.write(cellType.getName() + "\t" + geneOccurrence.getGene() + "\t"
+							+ geneOccurrence.getOccurrence() + "\n");
+				}
 			}
-
+			log.info("File with genes correlating in each cell type wrote at: " + outputFile.getAbsolutePath());
+		} finally {
+			if (fw != null) {
+				fw.close();
+			}
 		}
-		fw.close();
-		log.info("File with genes correlating in each cell type wrote at: " + outputFile.getAbsolutePath());
 	}
 
 	private void umapClustering(List<CellTypeClassification> cellTypeClassifications,
@@ -724,6 +747,7 @@ public class PCTSEA {
 			dataset.addSeries(negativeCorrelations);
 			int numCell = 1;
 			for (final SingleCell singleCell : singleCellList) {
+				ConcurrentUtil.sleep(1L);
 				if (!Double.isNaN(singleCell.getCorrelation())) {
 					if (correlationThreshold.passThreshold(singleCell)) {
 						positiveCorrelations.add(numCell, singleCell.getCorrelation());
@@ -768,6 +792,7 @@ public class PCTSEA {
 			final TIntIntMap map = new TIntIntHashMap();
 			int totalCells = 0;
 			for (final SingleCell singleCell : singleCellList) {
+				ConcurrentUtil.sleep(1L);
 				if (minCorrelation != null) {
 					if (minCorrelation > singleCell.getCorrelation()) {
 						continue;
@@ -844,6 +869,7 @@ public class PCTSEA {
 		}
 		final Set<String> totalGeneSet = new THashSet<String>();
 		for (final CellTypeClassification cellType : cellTypeClassifications) {
+			ConcurrentUtil.sleep(1L);
 			final List<GeneOccurrence> geneOccurrences = cellType
 					.getRankingOfGenesThatContributedToTheCorrelation(correlationThreshold2);
 			geneOccurrences.forEach(go -> totalGeneSet.add(go.getGene()));
@@ -860,6 +886,7 @@ public class PCTSEA {
 			final float[] instance = new float[totalGeneSet.size()];
 			instances[i] = instance;
 			for (int j = 0; j < totalGeneList.size(); j++) {
+				ConcurrentUtil.sleep(1L);
 				final String gene = totalGeneList.get(j);
 				if (occurrencesPerGene.containsKey(gene)) {
 					final float value = 1.0f * occurrencesPerGene.get(gene).getOccurrence();
@@ -899,6 +926,7 @@ public class PCTSEA {
 		final float[][] fitTransform = umap.fitTransform(instances);
 		if (setAsDefaultUMAPOnCellType) {
 			for (int i = 0; i < cellTypeClassifications.size(); i++) {
+				ConcurrentUtil.sleep(1L);
 				final CellTypeClassification cellType = cellTypeClassifications.get(i);
 				final float[] instance = fitTransform[i];
 				cellType.setUmapClustering(instance[0], instance[1]);
@@ -910,6 +938,7 @@ public class PCTSEA {
 			// now save an scatter plot
 			final LabeledXYDataset dataset = new LabeledXYDataset();
 			for (int i = 0; i < cellTypeClassifications.size(); i++) {
+				ConcurrentUtil.sleep(1L);
 				final CellTypeClassification cellType = cellTypeClassifications.get(i);
 				final float[] umapClustering = fitTransform[i];
 				final String label = cellType.getName();
@@ -945,9 +974,10 @@ public class PCTSEA {
 	}
 
 	private List<SingleCell> getSingleCellListFromDB(Set<String> datasets) {
+
 		final long t0 = System.currentTimeMillis();
 		log.info("Getting single cells from DB");
-
+		ConcurrentUtil.sleep(1L);
 		final List<SingleCell> ret = new ArrayList<SingleCell>();
 		final List<edu.scripps.yates.pctsea.db.SingleCell> singleCellsFromDB = new ArrayList<edu.scripps.yates.pctsea.db.SingleCell>();
 		if (datasets != null) {
@@ -960,6 +990,7 @@ public class PCTSEA {
 
 		int cellID = 0;
 		for (final edu.scripps.yates.pctsea.db.SingleCell singleCelldb : singleCellsFromDB) {
+			ConcurrentUtil.sleep(1L);
 			cellID++;
 			final SingleCell sc = new SingleCell(cellID, singleCelldb.getName(), Double.NaN);
 			sc.setCellType(singleCelldb.getType());
@@ -971,6 +1002,7 @@ public class PCTSEA {
 				+ DatesUtil.getDescriptiveTimeFromMillisecs(t1 - t0));
 
 		return ret;
+
 	}
 
 	/**
@@ -1569,134 +1601,141 @@ public class PCTSEA {
 				.getCountSingleCellsPassingThreshold(singleCellList);
 		// print to file
 		final File cellTypesFile = getCellTypesOutputFile();
-		final FileWriter fw = new FileWriter(cellTypesFile);
+		FileWriter fw = null;
 
-		/////////////////
-		// Header with parameters
-		String parameters = getParametersString();
-		parameters = parameters.replace(" = ", ":\t");
-		final StringBuilder paramsHeader = new StringBuilder();
-		paramsHeader.append("PCTSEA");
-		final AppVersion version = AutomaticGUICreator.getVersion();
-		if (version != null) {
-			paramsHeader.append(" version:\t" + version.toString());
-		}
-		paramsHeader.append("\n");
-		paramsHeader.append("Time:\t" + AutomaticGUICreator.getFormattedTime() + "\n");
-		paramsHeader.append(parameters);
+		try {
+			fw = new FileWriter(cellTypesFile);
 
-		fw.write(paramsHeader.toString());
+			/////////////////
+			// Header with parameters
+			String parameters = getParametersString();
+			parameters = parameters.replace(" = ", ":\t");
+			final StringBuilder paramsHeader = new StringBuilder();
+			paramsHeader.append("PCTSEA");
+			final AppVersion version = AutomaticGUICreator.getVersion();
+			if (version != null) {
+				paramsHeader.append(" version:\t" + version.toString());
+			}
+			paramsHeader.append("\n");
+			paramsHeader.append("Time:\t" + AutomaticGUICreator.getFormattedTime() + "\n");
+			paramsHeader.append(parameters);
 
-		fw.write("Total number of single cells with at least " + minNumberExpressedGenesInCell
-				+ " genes present in the input data:\t" + singleCellList.size() + "\n");
+			fw.write(paramsHeader.toString());
 
-		////////////
-		// glossary of some columns:
-		final StringBuilder glossary = new StringBuilder("Glossary of columns:\n");
-		glossary.append("hyperG_p-value column:\tp-value obtained from performing an hypergeometric test\n");
-		glossary.append(
-				"log2_ratio column:\tRatio of ratios between the ratio of # cells of type passing correlation threshold and # all cells of type, divided by the ratio between all # cells of type and # total cells (log2((cells of type core "
-						+ correlationThreshold + "/cells core " + correlationThreshold
-						+ ")/(cells of type/total cells))\n");
+			fw.write("Total number of single cells with at least " + minNumberExpressedGenesInCell
+					+ " genes present in the input data:\t" + singleCellList.size() + "\n");
+
+			////////////
+			// glossary of some columns:
+			final StringBuilder glossary = new StringBuilder("Glossary of columns:\n");
+			glossary.append("hyperG_p-value column:\tp-value obtained from performing an hypergeometric test\n");
+			glossary.append(
+					"log2_ratio column:\tRatio of ratios between the ratio of # cells of type passing correlation threshold and # all cells of type, divided by the ratio between all # cells of type and # total cells (log2((cells of type core "
+							+ correlationThreshold + "/cells core " + correlationThreshold
+							+ ")/(cells of type/total cells))\n");
 //		glossary.append(
 //				"eus column:\tEnrichment Unweighted Score equal to the supremum of the differences between the unweigted cumulative distributions of the correlations of the cells of the cell type and the rest of the cells belonging to other cell types\n");
 //		glossary.append(
 //				"eus p-value column:\tEnrichment Unweighted Score associated p-value (calculated with Apache)\n");
-		glossary.append(
-				"ews column:\tEnrichment Weighted Score equal to the supremum of the differences between the weighted cumulative distributions of the correlations of the cell of the cell type and the rest of the cells belongind to other cell types\n");
-		glossary.append("norm-ews column:\tEnrichment Weighted Score normalized by the sizes of the cell types\n");
+			glossary.append(
+					"ews column:\tEnrichment Weighted Score equal to the supremum of the differences between the weighted cumulative distributions of the correlations of the cell of the cell type and the rest of the cells belongind to other cell types\n");
+			glossary.append("norm-ews column:\tEnrichment Weighted Score normalized by the sizes of the cell types\n");
 
-		glossary.append("supX column:\tLocation of the supremum in the correlation-ranked cell list (x axis)\n");
-		glossary.append(
-				"norm-supX column:\tNormalized location of the supremum (from 0 to 1) in the correlation-ranked cell list (x axis)\n");
-		glossary.append(
-				"empirical_p-value column:\tSignificance probability of the Enrichment Weigthed Score based random permutations of cell types labels\n");
-		glossary.append("FDR column:\tEnrichment False Discovery Rate\n");
+			glossary.append("supX column:\tLocation of the supremum in the correlation-ranked cell list (x axis)\n");
+			glossary.append(
+					"norm-supX column:\tNormalized location of the supremum (from 0 to 1) in the correlation-ranked cell list (x axis)\n");
+			glossary.append(
+					"empirical_p-value column:\tSignificance probability of the Enrichment Weigthed Score based random permutations of cell types labels\n");
+			glossary.append("FDR column:\tEnrichment False Discovery Rate\n");
 
-		glossary.append(
-				"2nd_ews column:\tSecondary Enrichment Weigthed Score, calculated from the second best supremum that is positive and is located in a higher ranking on the correlation-ranked cell list\n");
-		glossary.append(
-				"2nd_supX column:\tLocation of the second best supremum that is positive and has a higher ranking on the correlation-ranked cell list\n");
-		glossary.append("size a (type) column:\tNumber of cells of type X that pass the correlation threshold.\n");
-		glossary.append("size_b_others column:\tNumber of cells NOT of type X that pass the correlation threshold.\n");
-		glossary.append(
-				"Dab_column:\tTwo-sample KS goodness-of-fit statistic. It is used for the two-sample KS goodness-of-fit significance calculation.\n");
-		glossary.append("KS p-value column:\tTwo-sample KS goodness-of-fit p-value.\n");
-		glossary.append(
-				"KS_p-value_BH_corrected column:\tTwo-sample KS goodness-of-fit p-value corrected by Benjamini Hochberg (BH) method.\n");
-		glossary.append(
-				"KS_significance_level column:\tTwo-sample KS goodness-of-fit significance level. '***'-> significant at alpha 0.001, '**'-> significant at alpha 0.01,'*'-> significant at alpha 0.05\n");
-		glossary.append(
-				"Umap_x and Umap_y columns:\tCoordinates of the cell type after performing a Uniform Manifold Approximation and Projection (UMAP) clustering of all cell types with positive ews\n");
-		glossary.append("'KS' term in this glossary:\tKolmogorov-Smirnov goodness-of-fit test\n");
-		fw.write(glossary.toString() + "\n\n\n");
+			glossary.append(
+					"2nd_ews column:\tSecondary Enrichment Weigthed Score, calculated from the second best supremum that is positive and is located in a higher ranking on the correlation-ranked cell list\n");
+			glossary.append(
+					"2nd_supX column:\tLocation of the second best supremum that is positive and has a higher ranking on the correlation-ranked cell list\n");
+			glossary.append("size a (type) column:\tNumber of cells of type X that pass the correlation threshold.\n");
+			glossary.append(
+					"size_b_others column:\tNumber of cells NOT of type X that pass the correlation threshold.\n");
+			glossary.append(
+					"Dab_column:\tTwo-sample KS goodness-of-fit statistic. It is used for the two-sample KS goodness-of-fit significance calculation.\n");
+			glossary.append("KS p-value column:\tTwo-sample KS goodness-of-fit p-value.\n");
+			glossary.append(
+					"KS_p-value_BH_corrected column:\tTwo-sample KS goodness-of-fit p-value corrected by Benjamini Hochberg (BH) method.\n");
+			glossary.append(
+					"KS_significance_level column:\tTwo-sample KS goodness-of-fit significance level. '***'-> significant at alpha 0.001, '**'-> significant at alpha 0.01,'*'-> significant at alpha 0.05\n");
+			glossary.append(
+					"Umap_x and Umap_y columns:\tCoordinates of the cell type after performing a Uniform Manifold Approximation and Projection (UMAP) clustering of all cell types with positive ews\n");
+			glossary.append("'KS' term in this glossary:\tKolmogorov-Smirnov goodness-of-fit test\n");
+			fw.write(glossary.toString() + "\n\n\n");
 
-		////////////////////
-		// Header of table
-		fw.write("cell_type" //
-				+ "\tnum_cells_of_type" //
-				+ "\tnum_total_cells" //
-				+ "\tnum_cells_of_type_corr" //
-				+ "\tnum_cells_corr" //
-				+ "\thyperG_p-value"//
-				+ "\tlog2_ratio"//
+			////////////////////
+			// Header of table
+			fw.write("cell_type" //
+					+ "\tnum_cells_of_type" //
+					+ "\tnum_total_cells" //
+					+ "\tnum_cells_of_type_corr" //
+					+ "\tnum_cells_corr" //
+					+ "\thyperG_p-value"//
+					+ "\tlog2_ratio"//
 //				+ "\teus"//
 //				+ "\teus p-value"//
-				+ "\tews"//
-				+ "\tnorm-ews"//
-				+ "\tsupX"//
-				+ "\tnorm-supX"//
-				+ "\tempirical_p-value"//
-				+ "\tFDR"//
-				+ "\t2nd_ews"//
-				+ "\t2nd_supX"//
-				+ "\tsize_a_type"//
-				+ "\tsize_b_others"//
-				+ "\tDab"//
-				+ "\tKS_p-value"//
-				+ "\tKS_p-value_BH_corrected"//
-				+ "\tKS_significance_level"//
-				+ "\tUmap_x"//
-				+ "\tUmap_y"//
+					+ "\tews"//
+					+ "\tnorm-ews"//
+					+ "\tsupX"//
+					+ "\tnorm-supX"//
+					+ "\tempirical_p-value"//
+					+ "\tFDR"//
+					+ "\t2nd_ews"//
+					+ "\t2nd_supX"//
+					+ "\tsize_a_type"//
+					+ "\tsize_b_others"//
+					+ "\tDab"//
+					+ "\tKS_p-value"//
+					+ "\tKS_p-value_BH_corrected"//
+					+ "\tKS_significance_level"//
+					+ "\tUmap_x"//
+					+ "\tUmap_y"//
 
-				+ "\tgenes"//
+					+ "\tgenes"//
 
-				+ "\n");
-		boolean positiveScore = true;
-		for (final CellTypeClassification cellType : cellTypeClassifications) {
-			if (positiveScore && cellType.getEnrichmentScore() < 0.0f) {
-				fw.write("------------------------- Negative ews from here -------------------------\n");
-				positiveScore = false;
-			}
-			fw.write(cellType.getName() + "\t" + cellType.getNumCellsOfType() + "\t" + numSingleCells + "\t"
-					+ cellType.getNumCellsOfTypePassingCorrelationThreshold() + "\t"
-					+ numSingleCellsWithPositiveCorrelation + "\t" + cellType.getHypergeometricPValue() + "\t"
-					+ cellType.getCasimirsEnrichmentScore() + "\t"
+					+ "\n");
+			boolean positiveScore = true;
+			for (final CellTypeClassification cellType : cellTypeClassifications) {
+				ConcurrentUtil.sleep(1L);
+				if (positiveScore && cellType.getEnrichmentScore() < 0.0f) {
+					fw.write("------------------------- Negative ews from here -------------------------\n");
+					positiveScore = false;
+				}
+				fw.write(cellType.getName() + "\t" + cellType.getNumCellsOfType() + "\t" + numSingleCells + "\t"
+						+ cellType.getNumCellsOfTypePassingCorrelationThreshold() + "\t"
+						+ numSingleCellsWithPositiveCorrelation + "\t" + cellType.getHypergeometricPValue() + "\t"
+						+ cellType.getCasimirsEnrichmentScore() + "\t"
 //					+ cellType.getEnrichmentUnweightedScore() + "\t"
-					+ cellType.getEnrichmentScore() + "\t"//
-					+ cellType.getNormalizedEnrichmentScore() + "\t"//
-					+ cellType.getSupremumX() + "\t"//
-					+ cellType.getNormalizedSupremumX() + "\t"//
-					+ cellType.getEnrichmentSignificance() + "\t"//
-					+ cellType.getEnrichmentFDR() + "\t"//
-					+ parseNullableNumber(cellType.getSecondaryEnrichmentScore()) + "\t"//
-					+ parseNullableNumber(cellType.getSecondarySupremumX()) + "\t"//
-					+ cellType.getSizeA() + "\t" //
-					+ cellType.getSizeB() + "\t" //
-					+ cellType.getKSTestDStatistic() + "\t"//
-					+ cellType.getKSTestPvalue() + "\t"//
-					+ cellType.getKSTestCorrectedPvalue() + "\t"//
-					+ cellType.getSignificancyString() + "\t"//
+						+ cellType.getEnrichmentScore() + "\t"//
+						+ cellType.getNormalizedEnrichmentScore() + "\t"//
+						+ cellType.getSupremumX() + "\t"//
+						+ cellType.getNormalizedSupremumX() + "\t"//
+						+ cellType.getEnrichmentSignificance() + "\t"//
+						+ cellType.getEnrichmentFDR() + "\t"//
+						+ parseNullableNumber(cellType.getSecondaryEnrichmentScore()) + "\t"//
+						+ parseNullableNumber(cellType.getSecondarySupremumX()) + "\t"//
+						+ cellType.getSizeA() + "\t" //
+						+ cellType.getSizeB() + "\t" //
+						+ cellType.getKSTestDStatistic() + "\t"//
+						+ cellType.getKSTestPvalue() + "\t"//
+						+ cellType.getKSTestCorrectedPvalue() + "\t"//
+						+ cellType.getSignificancyString() + "\t"//
 
-					+ parseNullableNumber(cellType.getUmapClusteringX()) + "\t" //
-					+ parseNullableNumber(cellType.getUmapClusteringY()) + "\t" //
+						+ parseNullableNumber(cellType.getUmapClusteringX()) + "\t" //
+						+ parseNullableNumber(cellType.getUmapClusteringY()) + "\t" //
 
-					+ cellType.getStringOfRankingOfGenesThatContributedToTheCorrelation(correlationThreshold) + "\n");
-			fw.flush();
+						+ cellType.getStringOfRankingOfGenesThatContributedToTheCorrelation(correlationThreshold)
+						+ "\n");
+				fw.flush();
+			}
+			log.info("File writen at " + cellTypesFile.getAbsolutePath());
+		} finally {
+			fw.close();
 		}
-		fw.close();
-		log.info("File writen at " + cellTypesFile.getAbsolutePath());
-
 	}
 
 	/**
@@ -1756,7 +1795,7 @@ public class PCTSEA {
 		N = numSingleCells;
 		final List<CellTypeClassification> cellTypeClassifications = new ArrayList<CellTypeClassification>();
 		for (final String cellType : celltypes) {
-
+			ConcurrentUtil.sleep(1L);
 			// cells of type
 			final List<SingleCell> cellsOfCellType = singleCellList.stream().filter(
 					sc -> sc.getCellType(cellTypeBranch) != null && sc.getCellType(cellTypeBranch).equals(cellType))
@@ -1858,60 +1897,66 @@ public class PCTSEA {
 		}
 		// output correlations
 		FileWriter correlationsFileWriter = null;
-		if (writeCorrelationsFile) {
-			correlationsFileWriter = new FileWriter(correlationsOutputFile);
-			correlationsFileWriter.write(
-					"cell\tcell_type\tpearsons_corr\tvalues_correlated\tgenes\tnum_genes\tgene_expression_variance_on_cell\n");
-		}
-		final Iterator<SingleCell> cellsIterator = singleCellList.iterator();
-		while (cellsIterator.hasNext()) {
-			final SingleCell singleCell = cellsIterator.next();
+		try {
+			if (writeCorrelationsFile) {
+				correlationsFileWriter = new FileWriter(correlationsOutputFile);
+				correlationsFileWriter.write(
+						"cell\tcell_type\tpearsons_corr\tvalues_correlated\tgenes\tnum_genes\tgene_expression_variance_on_cell\n");
+			}
+			final Iterator<SingleCell> cellsIterator = singleCellList.iterator();
+			while (cellsIterator.hasNext()) {
+				ConcurrentUtil.sleep(1L);
+				final SingleCell singleCell = cellsIterator.next();
 
-			singleCell.calculateCorrelation(interactorExpressions, takeZerosForCorrelation,
-					minNumberExpressedGenesInCell, getExpressionsUsedForCorrelation);
+				singleCell.calculateCorrelation(interactorExpressions, takeZerosForCorrelation,
+						minNumberExpressedGenesInCell, getExpressionsUsedForCorrelation);
 //			if (Double.isNaN(singleCell.getGeneExpressionVariance())
 //					|| singleCell.getGeneExpressionVariance() < minCellsPerCellTypeForPDF) {
 //				numCellsDiscardedByMinimumVariance++;
 //				cellsIterator.remove();
 //				continue;
 //			}
-			if (correlationThreshold.passThreshold(singleCell)) {
-				numPositiveCorrelated++;
-			}
-		}
-
-		if (writeCorrelationsFile) {
-			// we sort the single cell list to have them sorted by correlation
-			correlationThreshold.sortSingleCellsByCorrelation(singleCellList);
-
-			// print to file and create chart
-			final TDoubleList correlations = new TDoubleArrayList();
-
-			for (final SingleCell singleCell : singleCellList) {
-				if (!Double.isNaN(singleCell.getCorrelation())) {
-					correlations.add(singleCell.getCorrelation());
+				if (correlationThreshold.passThreshold(singleCell)) {
+					numPositiveCorrelated++;
 				}
-				correlationsFileWriter.write(singleCell.getName() + "\t" + singleCell.getCellType(cellTypeBranch) + "\t"
-						+ +singleCell.getCorrelation() + "\t" + singleCell.getExpressionsUsedForCorrelation() + "\t"
-						+ singleCell.getGenesForCorrelationString() + "\t" + singleCell.getGenesForCorrelation().size()
-						+ "\t" + singleCell.getGeneExpressionVariance() + "\n");
 			}
 
-			createWholeDatasetCorrelationDistributionChart(correlations);
-
-		}
-		if (writeCorrelationsFile) {
-			correlationsFileWriter.close();
-		}
-		if (outputToLog) {
-
-			log.info(numPositiveCorrelated + " cells pass the correlation threshold out of " + originalNumCells);
-			log.info("Correlations calculated");
 			if (writeCorrelationsFile) {
-				log.info("Correlations file created at: " + correlationsOutputFile.getAbsolutePath());
+				// we sort the single cell list to have them sorted by correlation
+				correlationThreshold.sortSingleCellsByCorrelation(singleCellList);
+
+				// print to file and create chart
+				final TDoubleList correlations = new TDoubleArrayList();
+
+				for (final SingleCell singleCell : singleCellList) {
+					ConcurrentUtil.sleep(1L);
+					if (!Double.isNaN(singleCell.getCorrelation())) {
+						correlations.add(singleCell.getCorrelation());
+					}
+					correlationsFileWriter.write(singleCell.getName() + "\t" + singleCell.getCellType(cellTypeBranch)
+							+ "\t" + +singleCell.getCorrelation() + "\t" + singleCell.getExpressionsUsedForCorrelation()
+							+ "\t" + singleCell.getGenesForCorrelationString() + "\t"
+							+ singleCell.getGenesForCorrelation().size() + "\t" + singleCell.getGeneExpressionVariance()
+							+ "\n");
+				}
+
+				createWholeDatasetCorrelationDistributionChart(correlations);
+
+			}
+			return numPositiveCorrelated;
+		} finally {
+			if (writeCorrelationsFile) {
+				correlationsFileWriter.close();
+			}
+			if (outputToLog) {
+				log.info(numPositiveCorrelated + " cells pass the correlation threshold out of " + originalNumCells);
+				log.info("Correlations calculated");
+				if (writeCorrelationsFile) {
+					log.info("Correlations file created at: " + correlationsOutputFile.getAbsolutePath());
+				}
 			}
 		}
-		return numPositiveCorrelated;
+
 	}
 
 	private void createWholeDatasetCorrelationDistributionChart(TDoubleList correlations) {

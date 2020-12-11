@@ -14,6 +14,7 @@ import org.jfree.chart.title.TextTitle;
 import org.jfree.chart.title.Title;
 
 import edu.scripps.yates.pctsea.utils.PDFUtils;
+import edu.scripps.yates.utilities.pi.ConcurrentUtil;
 
 public class ChartsGenerated extends ArrayList<ByteArrayOutputStream> {
 	/**
@@ -38,6 +39,7 @@ public class ChartsGenerated extends ArrayList<ByteArrayOutputStream> {
 
 	public void saveChartsAsPDF() throws IOException {
 		for (int i = 0; i < this.size(); i++) {
+			ConcurrentUtil.sleep(1L);
 			final byte[][] byteArrays = new byte[1][];
 			final ByteArrayOutputStream byteArrayOutput = this.get(i);
 			final File outputPDFFile = this.pdfFiles.get(i);

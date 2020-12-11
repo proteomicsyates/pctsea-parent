@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 
 import edu.scripps.yates.pctsea.InteractorsExpressionsRetriever;
 import edu.scripps.yates.utilities.maths.Maths;
+import edu.scripps.yates.utilities.pi.ConcurrentUtil;
 import gnu.trove.iterator.TIntIterator;
 import gnu.trove.list.TDoubleList;
 import gnu.trove.list.TIntList;
@@ -279,6 +280,7 @@ public class SingleCell {
 		this.genesForCorrelation = new ArrayList<String>();
 		final TIntIterator geneIDIterator = geneIDs.iterator();
 		while (geneIDIterator.hasNext()) {
+			ConcurrentUtil.sleep(1L);
 			final int geneID = geneIDIterator.next();
 			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID);
 //			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID)interactorExpressions.getExpressionsOfGene(geneID)
@@ -300,6 +302,7 @@ public class SingleCell {
 			}
 		}
 		for (final String gene : genesForCorrelation) {
+			ConcurrentUtil.sleep(1L);
 			if (!"".equals(description.toString())) {
 				description.append(",");
 			}

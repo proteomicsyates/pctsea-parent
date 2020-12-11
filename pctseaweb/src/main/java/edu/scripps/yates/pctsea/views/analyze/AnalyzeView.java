@@ -10,17 +10,28 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+
+import javax.annotation.PostConstruct;
 
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.ComponentEvent;
+import com.vaadin.flow.component.ComponentEventListener;
+import com.vaadin.flow.component.DomEvent;
 import com.vaadin.flow.component.HasComponents;
 import com.vaadin.flow.component.HtmlComponent;
 import com.vaadin.flow.component.Tag;
 import com.vaadin.flow.component.Text;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
@@ -43,10 +54,14 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.data.binder.Binder;
+import com.vaadin.flow.data.validator.EmailValidator;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.shared.Registration;
 
 import edu.scripps.yates.pctsea.PCTSEA;
+import edu.scripps.yates.pctsea.db.Dataset;
+import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
@@ -56,34 +71,38 @@ import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.pctsea.util.VaadinUtil;
 import edu.scripps.yates.pctsea.utils.StatusListener;
 import edu.scripps.yates.pctsea.views.main.MainView;
+import edu.scripps.yates.utilities.files.FileUtils;
 import edu.scripps.yates.utilities.util.Pair;
+import gnu.trove.set.hash.THashSet;
 
 @Route(value = "analyze", layout = MainView.class)
-@PageTitle("Analyze")
+@PageTitle("pCtSEAweb - Analyze")
 @CssImport("./styles/views/analyze/analyze-view.css")
 public class AnalyzeView extends VerticalLayout {
 
 	private final NumberField minCorrelation = new NumberField("Minimum Pearson's correlation");
 	private final IntegerField minGenesCells = new IntegerField("Minimum number of proteins");
+	private final ComboBox<Dataset> datasets = new ComboBox<Dataset>("Single cells dataset to compare against");
 	private final TextField outputPrefix = new TextField("Prefix for all output files", "experiment1");
 	private final EmailField email = new EmailField("Email", "your_email@domain.com");
 	private final IntegerField numPermutations = new IntegerField("Number of permutations", "1000");
 	MemoryBuffer buffer = new MemoryBuffer();
-	private final Upload upload = new Upload(buffer);
-	private final Div output = new Div();
-	private final Button cancelButton = new Button("Clear");
+	private final MyUpload upload = new MyUpload(buffer);
+	private final Div outputDiv = new Div();
+	private final Button clearButton = new Button("Clear");
+	private final Button cancelButton = new Button("Cancel");
 	private final Button submitButton = new Button("Submit");
 	private final TextArea statusArea = new TextArea("Progress status:");
-	private final Binder<InputParameters> binder;
+	private Binder<InputParameters> binder;
 	private File inputFile;
 	private final int defaultMinGenes = 4;
 	private final double defaultMinCorrelation = 0.1;
 	private final int defaultPermutations = 1000;
 	private Button showInputDataButton;
-	private final VerticalLayout inputFileDataTabContent;
-	private final Tab inputFileDataTab;
-	private final Map<Tab, Component> tabsToPages;
-	private final Tabs tabs;
+	private VerticalLayout inputFileDataTabContent;
+	private Tab inputFileDataTab;
+	private Map<Tab, Component> tabsToPages;
+	private Tabs tabs;
 	@Autowired
 	private SingleCellMongoRepository scmr;
 	@Autowired
@@ -92,10 +111,36 @@ public class AnalyzeView extends VerticalLayout {
 	private PctseaRunLogRepository runLogsRepo;
 	@Autowired
 	private MongoBaseService mbs;
-	private Runnable backgroundProcess;
-	private final HorizontalLayout resultsPanel;
+	@Autowired
+	private DatasetMongoRepository dmr;
+
+	private HorizontalLayout resultsPanel;
+	private ExecutorService executor;
+
+	class MyUpload extends Upload {
+		private static final long serialVersionUID = 1L;
+
+		public MyUpload(MemoryBuffer buffer) {
+			super(buffer);
+		}
+
+		Registration addFileRemoveListener(ComponentEventListener<FileRemoveEvent> listener) {
+			return super.addListener(FileRemoveEvent.class, listener);
+		}
+	}
+
+	@DomEvent("file-remove")
+	public static class FileRemoveEvent extends ComponentEvent<Upload> {
+		public FileRemoveEvent(Upload source, boolean fromClient) {
+			super(source, fromClient);
+		}
+	}
 
 	public AnalyzeView() {
+	}
+
+	@PostConstruct
+	public void init() {
 		setId("analyze-view");
 
 		add(createTitle());
@@ -129,9 +174,15 @@ public class AnalyzeView extends VerticalLayout {
 		final InputParameters inputParameters = new InputParameters();
 		binder.setBean(inputParameters);
 		binder.forField(outputPrefix).asRequired("Required")
-				.withValidator(prefix -> !"".equals(prefix), "Prefix is required")
+				.withValidator(prefix -> !"".equals(prefix), "Prefix is required").withValidator(prefix -> {
+					final String tmp = FileUtils.checkInvalidCharacterNameForFileName(prefix);
+					if (!tmp.equals(prefix)) {
+						return false;
+					}
+					return true;
+				}, "Prefix contains invalid characters")
 				.bind(InputParameters::getOutputPrefix, InputParameters::setOutputPrefix);
-		binder.forField(minGenesCells).asRequired("Required").withValidator(num -> num >= 1, "Minimum is 1")
+		binder.forField(minGenesCells).asRequired("Required").withValidator(num -> num >= 1, "Minimum is 3")
 				.bind(InputParameters::getMinGenesCells, InputParameters::setMinGenesCells);
 		binder.forField(numPermutations).asRequired("Required")
 				.withValidator(num -> num >= 10, "Minimum number of permutations: 10")
@@ -140,21 +191,50 @@ public class AnalyzeView extends VerticalLayout {
 				.withValidator(num -> num >= 0.0, "Minimum correlation is 0.0")
 				.withValidator(num -> num <= 1.0, "Maximum correlation is 1.0")
 				.bind(InputParameters::getMinCorrelation, InputParameters::setMinCorrelation);
-		binder.forField(email).asRequired("Required").bind(InputParameters::getEmail, InputParameters::setEmail);
+		binder.forField(email).asRequired("Required")
+				.withValidator(new EmailValidator("This doesn't look like a valid email address"))
+				.bind(InputParameters::getEmail, InputParameters::setEmail);
 
-		cancelButton.addClickListener(e -> clearForm());
+		// load datasets
+		loadDatasetsInComboList();
+
+		// buttons
+		clearButton.addClickListener(e -> clearForm());
 		submitButton.addClickListener(e -> {
-			submit();
+			try {
+				submit();
+			} catch (final Exception e2) {
+				VaadinUtil.showErrorDialog("Error: " + e2.getMessage());
+				return;
+			}
 		});
+		cancelButton.addClickListener(e -> {
+			final List<Runnable> jobsNotStarted = executor.shutdownNow();
+			VaadinUtil.showInformationDialog("pCtSEA will stop soon...");
+		});
+		cancelButton.setEnabled(false);
 
 		resultsPanel = new HorizontalLayout();
 		resultsPanel.add(
 				"Results will appear here as soon as the analysis is done. Also, an email will be sent to the provided email adress.");
+		resultsPanel.setVisible(false);
 		add(resultsPanel);
 		initializeInputParamsToDefaults();
 		statusArea.getStyle().set("minHeight", "150px");
+		statusArea.setMaxHeight("300px");
+		statusArea.setReadOnly(true);
 		statusArea.setWidthFull();
+		statusArea.setVisible(false);
 		add(statusArea);
+	}
+
+	private void loadDatasetsInComboList() {
+		final List<Dataset> datasetsFromDB = dmr.findAll();
+		final Set<String> datasets = datasetsFromDB.stream().map(dataset -> dataset.getTag())
+				.collect(Collectors.toSet());
+
+		this.datasets.setItems(datasetsFromDB);
+
 	}
 
 	private void showTabContent(Tab selectedTab) {
@@ -169,13 +249,23 @@ public class AnalyzeView extends VerticalLayout {
 			VaadinUtil.showErrorDialog("Input file is missing!");
 			return;
 		}
-		final InputParameters inputParameters = binder.getBean();
+		InputParameters inputParameters = new InputParameters();
+		final boolean valid = binder.writeBeanIfValid(inputParameters);
+		if (!valid) {
+			inputParameters = null;
+			VaadinUtil.showErrorDialog("Errors in input parameters!");
+			return;
+		}
 		// TODO
 		inputParameters.setCellTypesClassification("TYPE");
 		inputParameters.setLoadRandom(false);
 		inputParameters.setGenerateCharts(true);
 		inputParameters.setPlotNegativeEnriched(false);
 		inputParameters.setInputDataFile(inputFile.getAbsolutePath());
+		inputParameters.setWriteCorrelationsFile(false);
+		final Set<String> datasetTags = new THashSet<String>();
+		datasetTags.add(this.datasets.getValue().getTag());
+		inputParameters.setDatasets(datasetTags);
 		startPCTSEAAnalysis(inputParameters);
 		Notification.show("Run starting...");
 
@@ -183,39 +273,72 @@ public class AnalyzeView extends VerticalLayout {
 
 	private void startPCTSEAAnalysis(InputParameters inputParameters) {
 //		showSpinnerDialog();
-		checkInputParameters(inputParameters);
+		final UI ui = UI.getCurrent();
 		final PCTSEA pTCPctsea = new PCTSEA(inputParameters, emr, scmr, runLogsRepo, mbs);
 		pTCPctsea.setStatusListener(new StatusListener() {
 
 			@Override
 			public void onStatusUpdate(String statusMessage) {
-				getUI().get().access(() -> showMessage(statusMessage));
-
+				ui.access(() -> {
+					showMessage(statusMessage);
+				});
 			}
 		});
+		setEnabledStatusAsRunning();
+		statusArea.setValue("Starting run...");
 
 		// launch this in background
-		backgroundProcess = new Runnable() {
+		executor = Executors.newSingleThreadExecutor();
+
+		final Runnable currentPSEAJob = new Runnable() {
 
 			@Override
 			public void run() {
 
-				getUI().get().access(() -> submitButton.setEnabled(false));
-				final PCTSEAResult results = pTCPctsea.run();
-				getUI().get().access(() -> submitButton.setEnabled(true));
-				showLinkToResults(results.getUrlToViewer());
+				try {
+					final PCTSEAResult results = pTCPctsea.run();
+					ui.access(() -> {
+						showLinkToResults(results.getUrlToViewer());
+					});
+
+				} catch (final RuntimeException e) {
+					ui.access(() -> {
+						VaadinUtil.showErrorDialog("pCtSEA has stopped.");
+						showMessage("pCtSEA has stopped.");
+					});
+				} finally {
+					ui.access(() -> {
+						setEnabledStatusAsReady();
+					});
+				}
+
 			}
+
 		};
-		backgroundProcess.run();
+		executor.submit(currentPSEAJob);
 
 	}
 
-	private void checkInputParameters(InputParameters inputParameters) {
-		final String outputPrefix = inputParameters.getOutputPrefix();
-		if (outputPrefix == null) {
-			throw new IllegalArgumentException("Output prefix cannot be empty");
-		}
+	private void setEnabledStatusAsRunning() {
+		submitButton.setEnabled(false);
+		cancelButton.setEnabled(true);
+		clearButton.setEnabled(false);
+		this.minCorrelation.setEnabled(false);
+		this.minGenesCells.setEnabled(false);
+		this.numPermutations.setEnabled(false);
+		this.outputPrefix.setEnabled(false);
+		this.statusArea.setVisible(true);
+		this.resultsPanel.setVisible(true);
+	}
 
+	private void setEnabledStatusAsReady() {
+		submitButton.setEnabled(true);
+		cancelButton.setEnabled(false);
+		clearButton.setEnabled(true);
+		this.minCorrelation.setEnabled(true);
+		this.minGenesCells.setEnabled(true);
+		this.numPermutations.setEnabled(true);
+		this.outputPrefix.setEnabled(true);
 	}
 
 	protected void showLinkToResults(URL url) {
@@ -241,13 +364,28 @@ public class AnalyzeView extends VerticalLayout {
 		minGenesCells.setValue(defaultMinGenes);
 		minGenesCells
 				.setHelperText("Minimum number of proteins that should have a non-zero expression value in a cell. "
-						+ "Minimum value: 1");
-		minGenesCells.setMin(1);
+						+ "Minimum value: 2");
+		minGenesCells.setMin(2);
 		//
 		numPermutations.setValue(defaultPermutations);
 		numPermutations.setMin(10);
 		numPermutations.setHelperText(
 				"Number of permutations for calculating significance of the enrichment scores, being a value of 1000 reasonable. Minimum value: 10");
+		//
+		this.datasets.setAutoOpen(true);
+		this.datasets.setHelperText(
+				"Datasets stored in the database that can be used to compare your data against. Select the one that is more appropiate to your input.");
+		this.datasets.setClearButtonVisible(true);
+		this.datasets.setItemLabelGenerator(Dataset::getName);
+		this.datasets.setPlaceholder("Select dataset");
+		this.datasets.addValueChangeListener(event -> {
+			final Dataset value = event.getValue();
+			if (value != null) {
+				// TODO
+				// show information about it on other components
+			}
+
+		});
 		//
 		upload.setMaxFiles(1);
 		final int maxFileSizeInBytes = 100 * 1024 * 1024; // 100Mb
@@ -258,6 +396,7 @@ public class AnalyzeView extends VerticalLayout {
 		upload.addFileRejectedListener(event -> {
 			VaadinUtil.showErrorDialog(event.getErrorMessage());
 		});
+
 		upload.addFinishedListener(event -> {
 
 			try {
@@ -268,7 +407,8 @@ public class AnalyzeView extends VerticalLayout {
 				outputStream.close();
 				final List<Pair> genes = validateInputFile(inputFile);
 				enableInputFileDataTab(genes);
-				output.add(genes.size()
+				outputDiv.removeAll();
+				outputDiv.add(genes.size()
 						+ " genes/proteins read successfully from input file. You can review the input data in the 'Input data' tab below:");
 				showInputDataButton.setEnabled(true);
 
@@ -277,6 +417,14 @@ public class AnalyzeView extends VerticalLayout {
 				inputFile = null;
 			}
 		});
+		upload.addFileRemoveListener(event -> {
+			outputDiv.removeAll();
+			inputFile = null;
+			showInputDataButton.setEnabled(false);
+		});
+		//
+		email.setHelperText(
+				"Include your email in case the analysis take more than a few minutes. You will get notified with the results by email.");
 //		upload.addSucceededListener(event -> {
 //			final Component component = VaadinUtil.createComponent(event.getMIMEType(), event.getFileName(),
 //					buffer.getInputStream());
@@ -375,7 +523,7 @@ public class AnalyzeView extends VerticalLayout {
 	private Component createFormLayout() {
 		final FormLayout formLayout = new FormLayout();
 //		email.setErrorMessage("Please enter a valid email address");
-
+		formLayout.add(datasets);
 		formLayout.add(minCorrelation);
 		formLayout.add(minGenesCells);
 		formLayout.add(outputPrefix);
@@ -389,7 +537,9 @@ public class AnalyzeView extends VerticalLayout {
 		buttonLayout.addClassName("button-layout");
 		submitButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 		buttonLayout.add(submitButton);
+		buttonLayout.add(clearButton);
 		buttonLayout.add(cancelButton);
+		cancelButton.addThemeVariants(ButtonVariant.LUMO_ERROR);
 		return buttonLayout;
 	}
 
@@ -403,7 +553,7 @@ public class AnalyzeView extends VerticalLayout {
 
 		final HorizontalLayout horizontal = new HorizontalLayout();
 		final VerticalLayout verticalLayout2 = new VerticalLayout();
-		verticalLayout2.add(upload, output);
+		verticalLayout2.add(upload, outputDiv);
 		horizontal.add(verticalLayout2);
 
 		showInputDataButton = new Button("Show input data");

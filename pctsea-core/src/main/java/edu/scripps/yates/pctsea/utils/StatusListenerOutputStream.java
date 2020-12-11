@@ -29,7 +29,7 @@ public class StatusListenerOutputStream extends OutputStream {
 		}
 
 		if (b == '\n') {
-			final String text = sb.toString() + "\n";
+			final String text = sb.toString();
 			statusListener.onStatusUpdate(text);
 			sb.setLength(0);
 		} else {

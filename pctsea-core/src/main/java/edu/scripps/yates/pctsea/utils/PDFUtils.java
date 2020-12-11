@@ -10,6 +10,8 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.PDPageContentStream.AppendMode;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
+import edu.scripps.yates.utilities.pi.ConcurrentUtil;
+
 public class PDFUtils {
 	private final static Logger log = Logger.getLogger(PDFUtils.class);
 
@@ -22,6 +24,7 @@ public class PDFUtils {
 		final PDDocument doc = new PDDocument();
 
 		for (final File imageFile : imageFiles) {
+			ConcurrentUtil.sleep(1L);
 			// we will add the image to the first page.
 			final PDPage page = new PDPage();
 			doc.addPage(page);
@@ -56,6 +59,7 @@ public class PDFUtils {
 		final PDDocument doc = new PDDocument();
 
 		for (final byte[] byteArray : bytesArrays) {
+			ConcurrentUtil.sleep(1L);
 			// we will add the image to the first page.
 			final PDPage page = new PDPage();
 			doc.addPage(page);

@@ -19,6 +19,7 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -79,15 +80,23 @@ public class VaadinUtil {
 	}
 
 	public static void showErrorDialog(String text) {
+		showDialog(text, VaadinIcon.WARNING.create(), "OK");
+	}
+
+	public static void showInformationDialog(String text) {
+		showDialog(text, VaadinIcon.INFO.create(), "OK");
+	}
+
+	public static void showDialog(String text, Icon icon, String buttonText) {
 		final Dialog dialog = new Dialog();
 		final Div message = new Div(new Span(text));
 		dialog.setCloseOnEsc(true);
 		dialog.setCloseOnOutsideClick(true);
-		final Button confirmButton = new Button("OK", event -> {
+		final Button confirmButton = new Button(buttonText, event -> {
 
 			dialog.close();
 		});
-		final HorizontalLayout horizontalPanel = new HorizontalLayout(VaadinIcon.WARNING.create(), message);
+		final HorizontalLayout horizontalPanel = new HorizontalLayout(icon, message);
 		final VerticalLayout verticalPanel = new VerticalLayout(horizontalPanel, confirmButton);
 		verticalPanel.setHorizontalComponentAlignment(Alignment.CENTER, horizontalPanel, confirmButton);
 		dialog.add(verticalPanel);
