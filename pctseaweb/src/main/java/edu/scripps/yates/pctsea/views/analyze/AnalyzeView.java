@@ -26,6 +26,7 @@ import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.DomEvent;
 import com.vaadin.flow.component.HasComponents;
 import com.vaadin.flow.component.HtmlComponent;
+import com.vaadin.flow.component.ItemLabelGenerator;
 import com.vaadin.flow.component.Tag;
 import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
@@ -376,7 +377,13 @@ public class AnalyzeView extends VerticalLayout {
 		this.datasets.setHelperText(
 				"Datasets stored in the database that can be used to compare your data against. Select the one that is more appropiate to your input.");
 		this.datasets.setClearButtonVisible(true);
-		this.datasets.setItemLabelGenerator(Dataset::getName);
+		this.datasets.setItemLabelGenerator(new ItemLabelGenerator<Dataset>() {
+
+			@Override
+			public String apply(Dataset item) {
+				return item.getTag() + ": " + item.getName();
+			}
+		});
 		this.datasets.setPlaceholder("Select dataset");
 		this.datasets.addValueChangeListener(event -> {
 			final Dataset value = event.getValue();
@@ -548,7 +555,8 @@ public class AnalyzeView extends VerticalLayout {
 //		uploadLayout.addClassName("button-layout");
 
 		final Label label = new Label(
-				"Tab-separated text file with two columns, one the protein or gene identified and the second, the quantitative information (spectral counts):");
+				"Tab-separated text file with two columns, one the protein accessions (UniprotKB) or gene symbols "
+						+ "and the second, the quantitative values. Any other column will be ignored.");
 		uploadLayout.add(label);
 
 		final HorizontalLayout horizontal = new HorizontalLayout();
