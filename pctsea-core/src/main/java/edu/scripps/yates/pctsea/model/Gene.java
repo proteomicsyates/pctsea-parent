@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
 import gnu.trove.list.TFloatList;
 import gnu.trove.list.array.TFloatArrayList;
@@ -43,7 +44,7 @@ public class Gene {
 			if (Float.compare(expressionsBySingleCellID.get(singleCellID), expressionValue) != 0) {
 				// keep the highest
 				if (expressionsBySingleCellID.get(singleCellID) < expressionValue) {
-					log.info("Gene " + geneName + " already contained an expression value for single cell "
+					PCTSEA.logStatus("Gene " + geneName + " already contained an expression value for single cell "
 							+ singleCellID + " ("
 							+ SingleCellsMetaInformationReader.getSingleCellByCellID(singleCellID).getName()
 							+ ") which is " + expressionsBySingleCellID.get(singleCellID)

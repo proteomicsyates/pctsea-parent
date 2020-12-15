@@ -55,12 +55,13 @@ public class PCTSEAUtils {
 		final File outputTXTFile = getOutputTXTFile(resultsSubfolder, fileName, prefix);
 		final FileWriter fw = new FileWriter(outputTXTFile);
 		final Plot plot = chart.getPlot();
+		ConcurrentUtil.sleep(1L);
 		if (plot instanceof XYPlot) {
 			final XYPlot xyplot = (XYPlot) plot;
 			for (int datasetIndex = 0; datasetIndex < xyplot.getDatasetCount(); datasetIndex++) {
 				final XYDataset dataset = xyplot.getDataset(datasetIndex);
 				for (int seriesIndex = 0; seriesIndex < dataset.getSeriesCount(); seriesIndex++) {
-					ConcurrentUtil.sleep(1L);
+
 					final Comparable seriesKey = dataset.getSeriesKey(seriesIndex);
 					for (int itemIndex = 0; itemIndex < dataset.getItemCount(seriesIndex); itemIndex++) {
 						final double x = dataset.getXValue(seriesIndex, itemIndex);
@@ -74,7 +75,6 @@ public class PCTSEAUtils {
 			for (int datasetIndex = 0; datasetIndex < categoryPlot.getDatasetCount(); datasetIndex++) {
 				final CategoryDataset dataset = categoryPlot.getDataset(datasetIndex);
 				for (int rowIndex = 0; rowIndex < dataset.getRowCount(); rowIndex++) {
-					ConcurrentUtil.sleep(1L);
 					final Comparable rowKey = dataset.getRowKey(rowIndex);
 					for (int columnIndex = 0; columnIndex < dataset.getColumnCount(); columnIndex++) {
 						final Comparable columnKey = dataset.getColumnKey(columnIndex);
@@ -95,9 +95,6 @@ public class PCTSEAUtils {
 	}
 
 	private static File getOutputTXTFile(File folder, String fileName, String prefix) {
-		if (fileName.contains("bipotent")) {
-			System.out.println(fileName);
-		}
 		final String correctedFileName = FileUtils
 				.checkInvalidCharacterNameForFileName(prefix + "_" + fileName + ".txt");
 		return new File(folder.getAbsolutePath() + File.separator + correctedFileName);

@@ -14,7 +14,6 @@ import edu.scripps.yates.pctsea.db.PctseaRunLog;
  */
 public class PCTSEAResult {
 	private File resultsFile;
-	private File resultsFileForViewer;
 	private URL urlToViewer;
 	private PctseaRunLog runLog;
 
@@ -22,9 +21,8 @@ public class PCTSEAResult {
 
 	}
 
-	public PCTSEAResult(File resultsFile, File resultsFileForViewer, URL urlToViewer, PctseaRunLog runLog) {
+	public PCTSEAResult(File resultsFile, URL urlToViewer, PctseaRunLog runLog) {
 		this.resultsFile = resultsFile;
-		this.resultsFileForViewer = resultsFileForViewer;
 		this.urlToViewer = urlToViewer;
 		this.runLog = runLog;
 	}
@@ -41,16 +39,8 @@ public class PCTSEAResult {
 		return runLog;
 	}
 
-	public File getResultsFileForViewer() {
-		return resultsFileForViewer;
-	}
-
 	public void setResultsFile(File resultsFile) {
 		this.resultsFile = resultsFile;
-	}
-
-	public void setResultsFileForViewer(File resultsFileForViewer) {
-		this.resultsFileForViewer = resultsFileForViewer;
 	}
 
 	public void setUrlToViewer(URL urlToViewer) {

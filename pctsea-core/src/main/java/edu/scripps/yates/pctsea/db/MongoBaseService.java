@@ -9,6 +9,7 @@ import javax.inject.Inject;
 
 import org.bson.types.ObjectId;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.logging.LogLevel;
 import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.BulkOperations.BulkMode;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -22,6 +23,7 @@ import org.springframework.util.Assert;
 
 import com.mongodb.BasicDBObject;
 
+import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
 import edu.scripps.yates.utilities.progresscounter.ProgressPrintingType;
 import gnu.trove.map.hash.THashMap;
@@ -83,7 +85,7 @@ public class MongoBaseService {
 			counter.increment();
 			final String printIfNecessary = counter.printIfNecessary();
 			if (!"".equals(printIfNecessary)) {
-				log.info(printIfNecessary);
+				PCTSEA.logStatus(printIfNecessary);
 			}
 			if (datasets != null && !datasets.isEmpty()) {
 				for (final String dataset : datasets) {
@@ -99,9 +101,9 @@ public class MongoBaseService {
 					}
 				}
 			} else {
-				System.out.println("Gene: " + gene);
+				PCTSEA.logStatus("Gene: " + gene);
 				final List<Expression> expressions = emr.findByGene(gene);
-				System.out.println(expressions.size() + " expressions");
+				PCTSEA.logStatus(expressions.size() + " expressions");
 				for (final Expression expression : expressions) {
 					if (!ret.containsKey(gene)) {
 						final ArrayList<Expression> list = new ArrayList<Expression>();
@@ -183,7 +185,7 @@ public class MongoBaseService {
 			return entities;
 
 		} catch (final Exception ex) {
-			System.out.println("BulkWriteOperation Exception ::  " + ex);
+			PCTSEA.logStatus("BulkWriteOperation Exception ::  " + ex, LogLevel.ERROR);
 			return null;
 		}
 	}
@@ -239,7 +241,7 @@ public class MongoBaseService {
 			return entities;
 
 		} catch (final Exception ex) {
-			System.out.println("BulkWriteOperation Exception ::  " + ex);
+			PCTSEA.logStatus("BulkWriteOperation Exception ::  " + ex, LogLevel.ERROR);
 			return null;
 		}
 	}

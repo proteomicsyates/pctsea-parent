@@ -12,7 +12,18 @@ import org.vaadin.artur.helpers.LaunchUtil;
 public class Application extends SpringBootServletInitializer {
 
 	public static void main(String[] args) {
+
 		LaunchUtil.launchBrowserInDevelopmentMode(SpringApplication.run(Application.class, args));
+
+	}
+
+	private static boolean containsArgument(String[] args, String toFind) {
+		for (final String arg : args) {
+			if (arg.equalsIgnoreCase(toFind)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 }

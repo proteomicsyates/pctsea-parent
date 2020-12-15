@@ -10,8 +10,6 @@ import org.apache.log4j.Logger;
 
 import edu.scripps.yates.pctsea.InteractorsExpressionsRetriever;
 import edu.scripps.yates.utilities.maths.Maths;
-import edu.scripps.yates.utilities.pi.ConcurrentUtil;
-import gnu.trove.iterator.TIntIterator;
 import gnu.trove.list.TDoubleList;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TDoubleArrayList;
@@ -80,14 +78,14 @@ public class SingleCell {
 		final Set<String> cellTypesMapped = new THashSet<String>();
 		CellTypes.mapToOntologyCellType(cellType, cellTypesMapped);
 		if (cellTypesMapped.size() > 1) {
-//			log.info(cellType + " is mapped to multiple terms in the cell type ontology!");
+//			PCTSEA.logStatus(cellType + " is mapped to multiple terms in the cell type ontology!");
 		}
 		if (!cellTypesMapped.isEmpty()) {
 			final String next = cellTypesMapped.iterator().next();
 			map.put(originalCellType, next);
 			return next;
 		}
-//		log.info("'" + cellType + "' is not mapped to any cell type ontology");
+//		PCTSEA.logStatus("'" + cellType + "' is not mapped to any cell type ontology");
 		// parse heterogeneity of cell types
 		if (cellType.contains("_")) {
 			cellType = cellType.split("_")[0].trim();
@@ -278,10 +276,9 @@ public class SingleCell {
 		int singleCellNonZero = 0;
 		final StringBuilder description = new StringBuilder();
 		this.genesForCorrelation = new ArrayList<String>();
-		final TIntIterator geneIDIterator = geneIDs.iterator();
-		while (geneIDIterator.hasNext()) {
-			ConcurrentUtil.sleep(1L);
-			final int geneID = geneIDIterator.next();
+
+		for (final int geneID : geneIDs.toArray()) {
+
 			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID);
 //			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID)interactorExpressions.getExpressionsOfGene(geneID)
 //					.getSingleCellExpression(this.getId());
@@ -302,7 +299,6 @@ public class SingleCell {
 			}
 		}
 		for (final String gene : genesForCorrelation) {
-			ConcurrentUtil.sleep(1L);
 			if (!"".equals(description.toString())) {
 				description.append(",");
 			}

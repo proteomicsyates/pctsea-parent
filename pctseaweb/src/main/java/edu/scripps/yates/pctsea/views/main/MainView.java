@@ -1,7 +1,11 @@
 package edu.scripps.yates.pctsea.views.main;
 
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Optional;
 
+import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentUtil;
 import com.vaadin.flow.component.applayout.AppLayout;
@@ -19,6 +23,8 @@ import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.PWA;
 
+import edu.scripps.yates.pctsea.util.PCTSEALocalConfiguration;
+import edu.scripps.yates.pctsea.util.VaadinUtil;
 import edu.scripps.yates.pctsea.views.about.AboutView;
 import edu.scripps.yates.pctsea.views.analyze.AnalyzeView;
 import edu.scripps.yates.pctsea.views.home.HomeView;
@@ -99,5 +105,21 @@ public class MainView extends AppLayout {
 	private Optional<Tab> getTabForComponent(Component component) {
 		return menu.getChildren().filter(tab -> ComponentUtil.getData(tab, Class.class).equals(component.getClass()))
 				.findFirst().map(Tab.class::cast);
+	}
+
+	@Override
+	protected void onAttach(AttachEvent attachEvent) {
+		final String pctseaResultsViewerURL = PCTSEALocalConfiguration.getPCTSEAResultsViewerURL();
+		try {
+			new URL(pctseaResultsViewerURL).toURI().toString();
+		} catch (MalformedURLException | URISyntaxException e) {
+			VaadinUtil.showErrorDialog("Error in configuration input file: " + e.getMessage() + "\n"
+					+ "pCtSEA configuration error: Property '" + PCTSEALocalConfiguration.resultsViewerURLProperty
+					+ "' on configuration file '" + PCTSEALocalConfiguration.PCTSEA_CONF_FILE_NAME
+					+ "'   is a malformed URL");
+			throw new RuntimeException(e);
+
+		}
+		super.onAttach(attachEvent);
 	}
 }

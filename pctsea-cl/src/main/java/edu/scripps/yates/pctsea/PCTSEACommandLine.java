@@ -20,7 +20,6 @@ import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
-import edu.scripps.yates.utilities.dates.DatesUtil;
 import edu.scripps.yates.utilities.swing.CommandLineProgramGuiEnclosable;
 import edu.scripps.yates.utilities.swing.DoNotInvokeRunMethod;
 import edu.scripps.yates.utilities.swing.SomeErrorInParametersOcurred;
@@ -49,32 +48,30 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			throws ParseException, DoNotInvokeRunMethod, SomeErrorInParametersOcurred {
 		super(args);
 		pctsea = new PCTSEA(emr, scmr, runLog, mbs);
-		pctsea.setPrefix(prefix);
-		pctsea.setEmail(email);
-		pctsea.setExperimentExpressionFile(experimentExpressionFile);
-		pctsea.setCorrelationThreshold(correlationThreshold);
-		pctsea.setMinNumberExpressedGenesInCell(minNumberExpressedGenesInCell);
-		pctsea.setLoadRandomDistributionsIfExist(loadRandomDistributionsIfExist);
-		pctsea.setMaxIterations(maxIterations);
-		pctsea.setCellTypesBranches(cellTypeBranches);
-		pctsea.setGenerateCharts(generateCharts);
-		pctsea.setMinCellsPerCellTypeForPDF(minCellsPerCellTypeForPDF);
-		pctsea.setPlotNegativeEnrichedCellTypes(plotNegativeEnrichedCellTypes);
-		pctsea.setDatasets(datasets);
-		pctsea.setWriteCorrelationsFile(writeCorrelationsFile);
+
 	}
 
 	@Override
 	public void run() {
 		try {
 			System.setProperty("java.awt.headless", "true");
+			pctsea.setPrefix(prefix);
+			pctsea.setEmail(email);
+			pctsea.setExperimentExpressionFile(experimentExpressionFile);
+			pctsea.setCorrelationThreshold(correlationThreshold);
+			pctsea.setMinNumberExpressedGenesInCell(minNumberExpressedGenesInCell);
+			pctsea.setLoadRandomDistributionsIfExist(loadRandomDistributionsIfExist);
+			pctsea.setMaxIterations(maxIterations);
+			pctsea.setCellTypesBranches(cellTypeBranches);
+			pctsea.setGenerateCharts(generateCharts);
+			pctsea.setMinCellsPerCellTypeForPDF(minCellsPerCellTypeForPDF);
+			pctsea.setPlotNegativeEnrichedCellTypes(plotNegativeEnrichedCellTypes);
+			pctsea.setDatasets(datasets);
+			pctsea.setWriteCorrelationsFile(writeCorrelationsFile);
+			// to make log go to the textarea when calling to the status listener
+			pctsea.setStatusListener(this);
 			final PCTSEAResult result = pctsea.run();
-			log.info("PCTSEA got some results in "
-					+ DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime()));
-			log.info("Results file created at: " + result.getResultsFile());
-			if (result.getUrlToViewer() != null) {
-				log.info("Also, results can be visualized at: " + result.getUrlToViewer());
-			}
+
 		} catch (final Exception e) {
 			e.printStackTrace();
 			log.error("Error in PCTSEA:", e);
@@ -222,16 +219,9 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			// considering to use all datasets
 		}
 		// write correlations file
-		writeCorrelationsFile = true;
+		writeCorrelationsFile = false;
 		if (cmd.hasOption(InputParameters.WRITE_CORRELATIONS)) {
-			try {
-				writeCorrelationsFile = Boolean
-						.valueOf(cmd.getOptionValue(InputParameters.WRITE_CORRELATIONS).toLowerCase());
-			} catch (final Exception e) {
-				log.error(e);
-				errorInParameters("Error in value for option '-" + InputParameters.WRITE_CORRELATIONS
-						+ "'. It must be either true or false.");
-			}
+			writeCorrelationsFile = true;
 		}
 
 	}
@@ -319,8 +309,8 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 				"Comma separated values of the dataset against you want to analyze your data.");
 		options.add(datasets);
 
-		final Option writeCorrelationsFileOpton = new Option(InputParameters.WRITE_CORRELATIONS, true,
-				"Whether to write or not a file with the correlation values between all single cells and the input data. Default value if not provided: true.");
+		final Option writeCorrelationsFileOpton = new Option(InputParameters.WRITE_CORRELATIONS, false,
+				"Whether to write or not a file with the correlation values between all single cells and the input data. Default value if not provided: False.");
 		options.add(writeCorrelationsFileOpton);
 
 		return options;

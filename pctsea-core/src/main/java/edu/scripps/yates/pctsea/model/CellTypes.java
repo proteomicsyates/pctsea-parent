@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.math3.util.CombinatoricsUtils;
 import org.apache.log4j.Logger;
 
+import edu.scripps.yates.pctsea.PCTSEA;
 import gnu.trove.map.hash.THashMap;
 import gnu.trove.set.hash.THashSet;
 
@@ -26,7 +27,7 @@ public class CellTypes {
 	static {
 		cellTypes = org.proteored.miapeapi.cv.CellTypes.getInstance(null).getPossibleValues().stream()
 				.map(cvTerm -> cvTerm.getPreferredName().toLowerCase()).collect(Collectors.toSet());
-		log.info(cellTypes.size() + " cell types in the ontology");
+		PCTSEA.logStatus(cellTypes.size() + " cell types in the ontology");
 
 	}
 

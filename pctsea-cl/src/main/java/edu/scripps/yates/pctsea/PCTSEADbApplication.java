@@ -13,6 +13,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.dao.DataAccessResourceFailureException;
+
+import com.mongodb.MongoTimeoutException;
 
 import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
@@ -62,7 +65,16 @@ public class PCTSEADbApplication implements CommandLineRunner {
 		log.info("Spring application built");
 		// remove spring params to not interfere with the pctsea params
 //		args = removeSpringParams(args);
-		final ConfigurableApplicationContext context = springApp.run(args);
+		try {
+			final ConfigurableApplicationContext context = springApp.run(args);
+		} catch (final Exception e) {
+			if (e instanceof DataAccessResourceFailureException) {
+				if (e.getCause() != null && e.getCause() instanceof MongoTimeoutException) {
+					log.error("Some error occurred trying to connect to the database: " + e.getCause().getMessage());
+				}
+			}
+			System.exit(-1);
+		}
 
 	}
 

@@ -17,6 +17,8 @@ import org.springframework.data.mongodb.core.index.IndexDefinition;
 import org.springframework.data.mongodb.core.query.Collation;
 import org.springframework.stereotype.Component;
 
+import edu.scripps.yates.pctsea.PCTSEA;
+
 @Component
 public class MongoDBCreator {
 	private final static Logger log = LoggerFactory.getLogger(MongoDBCreator.class);
@@ -25,17 +27,17 @@ public class MongoDBCreator {
 
 	@EventListener(ContextRefreshedEvent.class)
 	public void initIndicesAfterStartup() {
-		log.info("Initializing MongoDB structure:");
+		PCTSEA.logStatus("Initializing MongoDB structure:");
 		if (!template.collectionExists(Expression.class)) {
-			log.info("Creating document collection for " + Expression.class);
+			PCTSEA.logStatus("Creating document collection for " + Expression.class);
 			template.createCollection(Expression.class);
 		} else {
-			log.info("Document collection for " + Expression.class + " already exists");
+			PCTSEA.logStatus("Document collection for " + Expression.class + " already exists");
 		}
 		if (!template.collectionExists(PctseaRunLog.class)) {
-			log.info("Creating document collection for " + PctseaRunLog.class);
+			PCTSEA.logStatus("Creating document collection for " + PctseaRunLog.class);
 			template.createCollection(PctseaRunLog.class);
-			log.info("Document collection for " + PctseaRunLog.class + " already exists");
+			PCTSEA.logStatus("Document collection for " + PctseaRunLog.class + " already exists");
 		}
 //		ensureExpressionGeneIndex();
 //		ensureExpressionProjectIndex();
@@ -43,9 +45,9 @@ public class MongoDBCreator {
 		ensureExpressionCellTypeIndex();
 		ensureExpressionCellNameIndex();
 		if (!template.collectionExists(SingleCell.class)) {
-			log.info("Creating document collection for " + SingleCell.class);
+			PCTSEA.logStatus("Creating document collection for " + SingleCell.class);
 			template.createCollection(SingleCell.class);
-			log.info("Document collection for " + SingleCell.class + " already exists");
+			PCTSEA.logStatus("Document collection for " + SingleCell.class + " already exists");
 
 		}
 		ensureSingleCellTypeIndex();
@@ -53,15 +55,15 @@ public class MongoDBCreator {
 		ensureSingleCellNameIndex();
 		ensureSingleCellDatasetTagIndex();
 		if (!template.collectionExists(Dataset.class)) {
-			log.info("Creating document collection for " + Dataset.class);
+			PCTSEA.logStatus("Creating document collection for " + Dataset.class);
 			template.createCollection(Dataset.class);
-			log.info("Document collection for " + Dataset.class + " already exists");
+			PCTSEA.logStatus("Document collection for " + Dataset.class + " already exists");
 
 		}
 		ensureProjectNameIndex();
 		ensureProjectTagIndex();
 
-		log.info("Database looks ready!");
+		PCTSEA.logStatus("Database looks ready!");
 	}
 
 	private void ensureExpressionGeneAndProjectTagCompoundIndex() {
@@ -83,10 +85,11 @@ public class MongoDBCreator {
 
 	private void logIndexCreation(String field, Class documentClass, boolean withCollation) {
 		if (withCollation) {
-			log.info("Making sure index on '" + field + "' field of collection " + documentClass
+			PCTSEA.logStatus("Making sure index on '" + field + "' field of collection " + documentClass
 					+ " with collation is present.");
 		} else {
-			log.info("Making sure index on '" + field + "' field of collection " + documentClass + " is present.");
+			PCTSEA.logStatus(
+					"Making sure index on '" + field + "' field of collection " + documentClass + " is present.");
 		}
 	}
 

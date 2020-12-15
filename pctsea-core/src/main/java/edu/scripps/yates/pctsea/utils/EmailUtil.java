@@ -2,7 +2,9 @@ package edu.scripps.yates.pctsea.utils;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
+import org.springframework.boot.logging.LogLevel;
 
+import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.utilities.dates.DatesUtil;
@@ -14,7 +16,7 @@ public class EmailUtil {
 
 	public static String sendEmailWithResults(PCTSEAResult result) {
 		final InputParameters inputParameters = result.getRunLog().getInputParameters();
-		log.info("Sending email with results to " + inputParameters.getEmail());
+		PCTSEA.logStatus("Sending email with results to " + inputParameters.getEmail());
 		// SUBJECT
 		final String subject = "PCTSEA results '" + result.getRunLog().getTimeStamp() + " - "
 				+ inputParameters.getOutputPrefix();
@@ -67,9 +69,10 @@ public class EmailUtil {
 		// SEND THE EMAIL
 		final String error = EmailSender.sendEmail(subject, body.toString(), destinationEmail, fromEmail);
 		if (error != null) {
-			log.error("Error sending email. Perhaps emails cannot be sent from this machine.");
+			PCTSEA.logStatus("Error sending email. Perhaps emails cannot be sent from this machine: " + error,
+					LogLevel.ERROR);
 		} else {
-			log.info("Email sent!");
+			PCTSEA.logStatus("Email sent!");
 		}
 		return error;
 	}

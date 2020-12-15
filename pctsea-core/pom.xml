@@ -20,6 +20,20 @@
   		<groupId>edu.scripps.yates</groupId>
   		<artifactId>utilities</artifactId>
   		<version>1.6-SNAPSHOT</version>
+  		<exclusions>
+  			<exclusion>
+  				<groupId>com.compomics</groupId>
+  				<artifactId>utilities</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>uk.ac.ebi.jmzml</groupId>
+  				<artifactId>jmzml</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>uk.ac.ebi.pride.utilities</groupId>
+  				<artifactId>pride-mod</artifactId>
+  			</exclusion>
+  		</exclusions>
   	</dependency>
   	<dependency>
   		<groupId>edu.scripps.yates</groupId>
@@ -35,6 +49,40 @@
   		<groupId>org.proteored.miape.api</groupId>
   		<artifactId>miape-api</artifactId>
   		<version>1.9.9-SNAPSHOT</version>
+  		<exclusions>
+  			<exclusion>
+  				<groupId>com.compomics</groupId>
+  				<artifactId>utilities</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>uk.ac.ebi.jmzml</groupId>
+  				<artifactId>jmzml</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>de.proteinms.xtandemparser</groupId>
+  				<artifactId>xtandem-parser</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>org.mockito</groupId>
+  				<artifactId>mockito-all</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>edu.scripps.yates</groupId>
+  				<artifactId>dtaselectparser</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>uk.ac.ebi.jmzidml</groupId>
+  				<artifactId>jmzidentml</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>uk.ac.ebi.pride.utilities</groupId>
+  				<artifactId>pride-mod</artifactId>
+  			</exclusion>
+  			<exclusion>
+  				<groupId>xerces</groupId>
+  				<artifactId>xercesImpl</artifactId>
+  			</exclusion>
+  		</exclusions>
   	</dependency>
   	<dependency>
   		<groupId>org.apache.pdfbox</groupId>

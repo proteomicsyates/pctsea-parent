@@ -1,20 +1,19 @@
 package edu.scripps.yates.pctsea.model.charts;
 
 import java.awt.Font;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.axis.utils.ByteArrayOutputStream;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.title.TextTitle;
 import org.jfree.chart.title.Title;
 
 import edu.scripps.yates.pctsea.utils.PDFUtils;
-import edu.scripps.yates.utilities.pi.ConcurrentUtil;
 
 public class ChartsGenerated extends ArrayList<ByteArrayOutputStream> {
 	/**
@@ -39,7 +38,6 @@ public class ChartsGenerated extends ArrayList<ByteArrayOutputStream> {
 
 	public void saveChartsAsPDF() throws IOException {
 		for (int i = 0; i < this.size(); i++) {
-			ConcurrentUtil.sleep(1L);
 			final byte[][] byteArrays = new byte[1][];
 			final ByteArrayOutputStream byteArrayOutput = this.get(i);
 			final File outputPDFFile = this.pdfFiles.get(i);

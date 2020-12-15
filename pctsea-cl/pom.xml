@@ -58,17 +58,6 @@
  		</dependency>
 		
 		<dependency>
-			<groupId>edu.scripps.yates</groupId>
-			<artifactId>utilities</artifactId>
-			<version>1.6-SNAPSHOT</version>
-<!-- 			<exclusions> -->
-<!-- 				<exclusion> -->
-<!-- 					<groupId>org.slf4j</groupId> -->
-<!-- 					<artifactId>slf4j-log4j12</artifactId> -->
-<!-- 				</exclusion> -->
-<!-- 			</exclusions> -->
-		</dependency>
-		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-collections4</artifactId>
 			<version>4.4</version>

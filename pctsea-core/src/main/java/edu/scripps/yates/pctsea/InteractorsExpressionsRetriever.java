@@ -93,8 +93,8 @@ public class InteractorsExpressionsRetriever {
 //		getSingleCellExpressionsFromDB(inputProteinGeneList);
 //		if (true)
 //			return;
-		log.info("Getting single-cell expression profiles with the input protein/gene list...");
-		System.out.println(geneIDsByGeneNameMap.size() + " - " + geneNamesByGeneIDMap.size());
+		PCTSEA.logStatus("Getting single-cell expression profiles with the input protein/gene list...");
+		PCTSEA.logStatus(geneIDsByGeneNameMap.size() + " - " + geneNamesByGeneIDMap.size());
 		final Set<String> singleCellNames = new THashSet<String>();
 		final List<String> genesNotFound = new ArrayList<String>();
 		final ProgressCounter counter = new ProgressCounter(inputProteinGeneList.size(),
@@ -116,7 +116,7 @@ public class InteractorsExpressionsRetriever {
 			counter.increment();
 			final String printIfNecessary = counter.printIfNecessary();
 			if (!"".equals(printIfNecessary)) {
-				log.info(printIfNecessary);
+				PCTSEA.logStatus(printIfNecessary);
 			}
 			int geneID = 0;
 			String geneName = inputProteinGene;
@@ -179,19 +179,19 @@ public class InteractorsExpressionsRetriever {
 		final String message = "Expression values from " + singleCellNames.size() + " single cells in "
 				+ genesById.size() + " genes/proteins out of a total "
 				+ SingleCellsMetaInformationReader.getNumSingleCells() + " of single cells";
-		log.info(message);
+		PCTSEA.logStatus(message);
 //		System.out.println(message);
 
 		if (!genesNotFound.isEmpty()) {
 			final String message2 = "Expression values from " + genesNotFound.size()
 					+ " genes were not found in the single cells dataset:";
-			log.info(message2);
+			PCTSEA.logStatus(message2);
 //			System.out.println(message2);
 			String message3 = "";
 			for (final String geneNotFound : genesNotFound) {
 				message3 += geneNotFound + ",";
 			}
-			log.info(message3);
+			PCTSEA.logStatus(message3);
 //			System.out.println(message3);
 		}
 
@@ -206,8 +206,8 @@ public class InteractorsExpressionsRetriever {
 	 * @throws IOException
 	 */
 	private void getSingleCellExpressionsFromDB(List<String> inputProteinGeneList) {
-		log.info("Getting single-cell expression profiles with the input protein/gene list...");
-		System.out.println(geneIDsByGeneNameMap.size() + " - " + geneNamesByGeneIDMap.size());
+		PCTSEA.logStatus("Getting single-cell expression profiles with the input protein/gene list...");
+//		PCTSEA.logStatus(geneIDsByGeneNameMap.size() + " - " + geneNamesByGeneIDMap.size());
 		final Set<String> singleCellNames = new THashSet<String>();
 		final List<String> genesNotFound = new ArrayList<String>();
 
@@ -222,7 +222,7 @@ public class InteractorsExpressionsRetriever {
 			counter.increment();
 			final String printIfNecessary = counter.printIfNecessary();
 			if (!"".equals(printIfNecessary)) {
-				log.info(printIfNecessary);
+				PCTSEA.logStatus(printIfNecessary);
 			}
 			// it already has an id associated from the call to getGenesFromInputList
 			final int geneID = geneIDsByGeneNameMap.get(geneName);
@@ -254,19 +254,19 @@ public class InteractorsExpressionsRetriever {
 		final String message = "Expression values from " + singleCellNames.size() + " single cells in "
 				+ genesById.size() + " genes/proteins out of a total "
 				+ SingleCellsMetaInformationReader.getNumSingleCells() + " of single cells";
-		log.info(message);
+		PCTSEA.logStatus(message);
 //		System.out.println(message);
 
 		if (!genesNotFound.isEmpty()) {
 			final String message2 = "Expression values from " + genesNotFound.size()
 					+ " genes were not found in the single cells dataset:";
-			log.info(message2);
+			PCTSEA.logStatus(message2);
 //			System.out.println(message2);
 			String message3 = "";
 			for (final String geneNotFound : genesNotFound) {
 				message3 += geneNotFound + ",";
 			}
-			log.info(message3);
+			PCTSEA.logStatus(message3);
 //			System.out.println(message3);
 		}
 
@@ -285,8 +285,12 @@ public class InteractorsExpressionsRetriever {
 		}
 		final Map<String, Entry> annotatedProteins = new THashMap<String, Entry>();
 		if (!uniprotAccs.isEmpty()) {
+			PCTSEA.logStatus("Translating " + uniprotAccs.size() + " uniprot accessions to gene names");
+
 			final UniprotProteinLocalRetriever uplr = new UniprotProteinLocalRetriever(
 					new File(System.getProperty("user.dir")), true);
+			uplr.setRetrieveFastaIsoforms(false);
+			uplr.setRetrieveFastaIsoformsFromMainForms(false);
 			annotatedProteins.putAll(uplr.getAnnotatedProteins(null, uniprotAccs));
 
 			for (final String uniprotAcc : uniprotAccs) {
@@ -340,7 +344,7 @@ public class InteractorsExpressionsRetriever {
 	private List<String> readExperimentalExpressionsFile(File experimentalExpressionsFile)
 			throws NumberFormatException, IOException {
 		final Set<String> genes = new THashSet<String>();
-		log.info("Reading experimental expressions from file "
+		PCTSEA.logStatus("Reading experimental expressions from file "
 				+ FilenameUtils.getName(experimentalExpressionsFile.getAbsolutePath()));
 		BufferedReader reader = null;
 		int id = 0;
@@ -372,7 +376,7 @@ public class InteractorsExpressionsRetriever {
 			reader.close();
 			final String message = "Information from " + interactorExpressionsInOurExperiment.size()
 					+ " genes/proteins readed";
-			log.info(message);
+			PCTSEA.logStatus(message);
 		}
 		return genes.stream().collect(Collectors.toList());
 	}

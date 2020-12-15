@@ -20,7 +20,7 @@
       "@vaadin/vaadin-item": "2.3.0",
       "@vaadin/vaadin-board": "2.2.0",
       "@vaadin/vaadin-notification": "1.6.0",
-      "@vaadin/vaadin-charts": "6.2.4",
+      "@vaadin/vaadin-charts": "6.3.1",
       "@vaadin/vaadin-grid-pro": "2.2.2",
       "@vaadin/vaadin-progress-bar": "1.3.0",
       "@vaadin/vaadin-shrinkwrap": "14.4.2",
@@ -60,7 +60,7 @@
       "webpack-merge": "4.2.2",
       "webpack-dev-server": "3.11.0"
     },
-    "hash": "5d842b9a03ac79f530a14bb5c6ed7375f79d0b349140000f26c28d5380bda464"
+    "hash": "f553ad71e1e4a7362cd094dfd8d6d96d79c9f2ffd110544db09bdf7060d7b04b"
   },
   "dependencies": {
     "lit-element": "^2.2.1",
@@ -80,7 +80,7 @@
     "@vaadin/vaadin-item": "2.3.0",
     "@vaadin/vaadin-board": "2.2.0",
     "@vaadin/vaadin-notification": "1.6.0",
-    "@vaadin/vaadin-charts": "6.2.4",
+    "@vaadin/vaadin-charts": "6.3.1",
     "@vaadin/vaadin-grid-pro": "2.2.2",
     "@vaadin/vaadin-progress-bar": "1.3.0",
     "@vaadin/vaadin-shrinkwrap": "14.4.2",

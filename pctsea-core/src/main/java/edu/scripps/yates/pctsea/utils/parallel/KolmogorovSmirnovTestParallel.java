@@ -26,9 +26,6 @@ public class KolmogorovSmirnovTestParallel extends Thread {
 			if (x.length > 1 && y.length > 1) {
 				pvalue = ksTest.kolmogorovSmirnovTest(PCTSEAUtils.toDoubleArray(x), PCTSEAUtils.toDoubleArray(y),
 						false);
-				if (Double.isNaN(pvalue)) {
-					System.out.println("ASDf");
-				}
 			}
 //			cellType.setKolmogorovSmirnovTestPValue(pvalue);
 		}

@@ -4,19 +4,23 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -69,10 +73,11 @@ import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
+import edu.scripps.yates.pctsea.util.PCTSEALocalConfiguration;
 import edu.scripps.yates.pctsea.util.VaadinUtil;
-import edu.scripps.yates.pctsea.utils.StatusListener;
 import edu.scripps.yates.pctsea.views.main.MainView;
 import edu.scripps.yates.utilities.files.FileUtils;
+import edu.scripps.yates.utilities.swing.StatusListener;
 import edu.scripps.yates.utilities.util.Pair;
 import gnu.trove.set.hash.THashSet;
 
@@ -196,6 +201,8 @@ public class AnalyzeView extends VerticalLayout {
 				.withValidator(new EmailValidator("This doesn't look like a valid email address"))
 				.bind(InputParameters::getEmail, InputParameters::setEmail);
 
+		binder.forField(datasets).asRequired("Required").withValidator(dataset -> dataset != null,
+				"A dataset must be selected");
 		// load datasets
 		loadDatasetsInComboList();
 
@@ -205,6 +212,7 @@ public class AnalyzeView extends VerticalLayout {
 			try {
 				submit();
 			} catch (final Exception e2) {
+				e2.printStackTrace();
 				VaadinUtil.showErrorDialog("Error: " + e2.getMessage());
 				return;
 			}
@@ -227,12 +235,12 @@ public class AnalyzeView extends VerticalLayout {
 		statusArea.setWidthFull();
 		statusArea.setVisible(false);
 		add(statusArea);
+		final Div footer = new Div();
+		add(footer);
 	}
 
 	private void loadDatasetsInComboList() {
 		final List<Dataset> datasetsFromDB = dmr.findAll();
-		final Set<String> datasets = datasetsFromDB.stream().map(dataset -> dataset.getTag())
-				.collect(Collectors.toSet());
 
 		this.datasets.setItems(datasetsFromDB);
 
@@ -265,7 +273,13 @@ public class AnalyzeView extends VerticalLayout {
 		inputParameters.setInputDataFile(inputFile.getAbsolutePath());
 		inputParameters.setWriteCorrelationsFile(false);
 		final Set<String> datasetTags = new THashSet<String>();
-		datasetTags.add(this.datasets.getValue().getTag());
+		final Dataset selectedDataset = this.datasets.getValue();
+		if (selectedDataset == null) {
+			inputParameters = null;
+			VaadinUtil.showErrorDialog("Errors in input parameters: A dataset must be selected.");
+			return;
+		}
+		datasetTags.add(selectedDataset.getTag());
 		inputParameters.setDatasets(datasetTags);
 		startPCTSEAAnalysis(inputParameters);
 		Notification.show("Run starting...");
@@ -275,8 +289,8 @@ public class AnalyzeView extends VerticalLayout {
 	private void startPCTSEAAnalysis(InputParameters inputParameters) {
 //		showSpinnerDialog();
 		final UI ui = UI.getCurrent();
-		final PCTSEA pTCPctsea = new PCTSEA(inputParameters, emr, scmr, runLogsRepo, mbs);
-		pTCPctsea.setStatusListener(new StatusListener() {
+		final PCTSEA pctsea = new PCTSEA(inputParameters, emr, scmr, runLogsRepo, mbs);
+		pctsea.setStatusListener(new StatusListener() {
 
 			@Override
 			public void onStatusUpdate(String statusMessage) {
@@ -285,6 +299,13 @@ public class AnalyzeView extends VerticalLayout {
 				});
 			}
 		});
+		try {
+			pctsea.setResultsViewerURL(PCTSEALocalConfiguration.getPCTSEAResultsViewerURL());
+		} catch (MalformedURLException | URISyntaxException e1) {
+			// this shoudn't happen because it is already checked before, but just in case
+			// we throw a runtimeException
+			throw new RuntimeException(e1);
+		}
 		setEnabledStatusAsRunning();
 		statusArea.setValue("Starting run...");
 
@@ -297,7 +318,7 @@ public class AnalyzeView extends VerticalLayout {
 			public void run() {
 
 				try {
-					final PCTSEAResult results = pTCPctsea.run();
+					final PCTSEAResult results = pctsea.run();
 					ui.access(() -> {
 						showLinkToResults(results.getUrlToViewer());
 					});
@@ -343,14 +364,21 @@ public class AnalyzeView extends VerticalLayout {
 	}
 
 	protected void showLinkToResults(URL url) {
-		final Anchor link = new Anchor(url.toString(), url.toString());
-		resultsPanel.removeAll();
-		resultsPanel.add("Access your results at: ");
-		resultsPanel.add(link);
+		if (url != null) {
+			final Anchor link = new Anchor(url.toString(), url.toString());
+			resultsPanel.removeAll();
+			resultsPanel.add("Access your results at: ");
+			resultsPanel.add(link);
+		} else {
+			resultsPanel.removeAll();
+			resultsPanel.add("Your results cannot be accessed by our web. Hopefully you got them by email.");
+		}
 	}
 
+	private static final SimpleDateFormat timeformatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");
+
 	protected void showMessage(String statusMessage) {
-		statusArea.setValue(statusArea.getValue() + "\n" + statusMessage);
+		statusArea.setValue(statusArea.getValue() + "\n" + timeformatter.format(new Date()) + ": " + statusMessage);
 	}
 
 	private void initializeInputParamsToDefaults() {
@@ -407,8 +435,26 @@ public class AnalyzeView extends VerticalLayout {
 		upload.addFinishedListener(event -> {
 
 			try {
-				inputFile = Files.createTempFile("pctsea", "upload.txt").toFile();
-
+				// save input File to the results folder using PCTSEALocalConfiguration:
+				final String fileName = event.getFileName();
+				final File pctseaResultsFolder = PCTSEALocalConfiguration.getPCTSEAResultsFolder();
+				if (pctseaResultsFolder != null) {
+					inputFile = new File(pctseaResultsFolder.getAbsolutePath() + File.separator + fileName);
+				} else {
+					inputFile = Files.createTempFile("pctsea", "upload.txt").toFile();
+				}
+				//////////////////////////////////////
+				// make sure the input file is unique:
+				File tmpFile = inputFile;
+				int version = 0;
+				while (tmpFile.exists()) {
+					version++;
+					tmpFile = new File(inputFile.getParent() + File.separator
+							+ FilenameUtils.getBaseName(inputFile.getAbsolutePath()) + "_" + version + "."
+							+ FilenameUtils.getExtension(inputFile.getAbsolutePath()));
+				}
+				inputFile = tmpFile;
+				//////////////////////////////////////
 				final FileOutputStream outputStream = new FileOutputStream(inputFile);
 				IOUtils.copy(buffer.getInputStream(), outputStream);
 				outputStream.close();
@@ -426,6 +472,10 @@ public class AnalyzeView extends VerticalLayout {
 		});
 		upload.addFileRemoveListener(event -> {
 			outputDiv.removeAll();
+			inputFileDataTabContent.removeAll();
+			if (inputFile != null && inputFile.exists()) {
+				inputFile.delete();
+			}
 			inputFile = null;
 			showInputDataButton.setEnabled(false);
 		});

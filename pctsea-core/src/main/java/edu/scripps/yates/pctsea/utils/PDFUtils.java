@@ -19,6 +19,15 @@ public class PDFUtils {
 		createPDF(pdfFile, 1.0, imageFiles);
 	}
 
+	/**
+	 * Creates a FDF file from a set of image files, setting each one in one
+	 * different page
+	 * 
+	 * @param pdfFile
+	 * @param scaleFactor
+	 * @param imageFiles
+	 * @throws IOException
+	 */
 	public static void createPDF(File pdfFile, double scaleFactor, File... imageFiles) throws IOException {
 
 		final PDDocument doc = new PDDocument();
@@ -54,6 +63,15 @@ public class PDFUtils {
 		doc.close();
 	}
 
+	/**
+	 * Creates a PDF file with an image on each page. Each image is represented by a
+	 * single byte[] (byteArray)
+	 * 
+	 * @param pdfFile
+	 * @param scaleFactor
+	 * @param bytesArrays
+	 * @throws IOException
+	 */
 	public static void createPDF(File pdfFile, double scaleFactor, byte[]... bytesArrays) throws IOException {
 
 		final PDDocument doc = new PDDocument();

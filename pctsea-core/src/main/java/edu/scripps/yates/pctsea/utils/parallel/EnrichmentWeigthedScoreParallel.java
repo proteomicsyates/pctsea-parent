@@ -333,7 +333,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	 * Default number of iterations used by
 	 * {@link #monteCarloP(double, int, int, boolean, int)}
 	 */
-	private static final int MONTE_CARLO_ITERATIONS = 1000000;
+	private static final int MONTE_CARLO_ITERATIONS = 1000;
 
 	private double ksPValue(double dStatistic, int a, int b) {
 
@@ -344,7 +344,9 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			return test.exactP(dStatistic, a, b, strict);
 		}
 		if (lengthProduct < LARGE_SAMPLE_PRODUCT) {
-			return test.monteCarloP(dStatistic, a, b, strict, MONTE_CARLO_ITERATIONS);
+			final double monteCarloP = test.monteCarloP(dStatistic, a, b, strict, MONTE_CARLO_ITERATIONS);
+
+			return monteCarloP;
 		}
 		return test.approximateP(dStatistic, a, b);
 	}

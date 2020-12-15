@@ -281,7 +281,6 @@ public class CellTypeClassification {
 		final File chartFile = PCTSEAUtils.getChartPDFFile(resultsSubFolder, fileName, prefix);
 
 		ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, width, height, false, chartFile);
-//		System.out.println("Chart saved internally ");
 		return txtFile;
 	}
 

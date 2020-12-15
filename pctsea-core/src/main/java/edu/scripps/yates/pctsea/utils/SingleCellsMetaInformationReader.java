@@ -14,7 +14,9 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
+import org.springframework.boot.logging.LogLevel;
 
+import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.utilities.files.FileUtils;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
@@ -42,7 +44,7 @@ public class SingleCellsMetaInformationReader {
 //	 * @throws IOException
 //	 */
 //	public SingleCellsMetaInformationReader(File metadataFile) throws IOException {
-//		log.info("Reading single cells metadata file: " + FilenameUtils.getBaseName(metadataFile.getAbsolutePath()));
+//		PCTSEA.logStatus("Reading single cells metadata file: " + FilenameUtils.getBaseName(metadataFile.getAbsolutePath()));
 //		if (!metadataFile.exists()) {
 //			throw new FileNotFoundException(metadataFile.getAbsolutePath() + " not found");
 //		}
@@ -95,7 +97,7 @@ public class SingleCellsMetaInformationReader {
 //		} finally {
 //			reader.close();
 //			final String message = "Information from " + singleCellList.size() + " single cells readed";
-//			log.info(message);
+//			PCTSEA.logStatus(message);
 ////			System.out.println(message);
 //		}
 //	}
@@ -108,7 +110,8 @@ public class SingleCellsMetaInformationReader {
 	 * @throws IOException
 	 */
 	public SingleCellsMetaInformationReader(File annotationRMBatchFolder) throws IOException {
-		log.info("Reading single cells metadata information from folder: " + annotationRMBatchFolder.getAbsolutePath());
+		PCTSEA.logStatus(
+				"Reading single cells metadata information from folder: " + annotationRMBatchFolder.getAbsolutePath());
 		final File[] files = annotationRMBatchFolder.listFiles(new FilenameFilter() {
 
 			@Override
@@ -124,7 +127,7 @@ public class SingleCellsMetaInformationReader {
 		for (int numFile = 1; numFile <= files.length; numFile++) {
 			totalSize += files[numFile - 1].length();
 		}
-		System.out.println(FileUtils.getDescriptiveSizeFromBytes(totalSize) + " from all files");
+		PCTSEA.logStatus(FileUtils.getDescriptiveSizeFromBytes(totalSize) + " from all files");
 		final ProgressCounter counter = new ProgressCounter(totalSize, ProgressPrintingType.EVERY_STEP, 1, true);
 		int cellID = 0;
 		final int cellsNotFound = 0;
@@ -148,11 +151,12 @@ public class SingleCellsMetaInformationReader {
 						}
 					} else {
 						if (!indexesByHeader.containsKey("cell_id")) {
-							log.error("File " + metadataFile.getAbsolutePath() + " has different header!");
+							PCTSEA.logStatus("File " + metadataFile.getAbsolutePath() + " has different header!",
+									LogLevel.ERROR);
 						}
 						final int cellIDIndex = indexesByHeader.get("cell_id");
 						if (cellIDIndex >= split.length) {
-							log.warn("Skipping line: '" + line + "'");
+							PCTSEA.logStatus("Skipping line: '" + line + "'", LogLevel.WARN);
 							continue;
 						}
 						final String cellName = removeQuotes(split[cellIDIndex]);
@@ -198,17 +202,17 @@ public class SingleCellsMetaInformationReader {
 			} finally {
 				reader.close();
 				final String message = "Information from " + singleCellList.size() + " single cells readed";
-				log.info(message);
-				log.info("Cells not found in DB: " + cellsNotFound);
+				PCTSEA.logStatus(message);
+				PCTSEA.logStatus("Cells not found in DB: " + cellsNotFound);
 				counter.increment(metadataFile.length());
 				final String printIfNecessary = counter.printIfNecessary();
 				if (!"".equals(printIfNecessary)) {
-					log.info(printIfNecessary);
+					PCTSEA.logStatus(printIfNecessary);
 				}
 //			System.out.println(message);
 			}
 		}
-		log.info(singleCellList.size() + " single cells read");
+		PCTSEA.logStatus(singleCellList.size() + " single cells read");
 	}
 
 	private String removeQuotes(String text) {
@@ -229,7 +233,7 @@ public class SingleCellsMetaInformationReader {
 	public List<SingleCell> getSingleCellListWithCorrelationGT(double minCorrelation) {
 		final List<SingleCell> ret = singleCellList.stream().filter(sc -> sc.getCorrelation() >= minCorrelation)
 				.collect(Collectors.toList());
-		log.info(ret.size() + " (out of " + singleCellList.size() + ") single cells with correlation >= "
+		PCTSEA.logStatus(ret.size() + " (out of " + singleCellList.size() + ") single cells with correlation >= "
 				+ minCorrelation);
 		return ret;
 	}
@@ -237,7 +241,7 @@ public class SingleCellsMetaInformationReader {
 	public List<SingleCell> getSingleCellListWithCorrelationLT(double maxCorrelation) {
 		final List<SingleCell> ret = singleCellList.stream().filter(sc -> sc.getCorrelation() <= maxCorrelation)
 				.collect(Collectors.toList());
-		log.info(ret.size() + " (out of " + singleCellList.size() + ") single cells with correlation <= "
+		PCTSEA.logStatus(ret.size() + " (out of " + singleCellList.size() + ") single cells with correlation <= "
 				+ maxCorrelation);
 		return ret;
 	}
@@ -268,7 +272,7 @@ public class SingleCellsMetaInformationReader {
 				}
 			}
 		}
-		log.info("Now we have " + singleCellList.size() + "(" + singleCellsByCellID.size() + ") single cells");
+		PCTSEA.logStatus("Now we have " + singleCellList.size() + "(" + singleCellsByCellID.size() + ") single cells");
 	}
 
 	public static int getSingleCellIDBySingleCellName(String name) {
@@ -279,7 +283,7 @@ public class SingleCellsMetaInformationReader {
 			if (!cellIDs.isEmpty()) {
 				cellID = cellIDs.max() + 1;
 			}
-//			log.warn("Why cell " + name + " was not found before in the DB?");
+//			PCTSEA.logStatus("Why cell " + name + " was not found before in the DB?",LogLevel.WARN);
 			final SingleCell cell = new SingleCell(cellID, name, Double.NaN);
 			addSingleCell(cell);
 			return cellID;
