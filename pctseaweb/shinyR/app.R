@@ -85,9 +85,10 @@ server <- function(input, output, session) {
     observe({
         query <-parseQueryString(session$clientData$url_search)
         if (!is.null(query$results)) {
+
             inputFileName <- query$results
             # input file should be in data folder
-            zipfilepath = paste('data/', inputFileName, ".zip", sep = "")
+            zipfilepath = paste('data/', inputFileName, sep = "")
 
             # check if the file exist
             if (!file.exists(zipfilepath)){
