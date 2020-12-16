@@ -301,6 +301,8 @@ public class AnalyzeView extends VerticalLayout {
 		});
 		try {
 			pctsea.setResultsViewerURL(PCTSEALocalConfiguration.getPCTSEAResultsViewerURL());
+			final String fromEmail = PCTSEALocalConfiguration.getFromEmail();
+			pctsea.setFromEmail(fromEmail);
 		} catch (MalformedURLException | URISyntaxException e1) {
 			// this shoudn't happen because it is already checked before, but just in case
 			// we throw a runtimeException
