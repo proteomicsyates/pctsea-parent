@@ -3,7 +3,6 @@ package edu.scripps.yates.pctsea;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -23,7 +22,6 @@ import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.utilities.swing.CommandLineProgramGuiEnclosable;
 import edu.scripps.yates.utilities.swing.DoNotInvokeRunMethod;
 import edu.scripps.yates.utilities.swing.SomeErrorInParametersOcurred;
-import gnu.trove.set.hash.THashSet;
 
 public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private final PCTSEA pctsea;
@@ -36,18 +34,18 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private int minNumberExpressedGenesInCell;
 	private boolean loadRandomDistributionsIfExist;
 	private int maxIterations;
-	private List<CellTypeBranch> cellTypeBranches;
+	private CellTypeBranch cellTypeBranch;
 	private boolean generateCharts;
 	private int minCellsPerCellTypeForPDF;
 	private boolean plotNegativeEnrichedCellTypes;
-	private Set<String> datasets;
+	private Dataset datasets;
 	private boolean writeCorrelationsFile;
 
 	public PCTSEACommandLine(String[] args, DatasetMongoRepository dmr, ExpressionMongoRepository emr,
 			SingleCellMongoRepository scmr, PctseaRunLogRepository runLog, MongoBaseService mbs)
 			throws ParseException, DoNotInvokeRunMethod, SomeErrorInParametersOcurred {
 		super(args);
-		pctsea = new PCTSEA(emr, scmr, runLog, mbs);
+		pctsea = new PCTSEA(emr, scmr, runLog, dmr, mbs);
 
 	}
 
@@ -62,11 +60,11 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			pctsea.setMinNumberExpressedGenesInCell(minNumberExpressedGenesInCell);
 			pctsea.setLoadRandomDistributionsIfExist(loadRandomDistributionsIfExist);
 			pctsea.setMaxIterations(maxIterations);
-			pctsea.setCellTypesBranches(cellTypeBranches);
+			pctsea.setCellTypesBranch(cellTypeBranch);
 			pctsea.setGenerateCharts(generateCharts);
 			pctsea.setMinCellsPerCellTypeForPDF(minCellsPerCellTypeForPDF);
 			pctsea.setPlotNegativeEnrichedCellTypes(plotNegativeEnrichedCellTypes);
-			pctsea.setDatasets(datasets);
+			pctsea.setDataset(datasets);
 			pctsea.setWriteCorrelationsFile(writeCorrelationsFile);
 			// to make log go to the textarea when calling to the status listener
 			pctsea.setStatusListener(this);
@@ -171,19 +169,19 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			}
 		}
 
-		cellTypeBranches = new ArrayList<CellTypeBranch>();
+		cellTypeBranch = CellTypeBranch.TYPE;
 
 		if (cmd.hasOption(InputParameters.CELL_TYPES_CLASSIFICATION)) {
-			final String optionValue = cmd.getOptionValue(InputParameters.CELL_TYPES_CLASSIFICATION);
+			final String optionValue = cmd.getOptionValue(InputParameters.CELL_TYPES_CLASSIFICATION).trim();
 			try {
-				cellTypeBranches.addAll(CellTypeBranch.parseCellTypeBranchesString(optionValue));
+				cellTypeBranch = CellTypeBranch.valueOf(optionValue);
+				if (cellTypeBranch == null) {
+					throw new Exception("");
+				}
 			} catch (final Exception e) {
 				errorInParameters("Error in value for option '-" + InputParameters.CELL_TYPES_CLASSIFICATION
-						+ "'. Possible values (separated by commas are: " + CellTypeBranch.getStringSeparated(",")
-						+ ")");
+						+ "'. Possible values are: " + CellTypeBranch.getStringSeparated(","));
 			}
-		} else {
-			cellTypeBranches.add(CellTypeBranch.TYPE);
 		}
 
 		generateCharts = false;
@@ -213,7 +211,8 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 
 		//
 		if (cmd.hasOption(InputParameters.DATASETS)) {
-			datasets = parseDatasets(cmd.getOptionValue(InputParameters.DATASETS));
+			final String optionValue = cmd.getOptionValue(InputParameters.DATASETS).trim();
+			datasets = new Dataset(optionValue, optionValue, null);
 
 		} else {
 			// considering to use all datasets
@@ -223,20 +222,6 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		if (cmd.hasOption(InputParameters.WRITE_CORRELATIONS)) {
 			writeCorrelationsFile = true;
 		}
-
-	}
-
-	private Set<String> parseDatasets(String datasetsString) {
-		final Set<String> ret = new THashSet<String>();
-		if (datasetsString.contains(",")) {
-			final String[] split = datasetsString.split(",");
-			for (final String string : split) {
-				ret.add(string.trim());
-			}
-		} else {
-			ret.add(datasetsString.trim());
-		}
-		return ret;
 
 	}
 
@@ -283,8 +268,9 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		options.add(option8);
 
 		final Option optionCellTypeBranch = new Option(InputParameters.CELL_TYPES_CLASSIFICATION, true,
-				"List (separated by commas) of types of cell types classifications according to the hierarchical cell type classification (TYPE, SUBTYPE, CHARACTERISTIC). Possible values of this list are: "
-						+ CellTypeBranch.getStringSeparated(",") + ". If not provided, only TYPE will be considered.");
+				"Level of cell type classification according to the hierarchical structure of its classification. Consult the administrator to know more about it. Possible values of this list are: "
+						+ CellTypeBranch.getStringSeparated(",") + ". If not provided, " + CellTypeBranch.TYPE.name()
+						+ " will be considered.");
 		options.add(optionCellTypeBranch);
 		//
 		final Option optionGenerateCharts = new Option(InputParameters.CHARTS, false,

@@ -56,6 +56,8 @@ import org.springframework.boot.logging.LogLevel;
 import com.google.common.io.Files;
 
 import edu.scripps.yates.pctsea.correlation.CorrelationThreshold;
+import edu.scripps.yates.pctsea.db.Dataset;
+import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.PctseaRunLog;
@@ -92,6 +94,7 @@ import edu.scripps.yates.utilities.pi.ParIterator.Schedule;
 import edu.scripps.yates.utilities.pi.ParIteratorFactory;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
 import edu.scripps.yates.utilities.progresscounter.ProgressPrintingType;
+import edu.scripps.yates.utilities.strings.StringUtils;
 import edu.scripps.yates.utilities.swing.AutomaticGUICreator;
 import edu.scripps.yates.utilities.swing.StatusListener;
 import gnu.trove.list.TDoubleList;
@@ -112,7 +115,7 @@ import tagbio.umap.metric.EuclideanMetric;
 public class PCTSEA {
 
 	private final ExpressionMongoRepository expressionMongoRepo;
-
+	private final DatasetMongoRepository datasetMongoRepo;
 	private final SingleCellMongoRepository singleCellMongoRepo;
 	private final PctseaRunLogRepository runLogsRepo;
 	private final MongoBaseService mongoBaseService;
@@ -137,11 +140,9 @@ public class PCTSEA {
 	private boolean loadRandomDistributionsIfExist;
 	private static final int threadCount = SystemCoreManager.getAvailableNumSystemCores();
 	private CellTypeBranch cellTypeBranch;
-	private String originalPrefix;
-	private final List<CellTypeBranch> cellTypeBranches = new ArrayList<CellTypeBranch>();
 	private InteractorsExpressionsRetriever interactorExpressions;
 	protected Future<?> savingFiles;
-	private boolean generateCharts;
+	private boolean generatePDFCharts;
 	private int minCellsPerCellTypeForPDF;
 	private boolean plotNegativeEnrichedCellTypes;
 
@@ -151,7 +152,7 @@ public class PCTSEA {
 
 	private String email;
 
-	private Set<String> datasets;
+	private Dataset dataset;
 
 	private String resultsViewerURL;
 
@@ -161,23 +162,24 @@ public class PCTSEA {
 
 	public PCTSEA(InputParameters inputParameters, ExpressionMongoRepository expressionMongoRepo,
 			SingleCellMongoRepository singleCellMongoRepo, PctseaRunLogRepository runLogsRepo,
-			MongoBaseService mongoBaseService) {
+			DatasetMongoRepository datasetMongoRepo, MongoBaseService mongoBaseService) {
 
 		this.expressionMongoRepo = expressionMongoRepo;
 		this.singleCellMongoRepo = singleCellMongoRepo;
 		this.mongoBaseService = mongoBaseService;
+		this.datasetMongoRepo = datasetMongoRepo;
 		this.runLogsRepo = runLogsRepo;
 		correlationThreshold = new CorrelationThreshold(inputParameters.getMinCorrelation());
-		cellTypeBranches
-				.addAll(CellTypeBranch.parseCellTypeBranchesString(inputParameters.getCellTypesClassification()));
+		cellTypeBranch = inputParameters.getCellTypesClassification();
 		experimentExpressionFile = new File(inputParameters.getInputDataFile());
-		generateCharts = inputParameters.isGenerateCharts();
+		generatePDFCharts = inputParameters.isGeneratePDFCharts();
 		loadRandomDistributionsIfExist = inputParameters.isLoadRandom();
 		maxIterations = inputParameters.getNumPermutations();
 		minCellsPerCellTypeForPDF = inputParameters.getMinCellsPerCellType();
 		minNumberExpressedGenesInCell = inputParameters.getMinGenesCells();
 		writeCorrelationsFile = inputParameters.isWriteCorrelationsFile();
 		email = inputParameters.getEmail();
+		dataset = inputParameters.getDataset();
 		// we check validity of prefix as file name
 		if (inputParameters.getOutputPrefix() != null) {
 			prefix = FileUtils.checkInvalidCharacterNameForFileName(inputParameters.getOutputPrefix());
@@ -189,11 +191,13 @@ public class PCTSEA {
 	}
 
 	public PCTSEA(ExpressionMongoRepository expressionMongoRepo, SingleCellMongoRepository singleCellMongoRepo,
-			PctseaRunLogRepository runLogsRepo, MongoBaseService mongoBaseService) {
+			PctseaRunLogRepository runLogsRepo, DatasetMongoRepository datasetMongoRepo,
+			MongoBaseService mongoBaseService) {
 		this.expressionMongoRepo = expressionMongoRepo;
 		this.singleCellMongoRepo = singleCellMongoRepo;
 		this.mongoBaseService = mongoBaseService;
 		this.runLogsRepo = runLogsRepo;
+		this.datasetMongoRepo = datasetMongoRepo;
 
 	}
 
@@ -201,13 +205,18 @@ public class PCTSEA {
 		return resultsViewerURL;
 	}
 
-	public void setResultsViewerURL(String resultsViewerURL) throws MalformedURLException, URISyntaxException {
+	public void setResultsViewerURL(String resultsViewerURL) {
 
-		this.resultsViewerURL = new URL(resultsViewerURL).toURI().toString();
-		if (resultsViewerURL.endsWith("/")) {
-			this.resultsViewerURL = this.resultsViewerURL.substring(0, this.resultsViewerURL.length() - 1);
+		try {
+			this.resultsViewerURL = new URL(resultsViewerURL).toURI().toString();
+
+			if (resultsViewerURL.endsWith("/")) {
+				this.resultsViewerURL = this.resultsViewerURL.substring(0, this.resultsViewerURL.length() - 1);
+			}
+		} catch (MalformedURLException | URISyntaxException e) {
+
+			throw new RuntimeException(e);
 		}
-
 	}
 
 	/**
@@ -230,19 +239,22 @@ public class PCTSEA {
 //
 //	}
 
-	private void setCellTypeBranch(CellTypeBranch cellTypeBranch2) {
-		cellTypeBranch = cellTypeBranch2;
-		prefix = originalPrefix + "_" + cellTypeBranch.name();
-
-	}
-
 	public PCTSEAResult run() {
 		logInputParams(getInputParameters());
 
+		// check dataset input parameters
+		final List<Dataset> datasetFromDB = datasetMongoRepo.findByTag(getInputParameters().getDataset().getTag());
+		if (datasetFromDB == null || datasetFromDB.isEmpty()) {
+			final List<String> datasetTags = datasetMongoRepo.findAll().stream().map(dataset -> dataset.getTag())
+					.sorted().collect(Collectors.toList());
+			throw new IllegalArgumentException("Dataset " + getInputParameters().getDataset().getTag()
+					+ " doesn't exist in DB. Available datasets are: "
+					+ StringUtils.getSortedSeparatedValueStringFromChars(datasetTags, ","));
+		}
 		// first of all create a time stamp
-		currentTimeStamp = createTimeStamp(originalPrefix);
+		currentTimeStamp = createTimeStamp(prefix);
+		// create log
 		final PctseaRunLog runLog = new PctseaRunLog();
-
 		runLog.setTimeStamp(currentTimeStamp);
 		runLog.setStarted(getDateNow());
 		runLog.setInputParameters(getInputParameters());
@@ -261,7 +273,7 @@ public class PCTSEA {
 						resultsViewerURL + "/?results=" + FilenameUtils.getName(zipOutputFile.getAbsolutePath()));
 			}
 			result = new PCTSEAResult(zipOutputFile, urlToViewer, runLog);
-			if (generateCharts) {
+			if (generatePDFCharts) {
 				ChartsGenerated.getNewInstance();
 			}
 //			// read input files
@@ -273,10 +285,10 @@ public class PCTSEA {
 //				return;
 //			}
 
-			final List<SingleCell> singleCellList = getSingleCellListFromDB(datasets);
+			final List<SingleCell> singleCellList = getSingleCellListFromDB(dataset);
 
 			interactorExpressions = new InteractorsExpressionsRetriever(expressionMongoRepo, mongoBaseService,
-					experimentExpressionFile, datasets);
+					experimentExpressionFile, dataset);
 			// log
 			runLog.setNumInputGenes(interactorExpressions.getInteractorsGeneIDs().size());
 
@@ -309,58 +321,54 @@ public class PCTSEA {
 			// cells
 			createDistributionOfCorrelationsOverRankedCells(singleCellList, correlationThreshold);
 
-			// do the calculations per cellTypeBranch
-			for (final CellTypeBranch cellTypeBranch : cellTypeBranches) {
-				ConcurrentUtil.sleep(1L);
-				setCellTypeBranch(cellTypeBranch);
-				// calculate hypergeometric statistics
-				final List<CellTypeClassification> cellTypeClassifications = calculateHyperGeometricStatistics(
-						singleCellList, cellTypeBranch, correlationThreshold);
+			ConcurrentUtil.sleep(1L);
+			// calculate hypergeometric statistics
+			final List<CellTypeClassification> cellTypeClassifications = calculateHyperGeometricStatistics(
+					singleCellList, cellTypeBranch, correlationThreshold);
 
-				// calculate enrichment scores with the Kolmogorov-Smirnov test
-				final List<SingleCell> singleCellsPassingCorrelationThreshold = correlationThreshold
-						.getSingleCellsPassingThresholdSortedByCorrelation(singleCellList);
+			// calculate enrichment scores with the Kolmogorov-Smirnov test
+			final List<SingleCell> singleCellsPassingCorrelationThreshold = correlationThreshold
+					.getSingleCellsPassingThresholdSortedByCorrelation(singleCellList);
 
-				///////////////////////////////////////////////
-				// REQUEST FROM CASIMIR FROM EMAIL ON Nov 3, 2020 8:22am
-				printGeneExpression(singleCellsPassingCorrelationThreshold, "ACE2", correlationThreshold);
+			///////////////////////////////////////////////
+			// REQUEST FROM CASIMIR FROM EMAIL ON Nov 3, 2020 8:22am
+			printGeneExpression(singleCellsPassingCorrelationThreshold, "ACE2", correlationThreshold);
 
-				///////////////////////////////////////////////
-				calculateEnrichmentScore(cellTypeClassifications, singleCellsPassingCorrelationThreshold,
-						cellTypeBranch, true, false, true, false, generateCharts, minCellsPerCellTypeForPDF,
-						plotNegativeEnrichedCellTypes);
+			///////////////////////////////////////////////
+			calculateEnrichmentScore(cellTypeClassifications, singleCellsPassingCorrelationThreshold, cellTypeBranch,
+					true, false, true, false, generatePDFCharts, minCellsPerCellTypeForPDF,
+					plotNegativeEnrichedCellTypes);
 
-				// calculate significance by cell types permutations
-				calculateSignificanceByCellTypesPermutations(interactorExpressions, cellTypeClassifications,
-						singleCellsPassingCorrelationThreshold, cellTypeBranch, maxIterations,
-						loadRandomDistributionsIfExist, minCellsPerCellTypeForPDF, plotNegativeEnrichedCellTypes);
+			// calculate significance by cell types permutations
+			calculateSignificanceByCellTypesPermutations(interactorExpressions, cellTypeClassifications,
+					singleCellsPassingCorrelationThreshold, cellTypeBranch, maxIterations,
+					loadRandomDistributionsIfExist, minCellsPerCellTypeForPDF, plotNegativeEnrichedCellTypes);
 
-				// calculate significance by phenotype permutations
-				if (false) { // DISABLED since we used significance by cell types permutations
-					calculateSignificanceByPhenotypePermutations(interactorExpressions, cellTypeClassifications,
-							singleCellsPassingCorrelationThreshold, cellTypeBranch, correlationThreshold,
-							loadRandomDistributionsIfExist, generateCharts, minCellsPerCellTypeForPDF,
-							plotNegativeEnrichedCellTypes, maxIterations, takeZerosForCorrelation,
-							minNumberExpressedGenesInCell);
-				}
-
-				// perform a clustering of the genes participating in each cell type
-				umapClustering(cellTypeClassifications, correlationThreshold, generateCharts);
-
-				// with no filtering
-
-				// export to output: Prints cell type classifications into a table in a file
-				printCellTypeClassifications(cellTypeClassifications, singleCellList, correlationThreshold,
+			// calculate significance by phenotype permutations
+			if (false) { // DISABLED since we used significance by cell types permutations
+				calculateSignificanceByPhenotypePermutations(interactorExpressions, cellTypeClassifications,
+						singleCellsPassingCorrelationThreshold, cellTypeBranch, correlationThreshold,
+						loadRandomDistributionsIfExist, generatePDFCharts, minCellsPerCellTypeForPDF,
+						plotNegativeEnrichedCellTypes, maxIterations, takeZerosForCorrelation,
 						minNumberExpressedGenesInCell);
-
-				// plots about suprema
-				createScatterPlotOfSuprema(cellTypeClassifications, plotNegativeEnrichedCellTypes, generateCharts);
-				createHistogramOfSuprema(cellTypeClassifications, plotNegativeEnrichedCellTypes, generateCharts);
-				// print mapping of cell types
-//				SingleCell.printCellTypeMapping(getCellTypesMappingOutputFile());
-				// export file with genes involved in the correlations per cell type
-				printGenesInvolvedInCorrelations(cellTypeClassifications, correlationThreshold);
 			}
+
+			// perform a clustering of the genes participating in each cell type
+			umapClustering(cellTypeClassifications, correlationThreshold, generatePDFCharts);
+
+			// with no filtering
+
+			// export to output: Prints cell type classifications into a table in a file
+			printCellTypeClassifications(cellTypeClassifications, singleCellList, correlationThreshold,
+					minNumberExpressedGenesInCell);
+
+			// plots about suprema
+			createScatterPlotOfSuprema(cellTypeClassifications, plotNegativeEnrichedCellTypes, generatePDFCharts);
+			createHistogramOfSuprema(cellTypeClassifications, plotNegativeEnrichedCellTypes, generatePDFCharts);
+			// print mapping of cell types
+//				SingleCell.printCellTypeMapping(getCellTypesMappingOutputFile());
+			// export file with genes involved in the correlations per cell type
+			printGenesInvolvedInCorrelations(cellTypeClassifications, correlationThreshold);
 
 			return result;
 		} catch (final IOException e) {
@@ -443,15 +451,15 @@ public class PCTSEA {
 
 	private InputParameters getInputParameters() {
 		final InputParameters inputParameters = new InputParameters();
-		inputParameters.setCellTypesClassification(CellTypeBranch.getStringSeparated(cellTypeBranches, ","));
+		inputParameters.setCellTypesClassification(cellTypeBranch);
 		inputParameters.setEmail(email);
-		inputParameters.setGenerateCharts(generateCharts);
+		inputParameters.setGeneratePDFCharts(generatePDFCharts);
 		inputParameters.setInputDataFile(FilenameUtils.getName(experimentExpressionFile.getAbsolutePath()));
 		inputParameters.setLoadRandom(loadRandomDistributionsIfExist);
 		inputParameters.setMinCellsPerCellType(minCellsPerCellTypeForPDF);
 		inputParameters.setMinCorrelation(correlationThreshold.getThresholdValue());
 		inputParameters.setMinGenesCells(Double.valueOf(minNumberExpressedGenesInCell).intValue());
-		inputParameters.setDatasets(datasets);
+		inputParameters.setDataset(dataset);
 		inputParameters.setNumPermutations(maxIterations);
 		inputParameters.setOutputPrefix(prefix);
 		inputParameters.setPlotNegativeEnriched(plotNegativeEnrichedCellTypes);
@@ -615,64 +623,62 @@ public class PCTSEA {
 	 * 
 	 * @param cellTypeClassifications
 	 * @param plotNegativeEnrichedCellTypes
-	 * @param generateCharts
+	 * @param generatePDFCharts
 	 */
 	private void createHistogramOfSuprema(List<CellTypeClassification> cellTypeClassifications,
-			boolean plotNegativeEnrichedCellTypes, boolean generateCharts) {
+			boolean plotNegativeEnrichedCellTypes, boolean generatePDFCharts) {
 		final List<CellTypeClassification> cellTypes = cellTypeClassifications.stream()
 				.filter(ct -> plotNegativeEnrichedCellTypes || ct.getEnrichmentScore() > 0.0f)
 				.collect(Collectors.toList());
-		if (generateCharts) {
-			final DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-			final TDoubleList supremas = new TDoubleArrayList();
-			for (final CellTypeClassification cellType : cellTypes) {
-				final int supremumX = cellType.getSupremumX();
-				if (supremumX != -1) {
-					supremas.add(supremumX);
-				}
+
+		final DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+		final TDoubleList supremas = new TDoubleArrayList();
+		for (final CellTypeClassification cellType : cellTypes) {
+			final int supremumX = cellType.getSupremumX();
+			if (supremumX != -1) {
+				supremas.add(supremumX);
 			}
+		}
 
-			String title = "Distribution of positive suprema positions in ranked cell list";
+		String title = "Distribution of positive suprema positions in ranked cell list";
 
-			final int numBins = Histogram.getRiceRuleForHistogramBins(supremas.size());
-			final double[][] calcHistogram = smile.math.Histogram.histogram(supremas.toArray(), numBins);
-			for (int i = 0; i < numBins; i++) {
-				final double freq = calcHistogram[2][i];
-				final double lowerBound = calcHistogram[0][i];
-				final double upperBound = calcHistogram[1][i];
-				dataset.addValue(freq, "x (rank of cells)", String.valueOf(Double.valueOf(lowerBound).intValue()) + "-"
-						+ String.valueOf(Double.valueOf(upperBound).intValue()));
-			}
+		final int numBins = Histogram.getRiceRuleForHistogramBins(supremas.size());
+		final double[][] calcHistogram = smile.math.Histogram.histogram(supremas.toArray(), numBins);
+		for (int i = 0; i < numBins; i++) {
+			final double freq = calcHistogram[2][i];
+			final double lowerBound = calcHistogram[0][i];
+			final double upperBound = calcHistogram[1][i];
+			dataset.addValue(freq, "x (rank of cells)", String.valueOf(Double.valueOf(lowerBound).intValue()) + "-"
+					+ String.valueOf(Double.valueOf(upperBound).intValue()));
+		}
 
-			title += " (" + cellTypes.size() + ")";
-			final JFreeChart chart = ChartFactory.createBarChart(title, "x (rank of cells)", "num cell types", dataset,
-					PlotOrientation.VERTICAL, true, false, false);
-			final CategoryPlot plot = (CategoryPlot) chart.getPlot();
-			plot.setBackgroundPaint(Color.white);
-			final BarRenderer renderer = (BarRenderer) plot.getRenderer();
-			renderer.setBarPainter(new StandardBarPainter());
-			renderer.setDefaultItemLabelGenerator(new IntegerCategoryItemLabelGenerator());
-			renderer.setDefaultItemLabelsVisible(true);
-			renderer.setDefaultItemLabelFont(renderer.getDefaultItemLabelFont().deriveFont(8f));
-			renderer.setItemMargin(0.1);
+		title += " (" + cellTypes.size() + ")";
+		final JFreeChart chart = ChartFactory.createBarChart(title, "x (rank of cells)", "num cell types", dataset,
+				PlotOrientation.VERTICAL, true, false, false);
+		final CategoryPlot plot = (CategoryPlot) chart.getPlot();
+		plot.setBackgroundPaint(Color.white);
+		final BarRenderer renderer = (BarRenderer) plot.getRenderer();
+		renderer.setBarPainter(new StandardBarPainter());
+		renderer.setDefaultItemLabelGenerator(new IntegerCategoryItemLabelGenerator());
+		renderer.setDefaultItemLabelsVisible(true);
+		renderer.setDefaultItemLabelFont(renderer.getDefaultItemLabelFont().deriveFont(8f));
+		renderer.setItemMargin(0.1);
 
-			final CategoryAxis domainAxis = plot.getDomainAxis();
-			domainAxis.setCategoryLabelPositions(CategoryLabelPositions.UP_45);
-			try {
-				final String fileName = "suprema_hist";
-				PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
+		final CategoryAxis domainAxis = plot.getDomainAxis();
+		domainAxis.setCategoryLabelPositions(CategoryLabelPositions.UP_45);
+		try {
+			final String fileName = "suprema_hist";
+			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
+			if (generatePDFCharts) {
 				final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
-
 				ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, 500, 500, true, chartFile);
-
-				logStatus("Histogram of suprema's positions in x axis created.");
-
-			} catch (final IOException e) {
-				e.printStackTrace();
-				logStatus("Some error occurred while creating chart for histogram of correlating genes: "
-						+ e.getMessage(), LogLevel.ERROR);
 			}
+			logStatus("Histogram of suprema's positions in x axis created.");
 
+		} catch (final IOException e) {
+			e.printStackTrace();
+			logStatus("Some error occurred while creating chart for histogram of correlating genes: " + e.getMessage(),
+					LogLevel.ERROR);
 		}
 	}
 
@@ -682,53 +688,53 @@ public class PCTSEA {
 	 * 
 	 * @param cellTypeClassifications
 	 * @param plotNegativeEnrichedCellTypes
-	 * @param generateCharts
+	 * @param generatePDFCharts
 	 */
 	private void createScatterPlotOfSuprema(List<CellTypeClassification> cellTypeClassifications,
-			boolean plotNegativeEnrichedCellTypes, boolean generateCharts) {
+			boolean plotNegativeEnrichedCellTypes, boolean generatePDFCharts) {
 		final List<CellTypeClassification> cellTypes = cellTypeClassifications.stream()
 				.filter(ct -> plotNegativeEnrichedCellTypes || ct.getEnrichmentScore() > 0.0f)
 				.collect(Collectors.toList());
-		if (generateCharts) {
-			final LabeledXYDataset dataset = new LabeledXYDataset();
-			final TDoubleList supremaXs = new TDoubleArrayList();
-			for (final CellTypeClassification cellType : cellTypes) {
-				final int supremumX = cellType.getSupremumX();
-				final double supremum = cellType.getEnrichmentScore();
-				supremaXs.add(supremumX);
 
-				final String label = cellType.getName();
+		final LabeledXYDataset dataset = new LabeledXYDataset();
+		final TDoubleList supremaXs = new TDoubleArrayList();
+		for (final CellTypeClassification cellType : cellTypes) {
+			final int supremumX = cellType.getSupremumX();
+			final double supremum = cellType.getEnrichmentScore();
+			supremaXs.add(supremumX);
 
-				dataset.add(cellType.getName(), supremumX, supremum, label);
+			final String label = cellType.getName();
 
-			}
+			dataset.add(cellType.getName(), supremumX, supremum, label);
 
-			final boolean legend = false;
-			final boolean tooltips = true;
-			final boolean urls = false;
-			final JFreeChart chart = ChartFactory.createScatterPlot(
-					"Suprema position in ranked cell list vs suprema size", "Suprema position in ranked cell list",
-					"supremum size", dataset, PlotOrientation.VERTICAL, legend, tooltips, urls);
-			final XYPlot plot = (XYPlot) chart.getPlot();
-			plot.setBackgroundPaint(Color.white);
-			final XYItemRenderer renderer = plot.getRenderer();
-			renderer.setDefaultItemLabelGenerator(new LabelGenerator());
-			renderer.setDefaultItemLabelsVisible(true);
-			renderer.setDefaultItemLabelFont(renderer.getDefaultItemLabelFont().deriveFont(8f));
-			chart.addSubtitle(new TextTitle("(" + cellTypes.size() + " cell types)"));
+		}
 
-			try {
-				final String fileName = "suprema_scatter";
-				PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
+		final boolean legend = false;
+		final boolean tooltips = true;
+		final boolean urls = false;
+		final JFreeChart chart = ChartFactory.createScatterPlot("Suprema position in ranked cell list vs suprema size",
+				"Suprema position in ranked cell list", "supremum size", dataset, PlotOrientation.VERTICAL, legend,
+				tooltips, urls);
+		final XYPlot plot = (XYPlot) chart.getPlot();
+		plot.setBackgroundPaint(Color.white);
+		final XYItemRenderer renderer = plot.getRenderer();
+		renderer.setDefaultItemLabelGenerator(new LabelGenerator());
+		renderer.setDefaultItemLabelsVisible(true);
+		renderer.setDefaultItemLabelFont(renderer.getDefaultItemLabelFont().deriveFont(8f));
+		chart.addSubtitle(new TextTitle("(" + cellTypes.size() + " cell types)"));
+
+		try {
+			final String fileName = "suprema_scatter";
+			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
+			if (generatePDFCharts) {
 				final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
 				ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, 500, 500, true, chartFile);
-				logStatus("Scatter plot of suprema created.");
-			} catch (final IOException e) {
-				e.printStackTrace();
-				logStatus("Some error occurred while creating chart for UMAP clustering: " + e.getMessage(),
-						LogLevel.ERROR);
 			}
-
+			logStatus("Scatter plot of suprema created.");
+		} catch (final IOException e) {
+			e.printStackTrace();
+			logStatus("Some error occurred while creating chart for UMAP clustering: " + e.getMessage(),
+					LogLevel.ERROR);
 		}
 
 	}
@@ -741,47 +747,49 @@ public class PCTSEA {
 	 */
 	private void createDistributionOfCorrelationsOverRankedCells(List<SingleCell> singleCellList,
 			CorrelationThreshold correlationThreshold) {
-		if (generateCharts) {
-			PCTSEAUtils.sortByDescendingCorrelation(singleCellList);
-			final XYSeriesCollection dataset = new XYSeriesCollection();
-			final XYSeries positiveCorrelations = new XYSeries("corr >= " + correlationThreshold.getThresholdValue());
-			dataset.addSeries(positiveCorrelations);
-			final XYSeries negativeCorrelations = new XYSeries("corr < " + correlationThreshold.getThresholdValue());
-			dataset.addSeries(negativeCorrelations);
-			int numCell = 1;
-			ConcurrentUtil.sleep(1L);
-			for (final SingleCell singleCell : singleCellList) {
-				if (!Double.isNaN(singleCell.getCorrelation())) {
-					if (correlationThreshold.passThreshold(singleCell)) {
-						positiveCorrelations.add(numCell, singleCell.getCorrelation());
-					} else {
-						negativeCorrelations.add(numCell, singleCell.getCorrelation());
-					}
 
-					numCell++;
+		PCTSEAUtils.sortByDescendingCorrelation(singleCellList);
+		final XYSeriesCollection dataset = new XYSeriesCollection();
+		final XYSeries positiveCorrelations = new XYSeries("corr >= " + correlationThreshold.getThresholdValue());
+		dataset.addSeries(positiveCorrelations);
+		final XYSeries negativeCorrelations = new XYSeries("corr < " + correlationThreshold.getThresholdValue());
+		dataset.addSeries(negativeCorrelations);
+		int numCell = 1;
+		ConcurrentUtil.sleep(1L);
+		for (final SingleCell singleCell : singleCellList) {
+			if (!Double.isNaN(singleCell.getCorrelation())) {
+				if (correlationThreshold.passThreshold(singleCell)) {
+					positiveCorrelations.add(numCell, singleCell.getCorrelation());
+				} else {
+					negativeCorrelations.add(numCell, singleCell.getCorrelation());
 				}
-			}
-			final JFreeChart chart = ChartFactory.createXYLineChart("Rank of cells by Pearson's correlation", "cell #",
-					"Pearson's correlation", dataset);
-			final XYPlot plot = (XYPlot) chart.getPlot();
-			plot.getDomainAxis().setLowerBound(1.0);
-			plot.setBackgroundPaint(Color.lightGray);
-			plot.setSeriesRenderingOrder(SeriesRenderingOrder.REVERSE);
-			final XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) plot.getRenderer();
-			renderer.setSeriesPaint(2, Color.black);
 
-			try {
-				final String fileName = "corr_rank_dist";
-				PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
-				final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
-				ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, 500, 500, true, chartFile);
-				PCTSEA.logStatus("Rank of cells by Pearson's correlation plot of suprema created.");
-			} catch (final IOException e) {
-				e.printStackTrace();
-				PCTSEA.logStatus("Some error occurred while creating chart for UMAP clustering: " + e.getMessage(),
-						LogLevel.ERROR);
+				numCell++;
 			}
 		}
+		final JFreeChart chart = ChartFactory.createXYLineChart("Rank of cells by Pearson's correlation", "cell #",
+				"Pearson's correlation", dataset);
+		final XYPlot plot = (XYPlot) chart.getPlot();
+		plot.getDomainAxis().setLowerBound(1.0);
+		plot.setBackgroundPaint(Color.lightGray);
+		plot.setSeriesRenderingOrder(SeriesRenderingOrder.REVERSE);
+		final XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) plot.getRenderer();
+		renderer.setSeriesPaint(2, Color.black);
+
+		try {
+			final String fileName = "corr_rank_dist";
+			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
+			if (generatePDFCharts) {
+				final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
+				ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, 500, 500, true, chartFile);
+			}
+			PCTSEA.logStatus("Rank of cells by Pearson's correlation plot of suprema created.");
+		} catch (final IOException e) {
+			e.printStackTrace();
+			PCTSEA.logStatus("Some error occurred while creating chart for UMAP clustering: " + e.getMessage(),
+					LogLevel.ERROR);
+		}
+
 	}
 
 	/**
@@ -791,70 +799,73 @@ public class PCTSEA {
 	 * @param singleCellList
 	 */
 	private void createHistogramOfCorrelatingGenes(List<SingleCell> singleCellList, Double minCorrelation) {
-		if (generateCharts) {
-			final DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-			final TIntIntMap map = new TIntIntHashMap();
-			int totalCells = 0;
-			ConcurrentUtil.sleep(1L);
-			for (final SingleCell singleCell : singleCellList) {
 
-				if (minCorrelation != null) {
-					if (minCorrelation > singleCell.getCorrelation()) {
-						continue;
-					}
-				}
-				totalCells++;
-				final int num = singleCell.getGenesForCorrelation().size();
-				if (!map.containsKey(num)) {
-					map.put(num, 1);
-				} else {
-					map.put(num, 1 + map.get(num));
-				}
-			}
-			final TIntList keys = new TIntArrayList(map.keys());
-			keys.sort();
-			for (final int numGenes : keys.toArray()) {
-				final int frequency = map.get(numGenes);
-				dataset.addValue(frequency, "# genes", String.valueOf(numGenes));
-			}
-			for (int i = 0; i < keys.size(); i++) {
-				int accumulativeNumGenes = 0;
-				for (int j = i; j < keys.size(); j++) {
-					accumulativeNumGenes += map.get(keys.get(j));
+		final DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+		final TIntIntMap map = new TIntIntHashMap();
+		int totalCells = 0;
+		ConcurrentUtil.sleep(1L);
+		for (final SingleCell singleCell : singleCellList) {
 
-				}
-				dataset.addValue(accumulativeNumGenes, "# genes or more", String.valueOf(keys.get(i)));
-			}
-
-			String title = "Distribution of # of genes correlating";
 			if (minCorrelation != null) {
-				title += " with only cells with corr >=" + minCorrelation;
+				if (minCorrelation > singleCell.getCorrelation()) {
+					continue;
+				}
 			}
-			title += " (" + totalCells + ")";
-			final JFreeChart chart = ChartFactory.createBarChart(title, "# of genes correlating", "# cells", dataset,
-					PlotOrientation.VERTICAL, true, false, false);
-			final CategoryPlot plot = (CategoryPlot) chart.getPlot();
-			plot.setBackgroundPaint(Color.white);
-			final BarRenderer renderer = (BarRenderer) plot.getRenderer();
-			renderer.setDefaultItemLabelGenerator(new IntegerCategoryItemLabelGenerator());
-			renderer.setDefaultItemLabelsVisible(true);
-			renderer.setDefaultItemLabelFont(renderer.getDefaultItemLabelFont().deriveFont(8f));
-			renderer.setItemMargin(0.1);
-			renderer.setBarPainter(new StandardBarPainter());
-			try {
-				final String fileName = "genes_hist";
-				PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
-				final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
-				ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, 500, 500, true, chartFile);
-				// logStatus("Chart with the distribution of # of genes correlating is
-				// created.");
-
-			} catch (final IOException e) {
-				e.printStackTrace();
-				PCTSEA.logStatus("Some error occurred while creating chart for histogram of correlating genes: "
-						+ e.getMessage(), LogLevel.ERROR);
+			totalCells++;
+			final int num = singleCell.getGenesForCorrelation().size();
+			if (!map.containsKey(num)) {
+				map.put(num, 1);
+			} else {
+				map.put(num, 1 + map.get(num));
 			}
 		}
+		final TIntList keys = new TIntArrayList(map.keys());
+		keys.sort();
+		for (final int numGenes : keys.toArray()) {
+			final int frequency = map.get(numGenes);
+			dataset.addValue(frequency, "# genes", String.valueOf(numGenes));
+		}
+		for (int i = 0; i < keys.size(); i++) {
+			int accumulativeNumGenes = 0;
+			for (int j = i; j < keys.size(); j++) {
+				accumulativeNumGenes += map.get(keys.get(j));
+
+			}
+			dataset.addValue(accumulativeNumGenes, "# genes or more", String.valueOf(keys.get(i)));
+		}
+
+		String title = "Distribution of # of genes correlating";
+		if (minCorrelation != null) {
+			title += " with only cells with corr >=" + minCorrelation;
+		}
+		title += " (" + totalCells + ")";
+		final JFreeChart chart = ChartFactory.createBarChart(title, "# of genes correlating", "# cells", dataset,
+				PlotOrientation.VERTICAL, true, false, false);
+		final CategoryPlot plot = (CategoryPlot) chart.getPlot();
+		plot.setBackgroundPaint(Color.white);
+		final BarRenderer renderer = (BarRenderer) plot.getRenderer();
+		renderer.setDefaultItemLabelGenerator(new IntegerCategoryItemLabelGenerator());
+		renderer.setDefaultItemLabelsVisible(true);
+		renderer.setDefaultItemLabelFont(renderer.getDefaultItemLabelFont().deriveFont(8f));
+		renderer.setItemMargin(0.1);
+		renderer.setBarPainter(new StandardBarPainter());
+		try {
+			final String fileName = "genes_hist";
+			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
+			if (generatePDFCharts) {
+				final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
+				ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, 500, 500, true, chartFile);
+			}
+			// logStatus("Chart with the distribution of # of genes correlating is
+			// created.");
+
+		} catch (final IOException e) {
+			e.printStackTrace();
+			PCTSEA.logStatus(
+					"Some error occurred while creating chart for histogram of correlating genes: " + e.getMessage(),
+					LogLevel.ERROR);
+		}
+
 	}
 
 	/**
@@ -864,11 +875,11 @@ public class PCTSEA {
 	 * @param chartTitle
 	 * @param setAsDefaultUMAPOnCellType if true, the umap coordinates will be the
 	 *                                   ones reported in the table
-	 * @param generateCharts
+	 * @param generatePDFCharts
 	 */
 	private void umapClustering(List<CellTypeClassification> cellTypeClassifications,
 			CorrelationThreshold correlationThreshold2, String chartTitle, boolean setAsDefaultUMAPOnCellType,
-			boolean generateCharts, String labelPDFFile) {
+			boolean generatePDFCharts, String labelPDFFile) {
 		if (cellTypeClassifications.isEmpty()) {
 			return;
 		}
@@ -939,47 +950,48 @@ public class PCTSEA {
 		}
 
 //		logStatus("UMAP clustering of cell types based on genes done.");
-		if (generateCharts) {
-			// now save an scatter plot
-			final LabeledXYDataset dataset = new LabeledXYDataset();
-			for (int i = 0; i < cellTypeClassifications.size(); i++) {
 
-				final CellTypeClassification cellType = cellTypeClassifications.get(i);
-				final float[] umapClustering = fitTransform[i];
-				final String label = cellType.getName();
+		// now save an scatter plot
+		final LabeledXYDataset dataset = new LabeledXYDataset();
+		for (int i = 0; i < cellTypeClassifications.size(); i++) {
 
-				dataset.add(cellType.getName(), umapClustering[0], umapClustering[1], label);
-			}
-			final boolean legend = false;
-			final boolean tooltips = true;
-			final boolean urls = false;
-			final JFreeChart chart = ChartFactory.createScatterPlot(chartTitle, "UMAP x", "UMAP y", dataset,
-					PlotOrientation.VERTICAL, legend, tooltips, urls);
-			final XYPlot plot = (XYPlot) chart.getPlot();
-			plot.setBackgroundPaint(Color.white);
-			final XYItemRenderer renderer = plot.getRenderer();
-			renderer.setDefaultItemLabelGenerator(new LabelGenerator());
-			renderer.setDefaultItemLabelsVisible(true);
-			renderer.setDefaultItemLabelFont(renderer.getDefaultItemLabelFont().deriveFont(8f));
-			chart.addSubtitle(new TextTitle(
-					"(" + cellTypeClassifications.size() + " cell types | param nnn=" + numberNearestNeighbours + ")"));
-			try {
-				final String fileName = "umap_" + labelPDFFile + "_scatter";
-				PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
+			final CellTypeClassification cellType = cellTypeClassifications.get(i);
+			final float[] umapClustering = fitTransform[i];
+			final String label = cellType.getName();
+
+			dataset.add(cellType.getName(), umapClustering[0], umapClustering[1], label);
+		}
+		final boolean legend = false;
+		final boolean tooltips = true;
+		final boolean urls = false;
+		final JFreeChart chart = ChartFactory.createScatterPlot(chartTitle, "UMAP x", "UMAP y", dataset,
+				PlotOrientation.VERTICAL, legend, tooltips, urls);
+		final XYPlot plot = (XYPlot) chart.getPlot();
+		plot.setBackgroundPaint(Color.white);
+		final XYItemRenderer renderer = plot.getRenderer();
+		renderer.setDefaultItemLabelGenerator(new LabelGenerator());
+		renderer.setDefaultItemLabelsVisible(true);
+		renderer.setDefaultItemLabelFont(renderer.getDefaultItemLabelFont().deriveFont(8f));
+		chart.addSubtitle(new TextTitle(
+				"(" + cellTypeClassifications.size() + " cell types | param nnn=" + numberNearestNeighbours + ")"));
+		try {
+			final String fileName = "umap_" + labelPDFFile + "_scatter";
+			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
+			if (generatePDFCharts) {
 				final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
 				ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, 500, 500, true, chartFile);
-				// logStatus("UMAP clustering chart created");
-
-			} catch (final IOException e) {
-				e.printStackTrace();
-				logStatus("Some error occurred while creating chart for UMAP clustering: " + e.getMessage(),
-						LogLevel.ERROR);
 			}
+			// logStatus("UMAP clustering chart created");
+
+		} catch (final IOException e) {
+			e.printStackTrace();
+			logStatus("Some error occurred while creating chart for UMAP clustering: " + e.getMessage(),
+					LogLevel.ERROR);
 		}
 
 	}
 
-	private List<SingleCell> getSingleCellListFromDB(Set<String> datasets) {
+	private List<SingleCell> getSingleCellListFromDB(Dataset dataset) {
 
 		final long t0 = System.currentTimeMillis();
 
@@ -987,10 +999,10 @@ public class PCTSEA {
 
 		final List<SingleCell> ret = new ArrayList<SingleCell>();
 		final List<edu.scripps.yates.pctsea.db.SingleCell> singleCellsFromDB = new ArrayList<edu.scripps.yates.pctsea.db.SingleCell>();
-		if (datasets != null) {
-			for (final String dataset : datasets) {
-				singleCellsFromDB.addAll(singleCellMongoRepo.findByDatasetTag(dataset));
-			}
+		if (dataset != null) {
+
+			singleCellsFromDB.addAll(singleCellMongoRepo.findByDatasetTag(dataset.getTag()));
+
 		} else {
 			singleCellsFromDB.addAll(singleCellMongoRepo.findAll());
 		}
@@ -1272,7 +1284,7 @@ public class PCTSEA {
 	 * @param cellTypeBranch
 	 * @param correlationThreshold
 	 * @param loadRandomDistributionsIfExist
-	 * @param generateCharts
+	 * @param generatePDFCharts
 	 * @param minCellsPerCellTypeForPDF
 	 * @param plotNegativeEnrichedCellTypes
 	 * @param maxIterations
@@ -1283,7 +1295,7 @@ public class PCTSEA {
 	private void calculateSignificanceByPhenotypePermutations(InteractorsExpressionsRetriever interactorExpressions,
 			List<CellTypeClassification> cellTypeClassifications, List<SingleCell> singleCellList,
 			CellTypeBranch cellTypeBranch, CorrelationThreshold correlationThreshold,
-			boolean loadRandomDistributionsIfExist, boolean generateCharts, int minCellsPerCellTypeForPDF,
+			boolean loadRandomDistributionsIfExist, boolean generatePDFCharts, int minCellsPerCellTypeForPDF,
 			boolean plotNegativeEnrichedCellTypes, int maxIterations, boolean takeZerosForCorrelation,
 			int minNumberExpressedGenesInCell) throws IOException {
 
@@ -1315,8 +1327,8 @@ public class PCTSEA {
 							.getSingleCellsPassingThresholdSortedByCorrelation(singleCellList);
 					// calculate enrichment scores with the Kolmogorov-Smirnov test
 					calculateEnrichmentScore(cellTypeClassifications, singleCellsPassingCorrelationThreshold,
-							cellTypeBranch, false, false, outputToLog, true, generateCharts, minCellsPerCellTypeForPDF,
-							plotNegativeEnrichedCellTypes);
+							cellTypeBranch, false, false, outputToLog, true, generatePDFCharts,
+							minCellsPerCellTypeForPDF, plotNegativeEnrichedCellTypes);
 
 					counter.increment();
 					final String printIfNecessary = counter.printIfNecessary();
@@ -1761,14 +1773,13 @@ public class PCTSEA {
 	private String getParametersString() {
 		final StringBuilder sb = new StringBuilder();
 		sb.append(InputParameters.EMAIL + " = " + email + "\n");
-		sb.append(InputParameters.OUT + " = " + originalPrefix + "\n");
+		sb.append(InputParameters.OUT + " = " + prefix + "\n");
 		sb.append(InputParameters.PERM + " = " + maxIterations + "\n");
 		sb.append(InputParameters.EEF + " = " + experimentExpressionFile.getAbsolutePath() + "\n");
-		sb.append(InputParameters.CHARTS + " = " + generateCharts + "\n");
+		sb.append(InputParameters.CHARTS + " = " + generatePDFCharts + "\n");
 		sb.append(InputParameters.MIN_CORRELATION + " = " + correlationThreshold.getThresholdValue() + "\n");
 		sb.append(InputParameters.MIN_GENES_CELLS + " = " + minNumberExpressedGenesInCell + "\n");
-		sb.append(InputParameters.CELL_TYPES_CLASSIFICATION + " = "
-				+ CellTypeBranch.getStringSeparated(cellTypeBranches, ",") + "\n");
+		sb.append(InputParameters.CELL_TYPES_CLASSIFICATION + " = " + cellTypeBranch + "\n");
 		sb.append(InputParameters.LOAD_RANDOM + " = " + loadRandomDistributionsIfExist + "\n");
 		sb.append(InputParameters.MIN_CELLS_PER_CELL_TYPE + " = " + minCellsPerCellTypeForPDF + "\n");
 		sb.append(InputParameters.PLOT_NEGATIVE_ENRICHED + " = " + plotNegativeEnrichedCellTypes + "\n");
@@ -1983,9 +1994,7 @@ public class PCTSEA {
 	}
 
 	private void createWholeDatasetCorrelationDistributionChart(TDoubleList correlations) {
-		if (!generateCharts) {
-			return;
-		}
+
 		// create chart
 		final HistogramDataset histogramDataset = new HistogramDataset();
 
@@ -2000,7 +2009,7 @@ public class PCTSEA {
 		final JFreeChart chart = ChartFactory.createXYLineChart(plotTitle, xaxis, yaxis, histogramDataset, orientation,
 				show, toolTips, urls);
 
-		final File folder = getResultsSubfolderForCellTypes(originalPrefix);
+		final File folder = getResultsSubfolderForCellTypes(prefix);
 		if (!folder.exists()) {
 			folder.mkdirs();
 			logStatus("Folder '" + folder.getAbsolutePath() + "' created");
@@ -2010,8 +2019,10 @@ public class PCTSEA {
 		try {
 			final String fileName = "corr_hist";
 			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
-			final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
-			ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, width, height, true, chartFile);
+			if (generatePDFCharts) {
+				final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
+				ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, width, height, true, chartFile);
+			}
 		} catch (final IOException e) {
 			PCTSEA.logStatus("Some error occurred while creating chart for correlations: " + e.getMessage(),
 					LogLevel.ERROR);
@@ -2029,14 +2040,14 @@ public class PCTSEA {
 	 * @param calculateKolmogorovSmirnovTest
 	 * @param outputToLog
 	 * @param permutatedData
-	 * @param generateCharts
+	 * @param generatePDFCharts
 	 * @param minCellsPerCellTypeForPDF
 	 * @param plotNegativeEnrichedCellTypes
 	 */
 	private void calculateEnrichmentScore(List<CellTypeClassification> cellTypeClassifications,
 			List<SingleCell> singleCellList, CellTypeBranch cellTypeBranch, boolean calculateUnweighted,
-			boolean calculateKolmogorovSmirnovTest, boolean outputToLog, boolean permutatedData, boolean generateCharts,
-			int minCellsPerCellTypeForPDF, boolean plotNegativeEnrichedCellTypes) {
+			boolean calculateKolmogorovSmirnovTest, boolean outputToLog, boolean permutatedData,
+			boolean generatePDFCharts, int minCellsPerCellTypeForPDF, boolean plotNegativeEnrichedCellTypes) {
 		if (outputToLog) {
 			PCTSEA.logStatus("Calculating enrichment scores...");
 		}
@@ -2049,12 +2060,12 @@ public class PCTSEA {
 
 		// calculate unweighted Score
 		if (calculateUnweighted) {
-			calculateUnweigthedScore(cellTypeClassifications, singleCellList, cellTypeBranch, outputToLog);
 		}
+		calculateUnweigthedScore(cellTypeClassifications, singleCellList, cellTypeBranch, outputToLog);
 
 		// calculate weighted Score
 		calculateWeigthedScoreInParallel(cellTypeClassifications, singleCellList, cellTypeBranch, outputToLog,
-				permutatedData, generateCharts, minCellsPerCellTypeForPDF, plotNegativeEnrichedCellTypes);
+				permutatedData, generatePDFCharts, minCellsPerCellTypeForPDF, plotNegativeEnrichedCellTypes);
 
 		// sort by score descending
 		Collections.sort(cellTypeClassifications, new Comparator<CellTypeClassification>() {
@@ -2102,7 +2113,7 @@ public class PCTSEA {
 
 	private void calculateWeigthedScoreInParallel(List<CellTypeClassification> cellTypeClassifications,
 			List<SingleCell> singleCellList, CellTypeBranch cellTypeBranch, boolean outputToLog, boolean permutatedData,
-			boolean generateCharts, int minCellsPerCellTypeForPDF, boolean plotNegativeEnrichedCellTypes) {
+			boolean generatePDFCharts, int minCellsPerCellTypeForPDF, boolean plotNegativeEnrichedCellTypes) {
 		if (outputToLog) {
 			PCTSEA.logStatus("Calculating weigthed enrichment score and KS statistics...");
 		}
@@ -2112,7 +2123,7 @@ public class PCTSEA {
 		for (int numCore = 1; numCore <= threadCount; numCore++) {
 			// take current DB session
 			final EnrichmentWeigthedScoreParallel runner = new EnrichmentWeigthedScoreParallel(iterator, numCore,
-					singleCellList, cellTypeBranch, permutatedData, generateCharts, minCellsPerCellTypeForPDF,
+					singleCellList, cellTypeBranch, permutatedData, generatePDFCharts, minCellsPerCellTypeForPDF,
 					plotNegativeEnrichedCellTypes);
 			runners.add(runner);
 			runner.start();
@@ -2129,12 +2140,13 @@ public class PCTSEA {
 			}
 		}
 		// now we save the charts
-		if (generateCharts && !permutatedData) {
-			saveScoreCalculationChartsToImagesInMemory(cellTypeClassifications);
+		if (!permutatedData) {
+			saveScoreCalculationCharts(cellTypeClassifications, generatePDFCharts);
 		}
 	}
 
-	private void saveScoreCalculationChartsToImagesInMemory(List<CellTypeClassification> cellTypeClassifications) {
+	private void saveScoreCalculationCharts(List<CellTypeClassification> cellTypeClassifications,
+			boolean generatePDFCharts) {
 
 		final List<CellTypeClassification> newList = new ArrayList<CellTypeClassification>();
 		newList.addAll(cellTypeClassifications);
@@ -2146,17 +2158,14 @@ public class PCTSEA {
 				// we create the writableImages on the FX thread and store them in a list, so
 				// that then we can save them
 				for (final CellTypeClassification cellTypeClassification : newList) {
-
 					try {
-
-						cellTypeClassification.saveChartsToMemory(getResultsSubfolderForCellTypes(), prefix);
+						cellTypeClassification.saveCharts(getResultsSubfolderForCellTypes(), prefix, generatePDFCharts);
 					} catch (final IOException e) {
 						e.printStackTrace();
 						PCTSEA.logStatus("Some error occurred while saving chart for "
 								+ cellTypeClassification.getName() + ": " + e.getMessage(), LogLevel.ERROR);
 					}
 				}
-
 			}
 		};
 		final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -2284,7 +2293,7 @@ public class PCTSEA {
 	}
 
 	private File getCorrelationsOutputFile() {
-		return new File(getCurrentTimeStampPath() + originalPrefix + "_single_cell_correlations.txt");
+		return new File(getCurrentTimeStampPath() + prefix + "_single_cell_correlations.txt");
 	}
 
 	private File getGeneExpressionOutputFile(String geneName, CorrelationThreshold correlationThreshold) {
@@ -2300,7 +2309,6 @@ public class PCTSEA {
 			}
 		}
 		this.prefix = prefix;
-		originalPrefix = prefix;
 	}
 
 	public void setExperimentExpressionFile(File experimentExpressionFile2) {
@@ -2323,14 +2331,13 @@ public class PCTSEA {
 		maxIterations = maxIterations2;
 	}
 
-	public void setCellTypesBranches(List<CellTypeBranch> cellTypeBranches2) {
-		if (cellTypeBranches2 != null) {
-			cellTypeBranches.addAll(cellTypeBranches2);
-		}
+	public void setCellTypesBranch(CellTypeBranch cellTypeBranch2) {
+		cellTypeBranch = cellTypeBranch2;
+
 	}
 
 	public void setGenerateCharts(boolean generateCharts2) {
-		generateCharts = generateCharts2;
+		generatePDFCharts = generateCharts2;
 	}
 
 	public void setMinCellsPerCellTypeForPDF(int minCellsPerCellTypeForPDF2) {
@@ -2393,8 +2400,8 @@ public class PCTSEA {
 		this.email = email;
 	}
 
-	public void setDatasets(Set<String> datasets2) {
-		datasets = datasets2;
+	public void setDataset(Dataset dataset2) {
+		dataset = dataset2;
 	}
 
 	public boolean isWriteCorrelationsFile() {

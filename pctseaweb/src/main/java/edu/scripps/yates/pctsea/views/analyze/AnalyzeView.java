@@ -4,8 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
@@ -14,7 +12,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -36,6 +33,7 @@ import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.formlayout.FormLayout;
@@ -71,6 +69,7 @@ import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
+import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.pctsea.util.PCTSEALocalConfiguration;
@@ -79,19 +78,21 @@ import edu.scripps.yates.pctsea.views.main.MainView;
 import edu.scripps.yates.utilities.files.FileUtils;
 import edu.scripps.yates.utilities.swing.StatusListener;
 import edu.scripps.yates.utilities.util.Pair;
-import gnu.trove.set.hash.THashSet;
 
 @Route(value = "analyze", layout = MainView.class)
 @PageTitle("pCtSEAweb - Analyze")
 @CssImport("./styles/views/analyze/analyze-view.css")
 public class AnalyzeView extends VerticalLayout {
 
-	private final NumberField minCorrelation = new NumberField("Minimum Pearson's correlation");
-	private final IntegerField minGenesCells = new IntegerField("Minimum number of proteins");
-	private final ComboBox<Dataset> datasets = new ComboBox<Dataset>("Single cells dataset to compare against");
-	private final TextField outputPrefix = new TextField("Prefix for all output files", "experiment1");
-	private final EmailField email = new EmailField("Email", "your_email@domain.com");
-	private final IntegerField numPermutations = new IntegerField("Number of permutations", "1000");
+	private final NumberField minCorrelationField = new NumberField("Minimum Pearson's correlation");
+	private final IntegerField minGenesCellsField = new IntegerField("Minimum number of proteins");
+	private final ComboBox<Dataset> datasetsCombo = new ComboBox<Dataset>("Single cells dataset to compare against");
+	private final ComboBox<CellTypeBranch> cellTypeBranchCombo = new ComboBox<CellTypeBranch>(
+			"Level of cell type classification");
+	private final TextField outputPrefixField = new TextField("Prefix for all output files", "experiment1");
+	private final EmailField emailField = new EmailField("Email", "your_email@domain.com");
+	private final IntegerField numPermutationsField = new IntegerField("Number of permutations", "1000");
+	private final Checkbox generatePDFCheckbox = new Checkbox("Generate PDF output", false);
 	MemoryBuffer buffer = new MemoryBuffer();
 	private final MyUpload upload = new MyUpload(buffer);
 	private final Div outputDiv = new Div();
@@ -179,7 +180,7 @@ public class AnalyzeView extends VerticalLayout {
 		binder = new Binder<>(InputParameters.class);
 		final InputParameters inputParameters = new InputParameters();
 		binder.setBean(inputParameters);
-		binder.forField(outputPrefix).asRequired("Required")
+		binder.forField(outputPrefixField).asRequired("Required")
 				.withValidator(prefix -> !"".equals(prefix), "Prefix is required").withValidator(prefix -> {
 					final String tmp = FileUtils.checkInvalidCharacterNameForFileName(prefix);
 					if (!tmp.equals(prefix)) {
@@ -188,23 +189,38 @@ public class AnalyzeView extends VerticalLayout {
 					return true;
 				}, "Prefix contains invalid characters")
 				.bind(InputParameters::getOutputPrefix, InputParameters::setOutputPrefix);
-		binder.forField(minGenesCells).asRequired("Required").withValidator(num -> num >= 1, "Minimum is 3")
+		binder.forField(minGenesCellsField).asRequired("Required").withValidator(num -> num >= 1, "Minimum is 3")
 				.bind(InputParameters::getMinGenesCells, InputParameters::setMinGenesCells);
-		binder.forField(numPermutations).asRequired("Required")
+		binder.forField(numPermutationsField).asRequired("Required")
 				.withValidator(num -> num >= 10, "Minimum number of permutations: 10")
 				.bind(InputParameters::getNumPermutations, InputParameters::setNumPermutations);
-		binder.forField(minCorrelation).asRequired("Required")
+		binder.forField(minCorrelationField).asRequired("Required")
 				.withValidator(num -> num >= 0.0, "Minimum correlation is 0.0")
 				.withValidator(num -> num <= 1.0, "Maximum correlation is 1.0")
 				.bind(InputParameters::getMinCorrelation, InputParameters::setMinCorrelation);
-		binder.forField(email).asRequired("Required")
+		binder.forField(emailField).asRequired("Required")
 				.withValidator(new EmailValidator("This doesn't look like a valid email address"))
 				.bind(InputParameters::getEmail, InputParameters::setEmail);
 
-		binder.forField(datasets).asRequired("Required").withValidator(dataset -> dataset != null,
+		binder.forField(datasetsCombo).asRequired("Required").withValidator(dataset -> dataset != null,
 				"A dataset must be selected");
+
+		binder.forField(cellTypeBranchCombo).asRequired("Required")
+				.withValidator(cellTypeBranch -> cellTypeBranch != null,
+						"A cell type classification level must be selected.")
+				.bind(InputParameters::getCellTypesClassification, InputParameters::setCellTypesClassification);
+
+		binder.forField(datasetsCombo).asRequired("Required")
+				.withValidator(dataset -> dataset != null, "A dataset must be selected")
+				.bind(InputParameters::getDataset, InputParameters::setDataset);
+
+		binder.forField(generatePDFCheckbox).bind(InputParameters::isGeneratePDFCharts,
+				InputParameters::setGeneratePDFCharts);
+
 		// load datasets
 		loadDatasetsInComboList();
+		// load cellTypeBranches
+		cellTypeBranchCombo.setItems(CellTypeBranch.values());
 
 		// buttons
 		clearButton.addClickListener(e -> clearForm());
@@ -242,7 +258,7 @@ public class AnalyzeView extends VerticalLayout {
 	private void loadDatasetsInComboList() {
 		final List<Dataset> datasetsFromDB = dmr.findAll();
 
-		this.datasets.setItems(datasetsFromDB);
+		this.datasetsCombo.setItems(datasetsFromDB);
 
 	}
 
@@ -266,21 +282,11 @@ public class AnalyzeView extends VerticalLayout {
 			return;
 		}
 		// TODO
-		inputParameters.setCellTypesClassification("TYPE");
 		inputParameters.setLoadRandom(false);
-		inputParameters.setGenerateCharts(true);
 		inputParameters.setPlotNegativeEnriched(false);
 		inputParameters.setInputDataFile(inputFile.getAbsolutePath());
 		inputParameters.setWriteCorrelationsFile(false);
-		final Set<String> datasetTags = new THashSet<String>();
-		final Dataset selectedDataset = this.datasets.getValue();
-		if (selectedDataset == null) {
-			inputParameters = null;
-			VaadinUtil.showErrorDialog("Errors in input parameters: A dataset must be selected.");
-			return;
-		}
-		datasetTags.add(selectedDataset.getTag());
-		inputParameters.setDatasets(datasetTags);
+
 		startPCTSEAAnalysis(inputParameters);
 		Notification.show("Run starting...");
 
@@ -289,7 +295,7 @@ public class AnalyzeView extends VerticalLayout {
 	private void startPCTSEAAnalysis(InputParameters inputParameters) {
 //		showSpinnerDialog();
 		final UI ui = UI.getCurrent();
-		final PCTSEA pctsea = new PCTSEA(inputParameters, emr, scmr, runLogsRepo, mbs);
+		final PCTSEA pctsea = new PCTSEA(inputParameters, emr, scmr, runLogsRepo, dmr, mbs);
 		pctsea.setStatusListener(new StatusListener() {
 
 			@Override
@@ -299,15 +305,11 @@ public class AnalyzeView extends VerticalLayout {
 				});
 			}
 		});
-		try {
-			pctsea.setResultsViewerURL(PCTSEALocalConfiguration.getPCTSEAResultsViewerURL());
-			final String fromEmail = PCTSEALocalConfiguration.getFromEmail();
-			pctsea.setFromEmail(fromEmail);
-		} catch (MalformedURLException | URISyntaxException e1) {
-			// this shoudn't happen because it is already checked before, but just in case
-			// we throw a runtimeException
-			throw new RuntimeException(e1);
-		}
+
+		pctsea.setResultsViewerURL(PCTSEALocalConfiguration.getPCTSEAResultsViewerURL());
+		final String fromEmail = PCTSEALocalConfiguration.getFromEmail();
+		pctsea.setFromEmail(fromEmail);
+
 		setEnabledStatusAsRunning();
 		statusArea.setValue("Starting run...");
 
@@ -326,6 +328,7 @@ public class AnalyzeView extends VerticalLayout {
 					});
 
 				} catch (final RuntimeException e) {
+					e.printStackTrace();
 					ui.access(() -> {
 						VaadinUtil.showErrorDialog("pCtSEA has stopped.");
 						showMessage("pCtSEA has stopped.");
@@ -347,10 +350,10 @@ public class AnalyzeView extends VerticalLayout {
 		submitButton.setEnabled(false);
 		cancelButton.setEnabled(true);
 		clearButton.setEnabled(false);
-		this.minCorrelation.setEnabled(false);
-		this.minGenesCells.setEnabled(false);
-		this.numPermutations.setEnabled(false);
-		this.outputPrefix.setEnabled(false);
+		this.minCorrelationField.setEnabled(false);
+		this.minGenesCellsField.setEnabled(false);
+		this.numPermutationsField.setEnabled(false);
+		this.outputPrefixField.setEnabled(false);
 		this.statusArea.setVisible(true);
 		this.resultsPanel.setVisible(true);
 	}
@@ -359,15 +362,16 @@ public class AnalyzeView extends VerticalLayout {
 		submitButton.setEnabled(true);
 		cancelButton.setEnabled(false);
 		clearButton.setEnabled(true);
-		this.minCorrelation.setEnabled(true);
-		this.minGenesCells.setEnabled(true);
-		this.numPermutations.setEnabled(true);
-		this.outputPrefix.setEnabled(true);
+		this.minCorrelationField.setEnabled(true);
+		this.minGenesCellsField.setEnabled(true);
+		this.numPermutationsField.setEnabled(true);
+		this.outputPrefixField.setEnabled(true);
 	}
 
 	protected void showLinkToResults(URL url) {
 		if (url != null) {
 			final Anchor link = new Anchor(url.toString(), url.toString());
+			link.setTarget("_blank");
 			resultsPanel.removeAll();
 			resultsPanel.add("Access your results at: ");
 			resultsPanel.add(link);
@@ -385,37 +389,37 @@ public class AnalyzeView extends VerticalLayout {
 
 	private void initializeInputParamsToDefaults() {
 		//
-		outputPrefix.setHelperText("All output files will be named with that prefix on them");
+		outputPrefixField.setHelperText("All output files will be named with that prefix on them");
 		//
-		minCorrelation.setHelperText("Values from 0.0 to 1.0");
-		minCorrelation.setValue(defaultMinCorrelation);
-		minCorrelation.setMax(1.0);
-		minCorrelation.setMin(0.0);
+		minCorrelationField.setHelperText("Values from 0.0 to 1.0");
+		minCorrelationField.setValue(defaultMinCorrelation);
+		minCorrelationField.setMax(1.0);
+		minCorrelationField.setMin(0.0);
 		//
-		minGenesCells.setValue(defaultMinGenes);
-		minGenesCells
+		minGenesCellsField.setValue(defaultMinGenes);
+		minGenesCellsField
 				.setHelperText("Minimum number of proteins that should have a non-zero expression value in a cell. "
 						+ "Minimum value: 2");
-		minGenesCells.setMin(2);
+		minGenesCellsField.setMin(2);
 		//
-		numPermutations.setValue(defaultPermutations);
-		numPermutations.setMin(10);
-		numPermutations.setHelperText(
+		numPermutationsField.setValue(defaultPermutations);
+		numPermutationsField.setMin(10);
+		numPermutationsField.setHelperText(
 				"Number of permutations for calculating significance of the enrichment scores, being a value of 1000 reasonable. Minimum value: 10");
 		//
-		this.datasets.setAutoOpen(true);
-		this.datasets.setHelperText(
+		this.datasetsCombo.setAutoOpen(true);
+		this.datasetsCombo.setHelperText(
 				"Datasets stored in the database that can be used to compare your data against. Select the one that is more appropiate to your input.");
-		this.datasets.setClearButtonVisible(true);
-		this.datasets.setItemLabelGenerator(new ItemLabelGenerator<Dataset>() {
+		this.datasetsCombo.setClearButtonVisible(true);
+		this.datasetsCombo.setItemLabelGenerator(new ItemLabelGenerator<Dataset>() {
 
 			@Override
 			public String apply(Dataset item) {
 				return item.getTag() + ": " + item.getName();
 			}
 		});
-		this.datasets.setPlaceholder("Select dataset");
-		this.datasets.addValueChangeListener(event -> {
+		this.datasetsCombo.setPlaceholder("Select dataset");
+		this.datasetsCombo.addValueChangeListener(event -> {
 			final Dataset value = event.getValue();
 			if (value != null) {
 				// TODO
@@ -423,6 +427,28 @@ public class AnalyzeView extends VerticalLayout {
 			}
 
 		});
+		//
+		this.cellTypeBranchCombo.setAutoOpen(true);
+		this.cellTypeBranchCombo.setHelperText(
+				"Level of cell type classification according to the hierarchical structure of its classification. Consult the administrator to know more about it.");
+		this.cellTypeBranchCombo.setClearButtonVisible(true);
+		this.cellTypeBranchCombo.setItemLabelGenerator(new ItemLabelGenerator<CellTypeBranch>() {
+
+			@Override
+			public String apply(CellTypeBranch item) {
+				return item.name();
+			}
+		});
+		this.cellTypeBranchCombo.setPlaceholder("Select level");
+		this.cellTypeBranchCombo.addValueChangeListener(event -> {
+			final CellTypeBranch value = event.getValue();
+			if (value != null) {
+				// TODO
+				// show information about it on other components
+			}
+
+		});
+		//
 		//
 		upload.setMaxFiles(1);
 		final int maxFileSizeInBytes = 100 * 1024 * 1024; // 100Mb
@@ -483,7 +509,7 @@ public class AnalyzeView extends VerticalLayout {
 			showInputDataButton.setEnabled(false);
 		});
 		//
-		email.setHelperText(
+		emailField.setHelperText(
 				"Include your email in case the analysis take more than a few minutes. You will get notified with the results by email.");
 //		upload.addSucceededListener(event -> {
 //			final Component component = VaadinUtil.createComponent(event.getMIMEType(), event.getFileName(),
@@ -583,12 +609,21 @@ public class AnalyzeView extends VerticalLayout {
 	private Component createFormLayout() {
 		final FormLayout formLayout = new FormLayout();
 //		email.setErrorMessage("Please enter a valid email address");
-		formLayout.add(datasets);
-		formLayout.add(minCorrelation);
-		formLayout.add(minGenesCells);
-		formLayout.add(outputPrefix);
-		formLayout.add(numPermutations);
-		formLayout.add(email);
+		formLayout.add(datasetsCombo);
+		formLayout.add(cellTypeBranchCombo);
+		formLayout.add(minCorrelationField);
+		formLayout.add(minGenesCellsField);
+		formLayout.add(outputPrefixField);
+		formLayout.add(numPermutationsField);
+		final VerticalLayout v = new VerticalLayout();
+		final Label label = new Label("Generate PDF file with charts");
+		label.setTitle("If selected, a set of PDF files will be created with the charts generated. "
+				+ "Disable this option for a more optimal performance. "
+				+ "Charts will be visible in the online results viewer anyway.");
+		v.add(label);
+		v.add(generatePDFCheckbox);
+		formLayout.add(v);
+		formLayout.add(emailField);
 		return formLayout;
 	}
 

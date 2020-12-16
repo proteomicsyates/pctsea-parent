@@ -9,7 +9,6 @@ import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.utilities.dates.DatesUtil;
 import edu.scripps.yates.utilities.email.EmailSender;
-import edu.scripps.yates.utilities.strings.StringUtils;
 
 public class EmailUtil {
 	private final static Logger log = Logger.getLogger(EmailUtil.class);
@@ -35,17 +34,15 @@ public class EmailUtil {
 		body.append(InputParameters.MIN_CELLS_PER_CELL_TYPE + ": " + inputParameters.getMinCellsPerCellType() + "\n");
 		body.append(InputParameters.MIN_CORRELATION + ": " + inputParameters.getMinCorrelation() + "\n");
 		body.append(InputParameters.MIN_GENES_CELLS + ": " + inputParameters.getMinGenesCells() + "\n");
-		if (inputParameters.getDatasets() != null) {
-			body.append(InputParameters.DATASETS + ": "
-					+ StringUtils.getSortedSeparatedValueStringFromChars(inputParameters.getDatasets(), ",") + "\n");
-		} else {
-			body.append(InputParameters.DATASETS + ": ALL");
-		}
+		body.append(InputParameters.DATASETS + ": " + inputParameters.getDataset().getTag() + " ("
+				+ inputParameters.getDataset().getName() + " - " + inputParameters.getDataset().getReference() + ")"
+				+ "\n");
+
 		body.append(InputParameters.OUT + ": " + inputParameters.getOutputPrefix() + "\n");
 		body.append(InputParameters.PERM + ": " + inputParameters.getNumPermutations() + "\n");
 		body.append(InputParameters.PLOT_NEGATIVE_ENRICHED + ": " + inputParameters.isPlotNegativeEnriched() + "\n");
 		body.append(InputParameters.LOAD_RANDOM + ": " + inputParameters.isLoadRandom() + "\n");
-		body.append(InputParameters.CHARTS + ": " + inputParameters.isGenerateCharts() + "\n");
+		body.append(InputParameters.CHARTS + ": " + inputParameters.isGeneratePDFCharts() + "\n");
 		body.append("\n\n");
 		// results
 		body.append("You can access to your results at this location in the machine you run it: "

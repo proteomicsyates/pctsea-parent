@@ -250,14 +250,14 @@ public class CellTypeClassification {
 		return this.chartScoreCalculation;
 	}
 
-	public List<File> saveChartsToMemory(File resultsSubFolder, String prefix) throws IOException {
+	public List<File> saveCharts(File resultsSubFolder, String prefix, boolean generatePDFCharts) throws IOException {
 		final List<File> txtfiles = new ArrayList<File>();
-		txtfiles.add(saveChartToBufferedImage(this.correlationDistributionChart, this.getName() + "_corr",
-				resultsSubFolder, prefix));
-		txtfiles.add(saveChartToBufferedImage(this.chartScoreCalculation, this.getName() + "_ews", resultsSubFolder,
-				prefix));
-		txtfiles.add(saveChartToBufferedImage(this.histogramOfCorrelatingGenesChart,
-				this.getName() + "_genes_per_cell_hist", resultsSubFolder, prefix));
+		txtfiles.add(saveChartToFileAndToBufferedImage(this.correlationDistributionChart, this.getName() + "_corr",
+				resultsSubFolder, prefix, generatePDFCharts));
+		txtfiles.add(saveChartToFileAndToBufferedImage(this.chartScoreCalculation, this.getName() + "_ews",
+				resultsSubFolder, prefix, generatePDFCharts));
+		txtfiles.add(saveChartToFileAndToBufferedImage(this.histogramOfCorrelatingGenesChart,
+				this.getName() + "_genes_per_cell_hist", resultsSubFolder, prefix, generatePDFCharts));
 		// remove any null
 		final List<File> ret = txtfiles.stream().filter(f -> f != null).collect(Collectors.toList());
 		return ret;
@@ -270,17 +270,19 @@ public class CellTypeClassification {
 		return name2;
 	}
 
-	private File saveChartToBufferedImage(JFreeChart chart, String fileName, File resultsSubFolder, String prefix)
-			throws IOException {
+	private File saveChartToFileAndToBufferedImage(JFreeChart chart, String fileName, File resultsSubFolder,
+			String prefix, boolean generatePDFCharts) throws IOException {
 		if (chart == null) {
 			return null;
 		}
-		final int width = 500;
-		final int height = 500;
-		final File txtFile = PCTSEAUtils.writeTXTFileForChart(chart, resultsSubFolder, prefix, fileName);
-		final File chartFile = PCTSEAUtils.getChartPDFFile(resultsSubFolder, fileName, prefix);
 
-		ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, width, height, false, chartFile);
+		final File txtFile = PCTSEAUtils.writeTXTFileForChart(chart, resultsSubFolder, prefix, fileName);
+		if (generatePDFCharts) {
+			final File chartFile = PCTSEAUtils.getChartPDFFile(resultsSubFolder, fileName, prefix);
+			final int width = 500;
+			final int height = 500;
+			ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, width, height, false, chartFile);
+		}
 		return txtFile;
 	}
 

@@ -1,6 +1,8 @@
 package edu.scripps.yates.pctsea.util;
 
 import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.util.Properties;
 
 import edu.scripps.yates.utilities.properties.PropertiesUtil;
@@ -24,11 +26,19 @@ public class PCTSEALocalConfiguration {
 	/**************************/
 
 	private static File getPCTSEAConfigurationFolder() {
+
 		final String value = System.getenv(PCTSEA_CONFIGURATION_FOLDER_ENV_NAME);
 		if (value != null) {
-			return new File(value);
+			final File folder = new File(value);
+			if (!folder.exists()) {
+				throw new PCTSEAConfigurationException("Value of environmental variable '"
+						+ PCTSEA_CONFIGURATION_FOLDER_ENV_NAME + "' is '" + value + "' and that folder is not found.");
+			}
+			return folder;
 		}
-		return null;
+		throw new PCTSEAConfigurationException(
+				"'" + PCTSEA_CONFIGURATION_FOLDER_ENV_NAME + "' environment variable not found");
+
 	}
 
 	public static File getPCTSEAResultsFolder() {
@@ -42,6 +52,11 @@ public class PCTSEALocalConfiguration {
 	public static String getPCTSEAResultsViewerURL() {
 		final String property = getPropertyValue(resultsViewerURLProperty);
 		if (property != null && !"".equals(property)) {
+			try {
+				new java.net.URL(property).toURI();
+			} catch (MalformedURLException | URISyntaxException e) {
+				throw new PCTSEAConfigurationException(e);
+			}
 			return property;
 		}
 		return null;
@@ -57,13 +72,22 @@ public class PCTSEALocalConfiguration {
 				}
 			}
 		} catch (final Exception e) {
+			if (e instanceof PCTSEAConfigurationException) {
+				throw (PCTSEAConfigurationException) e;
+			}
 			e.printStackTrace();
 		}
 		return null;
 	}
 
 	private static File getPCTSEAPropertiesFile() {
-		return new File(getPCTSEAConfigurationFolder().getAbsolutePath() + File.separator + PCTSEA_CONF_FILE_NAME);
+		final File confFile = new File(
+				getPCTSEAConfigurationFolder().getAbsolutePath() + File.separator + PCTSEA_CONF_FILE_NAME);
+		if (!confFile.exists()) {
+			throw new PCTSEAConfigurationException("Configuration file '" + PCTSEA_CONF_FILE_NAME
+					+ "' not found at path: '" + getPCTSEAConfigurationFolder().getAbsolutePath() + "'");
+		}
+		return confFile;
 	}
 
 	public static String getFromEmail() {

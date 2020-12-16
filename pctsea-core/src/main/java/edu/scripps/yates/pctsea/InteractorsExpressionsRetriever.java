@@ -15,6 +15,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.slf4j.LoggerFactory;
 
 import edu.scripps.yates.annotations.uniprot.UniprotProteinLocalRetriever;
+import edu.scripps.yates.pctsea.db.Dataset;
 import edu.scripps.yates.pctsea.db.Expression;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
@@ -50,7 +51,7 @@ public class InteractorsExpressionsRetriever {
 	private static final TIntObjectMap<String> geneNamesByGeneIDMap = new TIntObjectHashMap<String>();
 	private final ExpressionMongoRepository expresssionsMongoRepository;
 	private final MongoBaseService mongoBaseService;
-	private final Set<String> datasets;
+	private final Dataset dataset;
 	private static InteractorsExpressionsRetriever instance;
 
 	/**
@@ -61,8 +62,7 @@ public class InteractorsExpressionsRetriever {
 	 * @throws IOException
 	 */
 	public InteractorsExpressionsRetriever(ExpressionMongoRepository expresssionsMongoRepository,
-			MongoBaseService mongoBaseService, File experimentalExpressionsFile, Set<String> datasets)
-			throws IOException {
+			MongoBaseService mongoBaseService, File experimentalExpressionsFile, Dataset dataset) throws IOException {
 //		if (SingleCellsMetaInformationReader.singleCellIDsBySingleCellNameMap.isEmpty()) {
 //			throw new IllegalArgumentException(
 //					"We need to read the single cell metainformation before reading expressions");
@@ -70,7 +70,7 @@ public class InteractorsExpressionsRetriever {
 		// clear static
 		geneIDsByGeneNameMap.clear();
 		geneNamesByGeneIDMap.clear();
-		this.datasets = datasets;
+		this.dataset = dataset;
 		this.mongoBaseService = mongoBaseService;
 		this.expresssionsMongoRepository = expresssionsMongoRepository;
 		genes = readExperimentalExpressionsFile(experimentalExpressionsFile);
@@ -86,7 +86,7 @@ public class InteractorsExpressionsRetriever {
 	 * @param cellsMetadata
 	 * @param singleCellExpressionsFile table with single cells as columns, and rows
 	 *                                  as gene/protein names
-	 * @param datasets
+	 * @param dataset
 	 * @throws IOException
 	 */
 	private void getSingleCellExpressionsFromDBOLD(List<String> inputProteinGeneList) {
@@ -158,7 +158,7 @@ public class InteractorsExpressionsRetriever {
 			genesById.put(geneID, gene);
 			geneIDs.add(geneID);
 			for (final Expression expression : expressions) {
-				if (datasets != null && !datasets.equals(expression.getProjectTag())) {
+				if (dataset != null && !dataset.equals(expression.getProjectTag())) {
 //					System.out.println(projectID + " different than " + expression.getProject().getId());
 					continue;
 				}
@@ -202,7 +202,7 @@ public class InteractorsExpressionsRetriever {
 	 * @param cellsMetadata
 	 * @param singleCellExpressionsFile table with single cells as columns, and rows
 	 *                                  as gene/protein names
-	 * @param datasets
+	 * @param dataset
 	 * @throws IOException
 	 */
 	private void getSingleCellExpressionsFromDB(List<String> inputProteinGeneList) {
@@ -218,7 +218,7 @@ public class InteractorsExpressionsRetriever {
 		counter.setSuffix("Getting expression profiles of interest...");
 		for (final String geneName : genes) {
 
-			final List<Expression> expressions = mongoBaseService.getExpressionByGene(geneName, datasets);
+			final List<Expression> expressions = mongoBaseService.getExpressionByGene(geneName, dataset);
 			counter.increment();
 			final String printIfNecessary = counter.printIfNecessary();
 			if (!"".equals(printIfNecessary)) {

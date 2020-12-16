@@ -134,6 +134,21 @@ public class MongoBaseService {
 		return ret;
 	}
 
+	public List<Expression> getExpressionByGene(String gene, Dataset dataset) {
+		final List<Expression> ret = new ArrayList<Expression>();
+
+		if (dataset != null) {
+			final List<Expression> expressions = emr.findByGeneAndProjectTag(gene, dataset.getTag());
+			ret.addAll(expressions);
+
+		} else {
+			final List<Expression> expressions = emr.findByGene(gene);
+			ret.addAll(expressions);
+		}
+
+		return ret;
+	}
+
 	public List<Expression> saveExpressions(List<Expression> entities) {
 		Assert.notNull(entities, "Entity must not be null!");
 

@@ -1,8 +1,8 @@
 package edu.scripps.yates.pctsea.model;
 
-import java.util.Set;
-
 import javax.validation.constraints.NotNull;
+
+import edu.scripps.yates.pctsea.db.Dataset;
 
 public class InputParameters {
 	@Override
@@ -10,23 +10,23 @@ public class InputParameters {
 		return "InputParameters [writeCorrelationsFile=" + writeCorrelationsFile + ", email=" + email
 				+ ", inputDataFile=" + inputDataFile + ", minCorrelation=" + minCorrelation + ", minGenesCells="
 				+ minGenesCells + ", outputPrefix=" + outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations="
-				+ numPermutations + ", cellTypesClassification=" + cellTypesClassification + ", generateCharts="
-				+ generateCharts + ", minCellsPerCellType=" + minCellsPerCellType + ", plotNegativeEnriched="
-				+ plotNegativeEnriched + ", datasets=" + getSeparatedValueString(datasets, ",") + "]";
+				+ numPermutations + ", cellTypesClassification=" + cellTypesClassification + ", generatePDFCharts="
+				+ generatePDFCharts + ", minCellsPerCellType=" + minCellsPerCellType + ", plotNegativeEnriched="
+				+ plotNegativeEnriched + ", dataset=" + dataset.getTag() + "]";
 	}
 
-	private String getSeparatedValueString(Set<String> datasets2, String separator) {
-		final StringBuilder sb = new StringBuilder();
-		if (datasets2 != null) {
-			for (final String dataset : datasets2) {
-				if (!"".equals(sb.toString())) {
-					sb.append(separator);
-				}
-				sb.append(dataset);
-			}
-		}
-		return sb.toString();
-	}
+//	private String getSeparatedValueString(Set<String> datasets2, String separator) {
+//		final StringBuilder sb = new StringBuilder();
+//		if (datasets2 != null) {
+//			for (final String dataset : datasets2) {
+//				if (!"".equals(sb.toString())) {
+//					sb.append(separator);
+//				}
+//				sb.append(dataset);
+//			}
+//		}
+//		return sb.toString();
+//	}
 
 	private String email;
 	private String inputDataFile;
@@ -36,11 +36,11 @@ public class InputParameters {
 	private String outputPrefix;
 	private boolean loadRandom;
 	private int numPermutations;
-	private String cellTypesClassification;
-	private boolean generateCharts;
+	private CellTypeBranch cellTypesClassification;
+	private boolean generatePDFCharts;
 	private int minCellsPerCellType;
 	private boolean plotNegativeEnriched;
-	private Set<String> datasets;
+	private Dataset dataset;
 	private boolean writeCorrelationsFile;
 	public static final String EMAIL = "email";
 	public static final String OUT = "out";
@@ -104,20 +104,20 @@ public class InputParameters {
 		this.numPermutations = numPermutations;
 	}
 
-	public String getCellTypesClassification() {
+	public CellTypeBranch getCellTypesClassification() {
 		return cellTypesClassification;
 	}
 
-	public void setCellTypesClassification(String cellTypesClassification) {
+	public void setCellTypesClassification(CellTypeBranch cellTypesClassification) {
 		this.cellTypesClassification = cellTypesClassification;
 	}
 
-	public boolean isGenerateCharts() {
-		return generateCharts;
+	public boolean isGeneratePDFCharts() {
+		return generatePDFCharts;
 	}
 
-	public void setGenerateCharts(boolean generateCharts) {
-		this.generateCharts = generateCharts;
+	public void setGeneratePDFCharts(boolean generateCharts) {
+		this.generatePDFCharts = generateCharts;
 	}
 
 	public int getMinCellsPerCellType() {
@@ -144,12 +144,12 @@ public class InputParameters {
 		this.email = email;
 	}
 
-	public Set<String> getDatasets() {
-		return datasets;
+	public Dataset getDataset() {
+		return dataset;
 	}
 
-	public void setDatasets(Set<String> datasets) {
-		this.datasets = datasets;
+	public void setDataset(Dataset dataset) {
+		this.dataset = dataset;
 	}
 
 	public boolean isWriteCorrelationsFile() {
