@@ -443,6 +443,7 @@ public class AnalyzeView extends VerticalLayout {
 				} else {
 					inputFile = Files.createTempFile("pctsea", "upload.txt").toFile();
 				}
+
 				//////////////////////////////////////
 				// make sure the input file is unique:
 				File tmpFile = inputFile;

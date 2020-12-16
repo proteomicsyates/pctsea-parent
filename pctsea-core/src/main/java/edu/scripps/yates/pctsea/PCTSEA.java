@@ -157,6 +157,8 @@ public class PCTSEA {
 
 	private boolean writeCorrelationsFile = false;
 
+	private String fromEmail;
+
 	public PCTSEA(InputParameters inputParameters, ExpressionMongoRepository expressionMongoRepo,
 			SingleCellMongoRepository singleCellMongoRepo, PctseaRunLogRepository runLogsRepo,
 			MongoBaseService mongoBaseService) {
@@ -403,7 +405,7 @@ public class PCTSEA {
 						runLogsRepo.save(runLog);
 
 						if (runLog.getInputParameters().getEmail() != null) {
-							EmailUtil.sendEmailWithResults(result);
+							EmailUtil.sendEmailWithResults(result, fromEmail);
 						}
 						log.info("PCTSEA got some results in "
 								+ DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime()));
@@ -420,6 +422,14 @@ public class PCTSEA {
 				logStatus("Finishing now.");
 			}
 		}
+	}
+
+	public String getFromEmail() {
+		return fromEmail;
+	}
+
+	public void setFromEmail(String fromEmail) {
+		this.fromEmail = fromEmail;
 	}
 
 	private void logInputParams(InputParameters inputParameters) {

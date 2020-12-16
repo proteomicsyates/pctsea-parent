@@ -19,6 +19,7 @@ public class PCTSEALocalConfiguration {
 	/* PROPERTIES */
 	public static final String resultsPathProperty = "pctsea.results.path";
 	public static final String resultsViewerURLProperty = "pctsea.results.viewer.url";
+	public static final String fromEmailProperty = "pctsea.from.email";
 
 	/**************************/
 
@@ -63,5 +64,13 @@ public class PCTSEALocalConfiguration {
 
 	private static File getPCTSEAPropertiesFile() {
 		return new File(getPCTSEAConfigurationFolder().getAbsolutePath() + File.separator + PCTSEA_CONF_FILE_NAME);
+	}
+
+	public static String getFromEmail() {
+		final String property = getPropertyValue(fromEmailProperty);
+		if (property != null && !"".equals(property)) {
+			return property;
+		}
+		return null;
 	}
 }

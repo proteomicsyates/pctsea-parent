@@ -14,7 +14,7 @@ import edu.scripps.yates.utilities.strings.StringUtils;
 public class EmailUtil {
 	private final static Logger log = Logger.getLogger(EmailUtil.class);
 
-	public static String sendEmailWithResults(PCTSEAResult result) {
+	public static String sendEmailWithResults(PCTSEAResult result, String fromEmail) {
 		final InputParameters inputParameters = result.getRunLog().getInputParameters();
 		PCTSEA.logStatus("Sending email with results to " + inputParameters.getEmail());
 		// SUBJECT
@@ -64,7 +64,6 @@ public class EmailUtil {
 		final String destinationEmail = inputParameters.getEmail();
 
 		// FROM EMAIL
-		final String fromEmail = "salvador@scripps.edu";
 
 		// SEND THE EMAIL
 		final String error = EmailSender.sendEmail(subject, body.toString(), fromEmail, destinationEmail, fromEmail);
