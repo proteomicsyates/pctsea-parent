@@ -67,7 +67,7 @@ public class EmailUtil {
 		final String fromEmail = "salvador@scripps.edu";
 
 		// SEND THE EMAIL
-		final String error = EmailSender.sendEmail(subject, body.toString(), destinationEmail, fromEmail);
+		final String error = EmailSender.sendEmail(subject, body.toString(), fromEmail, destinationEmail, fromEmail);
 		if (error != null) {
 			PCTSEA.logStatus("Error sending email. Perhaps emails cannot be sent from this machine: " + error,
 					LogLevel.ERROR);
