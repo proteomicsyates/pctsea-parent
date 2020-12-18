@@ -30,49 +30,82 @@ createPlotWithCorrelations <- function(table, correlation_threshold, cell_type){
     theme_classic()
 }
 
+createPlotWithCorrelationsForCellType <- function(table, cell_type){
+  req(table, cell_type)
+  names(table) <- c('cell type', 'Pearson\'s correlation', 'Frequency (# cells)')
+  plot <- ggplot(data = table,
+         aes(
+           x = `Pearson\'s correlation`,
+           y = `Frequency (# cells)`)) +
+    labs(x = "Pearson\'s correlation", y = "Frequency (# cells)") +
+    geom_line(aes(color = `cell type`))+
+    theme_classic() +
+    xlim(-1,1)
+    # ggtitle(paste0("Corr. distrib. for: '",cell_type, "'")) +
+    # theme(plot.title = element_text(size=10))
+  ggplotly(plot) %>% layout(showlegend = FALSE)
+}
+
 # select the correlations file
-correlations_file <- eventReactive(unziped_files(),{
-  browser()
-  folder = unziped_files()
-  paste(folder, .Platform$file.sep, list.files(folder, pattern = ".*correlations.txt")[1], sep = "")
+# correlations_file <- eventReactive(rv$unziped_files,{
+#   browser()
+#   folder = rv$unziped_files
+#   get_cell_type_file(unziped_files_folder = rv$unziped_files, run_name = rv$run_name, cell_type = input$selectCellType, file_suffix = "correlations")
+#   paste(folder, .Platform$file.sep, list.files(folder, pattern = ".*correlations.txt")[1], sep = "")
+# })
+
+cell_type_correlations_table <- eventReactive(input$selectCellType, {
+  req(rv$unziped_files, input$selectCellType)
+  file <- get_cell_type_file(rv$unziped_files, rv$run_name, input$selectCellType, "corr")
+  if(is.null(file)){
+    return()
+  }
+  table = fread(file, header = FALSE, sep = "\t", showProgress = TRUE)
+  table
+}, ignoreInit = TRUE)
+
+
+
+# plot the cell_type correlation histogram plot
+observeEvent(cell_type_correlations_table(),{
+  output$cellTypeCorrelationsPlot <- renderPlotly(cell_type_correlations_table() %>% createPlotWithCorrelationsForCellType(., input$selectCellType))
 })
 
 # read the file
-rv <- reactiveValues(correlations_table = NULL)
-rv$correlations_table <- eventReactive(correlations_file(),{
-  browser()
-  withProgress({
-    table = fread(file = correlations_file(), header = TRUE, sep = "\t", showProgress = TRUE)
-    setProgress(value = 1)
-    table
-  }, message = "Reading correlations file", detail = "This can take a few seconds. Please wait...")
-})
+# rv$correlations_table <- eventReactive(correlations_file(),{
+#   browser()
+#   withProgress({
+#     table = fread(file = correlations_file(), header = TRUE, sep = "\t", showProgress = TRUE)
+#     setProgress(value = 1)
+#     table
+#   }, message = "Reading correlations file", detail = "This can take a few seconds. Please wait...")
+# }, ignoreInit = TRUE)
 
 
-filteredCorrelationsTable <- eventReactive(rv$correlations_table,{
-  browser()
-  t2 <- rv$correlations_table
-  t2 <- t2[t2$pearsons_corr > 0.3,]
+# filteredCorrelationsTable <- eventReactive(rv$correlations_table,{
+#   browser()
+#   t2 <- rv$correlations_table
+#   t2 <- t2[t2$pearsons_corr > 0.3,]
+#
+#   # plot the table as soon as is loaded
+#   output$correlationsDataTable <- DT::renderDataTable({
+#     t <- filteredCorrelationsTable()
+#   }, options = list(pageLength = 20)
+#   )
+# })
 
-  # plot the table as soon as is loaded
-  output$correlationsDataTable <- DT::renderDataTable({
-    t <- filteredCorrelationsTable()
-  }, options = list(pageLength = 20)
-  )
-})
 
-
-observeEvent(input$selectCellType, {
-  req(input$selectCellType)
-  t <- rv$correlations_table
-  req(t)
-  browser()
-  t <- t[t$cell_type == input$selectCellType,]
-  rv$correlations_table <- t
-})
+# observeEvent(input$selectCellType, {
+#   req(input$selectCellType)
+#   t <- rv$correlations_table
+#   req(t)
+#   browser()
+#   t <- t[t$cell_type == input$selectCellType,]
+#   rv$correlations_table <- t
+# })
 
 # plot the correlation plot
-observeEvent(rv$correlations_table,{
-  browser()
-  output$correlationsPlot <- renderPlot(rv$correlations_table %>% createPlotWithCorrelations(., 0.1))
-})
+# observeEvent(rv$correlations_table,{
+#   browser()
+#   output$correlationsPlot <- renderPlot(rv$correlations_table %>% createPlotWithCorrelations(., 0.1))
+# })

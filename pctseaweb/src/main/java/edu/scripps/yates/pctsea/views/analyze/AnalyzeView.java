@@ -92,7 +92,7 @@ public class AnalyzeView extends VerticalLayout {
 	private final TextField outputPrefixField = new TextField("Prefix for all output files", "experiment1");
 	private final EmailField emailField = new EmailField("Email", "your_email@domain.com");
 	private final IntegerField numPermutationsField = new IntegerField("Number of permutations", "1000");
-	private final Checkbox generatePDFCheckbox = new Checkbox("Generate PDF output", false);
+	private final Checkbox generatePDFCheckbox = new Checkbox("Generate PDF files with charts", false);
 	MemoryBuffer buffer = new MemoryBuffer();
 	private final MyUpload upload = new MyUpload(buffer);
 	private final Div outputDiv = new Div();
@@ -615,14 +615,8 @@ public class AnalyzeView extends VerticalLayout {
 		formLayout.add(minGenesCellsField);
 		formLayout.add(outputPrefixField);
 		formLayout.add(numPermutationsField);
-		final VerticalLayout v = new VerticalLayout();
-		final Label label = new Label("Generate PDF file with charts");
-		label.setTitle("If selected, a set of PDF files will be created with the charts generated. "
-				+ "Disable this option for a more optimal performance. "
-				+ "Charts will be visible in the online results viewer anyway.");
-		v.add(label);
-		v.add(generatePDFCheckbox);
-		formLayout.add(v);
+
+		formLayout.add(generatePDFCheckbox);
 		formLayout.add(emailField);
 		return formLayout;
 	}
