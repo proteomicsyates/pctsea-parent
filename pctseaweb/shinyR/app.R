@@ -32,59 +32,66 @@ options(shiny.maxRequestSize = 120*1024^2,
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(title = "PCTSEA",
-                br(),
-                sidebarLayout(
-                  sidebarPanel(width = 2,
-                               conditionalPanel(
-                                 condition = "input.tabs == 'Import data'",
-                                 uiOutput(outputId = "importSideControlUI")
-                               ),
-                               conditionalPanel(
-                                 condition = "input.tabs == 'Enrichment Table'",
-                                 p("Here you have the main output table")
-                               ),
-                               conditionalPanel(
-                                 condition = "input.tabs == 'Charts per cell type'",
-                                 p("Select cell type:"),
-                                 selectInput(inputId = "selectCellType", label = "Cell type", choices = c())
-                               )
-                  ),
-                  mainPanel(width = 10,
-                            tabsetPanel(id = "tabs",
-                                        tabPanel("Import data",
+                fluidRow(
+                  column(12, h2("pCtSEA results explorer"))
+                ),
+                # sidebarLayout(
+                #   sidebarPanel(width = 2,
+                #
+                #                conditionalPanel(
+                #                  condition = "input.tabs == 'Enrichment Table'",
+                #                  p("Here you have the main output table")
+                #                ),
+                #
+                #   ),
+                fluidRow(
+                  column(width = 12,
+                         tabsetPanel(id = "tabs",
+                                     tabPanel("Import data",
+                                              br(),
 
-                                                 br(),
-                                                 uiOutput(outputId = "importControlUI"),
-                                        ),
-                                        tabPanel("Enrichment Table",
-                                                 br(),
-                                                 fluidRow(
-                                                   column(width = 12,
-                                                          dataTableOutput(outputId = "enrichmentDataTable"), style = "font-size:80%; rowHeight: 75%"
-                                                   )
-                                                 )
-                                        ),
-                                        tabPanel("Glocal charts",
-                                                 fluidRow(
-                                                   column(4, plotlyOutput(outputId = "globalCorrelationsPlot")),
-                                                   column(4, plotlyOutput(outputId = "globalCorrelationsRankPlot")),
-                                                   column(4, plotlyOutput(outputId = "globalGenesPerCellTypePlot"))
-                                                 )
-                                        ),
-                                        tabPanel("Charts per cell type",
+                                                uiOutput(outputId = "importSideControlUI"),
 
-                                                 fluidRow(
-                                                   column(4, plotlyOutput(outputId = "cellTypeCorrelationsPlot")),
-                                                   column(4, plotlyOutput(outputId = "cellTypeScoreCalculationPlot")),
-                                                   column(4, plotlyOutput(outputId = "genesPerCellTypePlot"))
-                                                 ),
-                                                 fluidRow(
-                                                   column(width = 6,
-                                                          dataTableOutput(outputId = "enrichmentDataTable2"), style = "font-size:80%; rowHeight: 75%"
-                                                   )
-                                                 )
-                                        )
-                            )
+                                              br(),
+                                              uiOutput(outputId = "importControlUI"),
+                                     ),
+                                     tabPanel("Enrichment Table",
+                                              br(),
+                                              p("Here you have the main output table"),
+                                              fluidRow(
+                                                column(width = 12,
+                                                       dataTableOutput(outputId = "enrichmentDataTable"), style = "font-size:80%; rowHeight: 75%"
+                                                )
+                                              )
+                                     ),
+                                     tabPanel("Glocal charts",
+                                              br(),
+                                              fluidRow(
+                                                column(4, plotlyOutput(outputId = "globalCorrelationsPlot")),
+                                                column(4, plotlyOutput(outputId = "globalCorrelationsRankPlot")),
+                                                column(4, plotlyOutput(outputId = "globalGenesPerCellTypePlot"))
+                                              )
+                                     ),
+                                     tabPanel("Charts per cell type",
+                                              br(),
+                                              fluidRow(
+                                                column(4, wellPanel(
+                                                  p("Select cell type:"),
+                                                  selectInput(inputId = "selectCellType", label = "Cell type", choices = c())
+                                                ))
+                                              ),
+                                              fluidRow(
+                                                column(4, plotlyOutput(outputId = "cellTypeCorrelationsPlot")),
+                                                column(4, plotlyOutput(outputId = "cellTypeScoreCalculationPlot")),
+                                                column(4, plotlyOutput(outputId = "genesPerCellTypePlot"))
+                                              ),
+                                              fluidRow(
+                                                column(width = 6,
+                                                       dataTableOutput(outputId = "enrichmentDataTable2"), style = "font-size:80%; rowHeight: 75%"
+                                                )
+                                              )
+                                     )
+                         )
                   )
                 )
 )
@@ -130,7 +137,7 @@ server <- function(input, output, session) {
             column(width = 12, h5("Analysis from:"))
           ),
           fluidRow(
-            column(width = 12, h6(tags$b(tools::file_path_sans_ext(basename(inputFileName)))))
+            column(width = 6, wellPanel(h6(tags$b(tools::file_path_sans_ext(basename(inputFileName))))))
           )
         )
       })
