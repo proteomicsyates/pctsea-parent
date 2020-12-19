@@ -1,19 +1,22 @@
 createPlotWithGenesPerCellType <- function(table, cell_type, corr_threshold){
   req(table)
+  colnames(table) <- c('type', '# genes', '# cells')
   plot <- ggplot(data = table) +
-    geom_bar(stat="identity", aes(x=factor(V2), y=V3, color = V1, fill = V1), position = 'dodge') +
-    labs(x = "# of genes corr > threshold", y = "# cells") +
+    geom_bar(stat="identity", aes(x=factor(`# genes`), y=`# cells`, fill = type), position = 'dodge') +
+    labs(x = "# of genes with corr > threshold", y = "# cells") +
     theme_classic() +
-    theme(plot.title = element_text(size=10)) +
-    theme(legend.position="bottom")
+    theme(legend.title = element_blank())
   ggplotly(plot) %>%
     layout(
       legend = list(
-        orientation = "h",
-        x = 0,
-        y = 1.1,
-        title = NULL
-      )
+        x = 0.5,
+        y = 0.6,
+        title = NULL,
+        font = list(size = 9),
+        tracegroupgap = 3
+      ),
+      xaxis = list(title = plot_axis_title_format),
+      yaxis = list(title = plot_axis_title_format)
     )
 }
 

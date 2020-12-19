@@ -50,7 +50,7 @@ ui <- fluidPage(title = "PCTSEA",
                                      tabPanel("Import data",
                                               br(),
 
-                                                uiOutput(outputId = "importSideControlUI"),
+                                              uiOutput(outputId = "importSideControlUI"),
 
                                               br(),
                                               uiOutput(outputId = "importControlUI"),
@@ -60,34 +60,57 @@ ui <- fluidPage(title = "PCTSEA",
                                               p("Here you have the main output table"),
                                               fluidRow(
                                                 column(width = 12,
-                                                       dataTableOutput(outputId = "enrichmentDataTable"), style = "font-size:80%; rowHeight: 75%"
+                                                       DT::dataTableOutput(outputId = "enrichmentDataTable"), style = "font-size:80%; rowHeight: 75%"
                                                 )
                                               )
                                      ),
-                                     tabPanel("Glocal charts",
+                                     tabPanel("Global charts",
                                               br(),
                                               fluidRow(
-                                                column(4, plotlyOutput(outputId = "globalCorrelationsPlot")),
-                                                column(4, plotlyOutput(outputId = "globalCorrelationsRankPlot")),
-                                                column(4, plotlyOutput(outputId = "globalGenesPerCellTypePlot"))
+                                                column(3, plotlyOutput(outputId = "globalCorrelationsPlot", height = "300px")),
+                                                column(3, plotlyOutput(outputId = "globalCorrelationsRankPlot", height = "300px")),
+                                                column(3, plotlyOutput(outputId = "globalGenesPerCellTypePlot", height = "300px"))
+                                              ),
+                                              fluidRow(
+                                                column(3, plotlyOutput(outputId = "globalMultipleTestingCorrectionPlot", height = "300px")),
+                                                column(3, plotlyOutput(outputId = "globalSupremaHistogramPlot", height = "300px")),
+                                                column(3, plotlyOutput(outputId = "globalSupremaScatterPlot", height = "300px"))
                                               )
                                      ),
                                      tabPanel("Charts per cell type",
                                               br(),
                                               fluidRow(
-                                                column(4, wellPanel(
-                                                  p("Select cell type:"),
-                                                  selectInput(inputId = "selectCellType", label = "Cell type", choices = c())
-                                                ))
+                                                column(4, selectInput(inputId = "selectCellType", label = "Select cell type", choices = c()))
+
                                               ),
                                               fluidRow(
-                                                column(4, plotlyOutput(outputId = "cellTypeCorrelationsPlot")),
-                                                column(4, plotlyOutput(outputId = "cellTypeScoreCalculationPlot")),
-                                                column(4, plotlyOutput(outputId = "genesPerCellTypePlot"))
+                                                column(3, plotlyOutput(outputId = "cellTypeCorrelationsPlot", height = "300px")),
+                                                column(3, plotlyOutput(outputId = "cellTypeScoreCalculationPlot", height = "300px")),
+                                                column(3, plotlyOutput(outputId = "genesPerCellTypePlot", height = "300px"))
                                               ),
                                               fluidRow(
                                                 column(width = 6,
-                                                       dataTableOutput(outputId = "enrichmentDataTable2"), style = "font-size:80%; rowHeight: 75%"
+                                                       DT::dataTableOutput(outputId = "enrichmentDataTable2"), style = "font-size:80%; rowHeight: 75%"
+                                                )
+                                              )
+                                     ),
+                                     tabPanel("Clustering",
+                                              br(),
+                                              splitLayout(
+                                                cellWidths = c("30%", "70%"),
+                                                fluidRow(
+                                                  column(12, DT::dataTableOutput(outputId = "enrichmentDataTableForCluster"), style = "font-size:80%; rowHeight: 75%")
+                                                ),
+                                                verticalLayout(
+                                                  fluidRow(
+                                                    column(4, plotlyOutput(outputId = "umapAllPlot", height = "300px")),
+                                                    column(4, plotlyOutput(outputId = "umapHypGPlot", height = "300px")),
+                                                    column(4, plotlyOutput(outputId = "umapKSTestPlot", height = "300px"))
+                                                  ),
+                                                  fluidRow(
+                                                    column(4, plotlyOutput(outputId = "umapSig001Plot", height = "300px")),
+                                                    column(4, plotlyOutput(outputId = "umapSig005Plot", height = "300px"))
+                                                  )
                                                 )
                                               )
                                      )
@@ -120,10 +143,10 @@ server <- function(input, output, session) {
         output$importControlUI <- renderUI({
           tagList(
             fluidRow(
-              column(width = 12, h4("Sorry, your analysis is not found on the server.")),
+              column(width = 12, h4("Sorry, your analysis is not found on the server."))
             ),
             fluidRow(
-              column(width = 12, h5("Please make sure the URL is correct or contact your administrator.")),
+              column(width = 12, h5("Please make sure the URL is correct or contact your administrator."))
             )
           )
         })
@@ -133,25 +156,28 @@ server <- function(input, output, session) {
       # side panel
       output$importSideControlUI <- renderUI({
         tagList(
-          fluidRow(
-            column(width = 12, h5("Analysis from:"))
-          ),
-          fluidRow(
-            column(width = 6, wellPanel(h6(tags$b(tools::file_path_sans_ext(basename(inputFileName))))))
-          )
+          wellPanel(
+
+            h5("Analysis from ptcSEA run:"),
+            h5(tags$b(rv$run_name)))
+
         )
       })
       url <- paste(session$clientData$url_protocol, "//", session$clientData$url_hostname, ":", session$clientData$url_port, session$clientData$url_pathname, sep = "")
       output$importControlUI <- renderUI({
         tagList(
-          p("Your dataset is imported in the pCtSEA results viewer. This URL will only be valid a limited time."),
+          p("Your dataset is imported in the pCtSEA results viewer. This URL will only be valid a limited time because the results will only be kept for ."),
 
           p("You can also download your Zip file with your results here:",
             downloadButton(outputId = 'downloadData', label = "Download results Zip")),
           p("You could come back anytime here ", a(url, href = url), " and import the zip file to explore the results again."),
           br(),
-          h4("Explore the other tabs to see your data."),
-
+          fluidRow(
+            column(12,
+                   h4("Explore the other tabs to see your data.")
+            ),
+            align = 'center'
+          )
         )
       })
 
@@ -173,6 +199,15 @@ server <- function(input, output, session) {
           rv$unziped_files <- folderTo
           rv$global_correlations_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_hist")
           rv$global_correlations_rank_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_rank_dist")
+          rv$global_genes_file <- get_global_file(rv$unziped_files, rv$run_name, "genes_hist")
+          rv$multiple_testing_correction_file <- get_global_file(rv$unziped_files, rv$run_name, "ews_obs_null_hist")
+          rv$suprema_histogram_file <- get_global_file(rv$unziped_files, rv$run_name, "suprema_hist")
+          rv$suprema_scatter_file <- get_global_file(rv$unziped_files, rv$run_name, "suprema_scatter")
+          rv$umap_all_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_all_scatter")
+          rv$umap_hypG_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_hypG_pvalue_0.05_scatter")
+          rv$umap_KStest_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_KStest_scatter")
+          rv$umap_sig001_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.01_scatter")
+          rv$umap_sig005_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.05_scatter")
         },
         detail = "This just will take a few seconds"
         )
@@ -180,7 +215,15 @@ server <- function(input, output, session) {
         rv$unziped_files <- folderTo
         rv$global_correlations_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_hist")
         rv$global_correlations_rank_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_rank_dist")
-        print(rv$global_correlations_file)
+        rv$global_genes_file <- get_global_file(rv$unziped_files, rv$run_name, "genes_hist")
+        rv$multiple_testing_correction_file <- get_global_file(rv$unziped_files, rv$run_name, "ews_obs_null_hist")
+        rv$suprema_histogram_file <- get_global_file(rv$unziped_files, rv$run_name, "suprema_hist")
+        rv$suprema_scatter_file <- get_global_file(rv$unziped_files, rv$run_name, "suprema_scatter")
+        rv$umap_all_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_all_scatter")
+        rv$umap_hypG_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_hypG_pvalue_0.05_scatter")
+        rv$umap_KStest_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_KStest_scatter")
+        rv$umap_sig001_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.01_scatter")
+        rv$umap_sig005_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.05_scatter")
       }
 
 
@@ -208,11 +251,12 @@ server <- function(input, output, session) {
                    textOutput(outputId = "inputDataError")
             )
           ),
-          wellPanel(
-            fluidRow(
-              column(width = 12,
+
+          fluidRow(
+            column(width = 6,
+                   wellPanel(
                      fileInput(inputId = "inputUploadedFile", label = "Upload your pCtSEA results (Zip file)", multiple = FALSE)
-              )
+                   )
             )
           ),
           fluidRow(
@@ -234,13 +278,26 @@ server <- function(input, output, session) {
                        unziped_files=NULL,
                        run_name=NULL,
                        correlations_table=NULL,
-                       global_correlations_file=NULL
+                       global_correlations_file=NULL,
+                       global_genes_file=NULL,
+                       multiple_testing_correction_file=NULL,
+                       suprema_histogram_file = NULL,
+                       suprema_scatter_file = NULL,
+                       umap_all_file = NULL,
+                       umap_hypG_file = NULL,
+                       umap_KStest_file = NULL,
+                       umap_sig001_file = NULL,
+                       umap_sig005_file = NULL
   )
   source("./server/Table.R", local=TRUE)
   source("./server/Correlations.R", local=TRUE)
   source("./server/Scores.R", local=TRUE)
   source("./server/Genes.R", local=TRUE)
   source("./server/GlobalCorrelations.R", local=TRUE)
+  source("./server/GlobalGenes.R", local=TRUE)
+  source("./server/MultipleTestingCorrection.R", local=TRUE)
+  source("./server/Suprema.R", local=TRUE)
+  source("./server/Umap.R", local=TRUE)
 
   output$data_loaded <- reactive({FALSE})
   outputOptions(output, "data_loaded", suspendWhenHidden = FALSE)
@@ -260,9 +317,18 @@ server <- function(input, output, session) {
       unzip(newZipFilepath, exdir = folderTo)
       setProgress(message = "Results unzipped", value = 1)
       rv$unziped_files <- folderTo
-      # global correlations:
+      # global files:
       rv$global_correlations_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_hist")
       rv$global_correlations_rank_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_rank_dist")
+      rv$global_genes_file <- get_global_file(rv$unziped_files, rv$run_name, "genes_hist")
+      rv$multiple_testing_correction_file <- get_global_file(rv$unziped_files, rv$run_name, "ews_obs_null_hist")
+      rv$suprema_histogram_file <- get_global_file(rv$unziped_files, rv$run_name, "suprema_hist")
+      rv$suprema_scatter_file <- get_global_file(rv$unziped_files, rv$run_name, "suprema_scatter")
+      rv$umap_all_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_all_scatter")
+      rv$umap_hypG_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_hypG_pvalue_0.05_scatter")
+      rv$umap_KStest_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_KStest_scatter")
+      rv$umap_sig001_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.01_scatter")
+      rv$umap_sig005_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.05_scatter")
     },
     detail = "This just will take a few seconds"
     )

@@ -81,3 +81,25 @@ ggplotly(plot) %>%
       title = list(text = "cell type", side = "top")
     )
   )
+
+
+
+
+table = fread(file = paste0("Spike_DandG_TYPE_suprema_scatter.txt"), header = FALSE, sep = "\t")
+
+
+colnames(table) <- c('cell type', 'suprema positions in ranked list', 'supremum size')
+plot <- ggplot(data = table, aes(x=`suprema positions in ranked list`, y=`supremum size`, color = `cell type`)) +
+  geom_point(shape = 1) +
+  labs(x = 'suprema positions in ranked list', y = 'supremum size') +
+  theme_classic() +
+  theme(legend.position = 'none')
+ggplotly(plot) %>%
+  layout(
+    xaxis = list(
+      title = plot_axis_title_format
+    ),
+    yaxis = list(
+      title = plot_axis_title_format
+    )
+  )

@@ -21,3 +21,5 @@ get_global_file <- function(unziped_files_folder, run_name, file_suffix){
     return(NULL)
   }
 }
+
+plot_axis_title_format <- list(font = list(size = 12))

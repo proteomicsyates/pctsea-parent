@@ -40,7 +40,7 @@ createPlotWithScoreCalculationForCellType <- function(table, cell_type){
     theme_classic() +
     xlim(1,max(table$rank)) +
     ylim(0,1) +
-    theme(legend.title = element_blank())
+    theme(legend.title = element_blank()) # this makes it configurable by plotly on the layout
   # ggtitle(paste0("Enrich. Score calculation for: '",cell_type, "'")) +
   # theme(plot.title = element_text(size=10))
   ggplotly(plot) %>%
@@ -49,7 +49,15 @@ createPlotWithScoreCalculationForCellType <- function(table, cell_type){
         orientation = "v",
         x = 0.4,
         y = 0.1,
-        title = list(text = "cell type", side = "top")
+        title = list(side = "top"),
+        font = list(size = 9),
+        tracegroupgap = 3
+      ),
+      xaxis = list(
+        title = plot_axis_title_format
+      ),
+      yaxis = list(
+        title = plot_axis_title_format
       )
     )
 }

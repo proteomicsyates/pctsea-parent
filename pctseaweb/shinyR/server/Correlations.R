@@ -40,10 +40,17 @@ createPlotWithCorrelationsForCellType <- function(table, cell_type){
     labs(x = "Pearson\'s correlation", y = "Frequency (# cells)") +
     geom_line(aes(color = `cell type`))+
     theme_classic() +
-    xlim(-1,1)
-    # ggtitle(paste0("Corr. distrib. for: '",cell_type, "'")) +
-    # theme(plot.title = element_text(size=10))
-  ggplotly(plot) %>% layout(showlegend = FALSE)
+    xlim(-1,1) +
+    theme(legend.position = 'none') # no legend
+
+  ggplotly(plot) %>% layout(
+    xaxis = list(
+      title = plot_axis_title_format
+    ),
+    yaxis = list(
+      title = plot_axis_title_format
+    )
+  )
 }
 
 # select the correlations file

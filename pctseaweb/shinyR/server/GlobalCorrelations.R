@@ -2,18 +2,26 @@
 
 createPlotWithGlobalCorrelationsNEW <- function(table){
   req(table)
-  names(table) <- c('x', 'Pearson\'s correlation', 'Frequency (# cells)')
+  names(table) <- c('ax', 'Pearson\'s correlation', 'Frequency (# cells)')
   plot <- ggplot(data = table,
                  aes(
                    x = `Pearson\'s correlation`,
                    y = `Frequency (# cells)`)) +
     labs(x = "Pearson\'s correlation", y = "Frequency (# cells)") +
-    geom_line(aes(color = x))+
+    geom_line(aes(color = ax))+
     theme_classic() +
-    xlim(-1,1)
-  # ggtitle(paste0("Corr. distrib. for: '",cell_type, "'")) +
-  # theme(plot.title = element_text(size=10))
-  ggplotly(plot) %>% layout(showlegend = FALSE)
+    xlim(-1,1) +
+    theme(legend.position = 'none') # no legend
+  ggplotly(plot) %>%
+    layout(
+      xaxis = list(
+        title = plot_axis_title_format
+      ),
+      yaxis = list(
+        title = plot_axis_title_format
+      )
+    )
+
 }
 createPlotWithGlobalRankCorrelationsNEW <- function(table){
   req(table)
@@ -34,7 +42,13 @@ createPlotWithGlobalRankCorrelationsNEW <- function(table){
         orientation = "v",
         x = 0.5,
         y = 0.6,
-        title = list(text = "cell type", side = "top")
+        title = NULL
+      ),
+      xaxis = list(
+        title = plot_axis_title_format
+      ),
+      yaxis = list(
+        title = plot_axis_title_format
       )
     )
 }

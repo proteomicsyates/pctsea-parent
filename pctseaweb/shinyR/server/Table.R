@@ -19,7 +19,10 @@ enrichment_table <- eventReactive(enrichment_file(),{
     setProgress(value = 0, message = "Reading enrichment table...")
     t <- fread(file = enrichment_file(), header = TRUE, skip = 33,  sep = "\t", fill = TRUE) # IMPORTANT: 33 is the number of rows to skip until finding the actual table on the file
     setProgress(value = 0.5)
-    t = t[ews>0,] # take only with positives ews
+    # take only with positives ews:
+    t = t[ews>0,]
+    # replace all '_' by spaces on names
+    names(t) <- gsub(x = names(t), pattern = '_', replacement = ' ')
     setProgress(value = 1, message = "Enrichment table read.")
     return(t)
   },
@@ -29,15 +32,18 @@ enrichment_table <- eventReactive(enrichment_file(),{
 
 # plot the table as soon as is loaded
 output$enrichmentDataTable <- DT::renderDataTable(
-  enrichment_table(),
-  options = list(
-    pageLength = 10,
-
-    columnDefs = list(list(className = 'dt-center', targets = 5)),
-    order = list(list(13, 'asc'), list(12, 'asc'), list(20, 'asc'))
-  ),
-  filter = 'top',
-  selection = 'single'
+  datatable(
+    enrichment_table(),
+    filter = 'top',
+    selection = 'single',
+    options = list(
+      pageLength = 10,
+      columnDefs = list(list(className = 'dt-center', targets = 5)),
+      order = list(list(13, 'asc'), list(12, 'asc'), list(20, 'asc'))
+    )
+  ) %>%
+    formatRound(columns=c("hyperG p-value", "FDR", "empirical p-value", "KS p-value", "KS p-value BH corrected"), digits=4) %>%
+    formatRound(columns=c("log2 ratio", "ews", "2nd ews", "norm-ews", "norm-supX", "2nd supX", "Dab", "Umap x", "Umap y"), digits=2)
 )
 
 # having the table, enable us to get the unique cell types
@@ -52,18 +58,38 @@ observeEvent(enrichment_table(),{
                     choices = unique_cell_types)
 })
 
-# plot the table as soon as is loaded
 output$enrichmentDataTable2 <- DT::renderDataTable(
   {
     table <- enrichment_table()
-    table[, c("cell_type", "FDR", "empirical_p-value", "KS_p-value_BH_corrected")]
-  },
-  options = list(
-    pageLength = 10,
-    dom = 't',
-    order = list(list(2, 'asc'), list(3, 'asc'), list(4, 'asc'))
-  ),
-  selection = 'single'
+    table <- table[, c("cell type", "FDR", "empirical p-value", "KS p-value BH corrected")]
+    datatable(
+      table,
+      selection = 'single',
+      options = list(
+        pageLength = 10,
+        dom = 't',
+        order = list(list(2, 'asc'), list(3, 'asc'), list(4, 'asc'))
+      )
+    ) %>%
+      formatRound(columns=c("FDR", "empirical p-value", "KS p-value BH corrected"), digits=4)
+  }
+)
+
+output$enrichmentDataTableForCluster <- DT::renderDataTable(
+  {
+    table <- enrichment_table()
+    table <- table[, c("cell type", "FDR", "empirical p-value", "KS p-value BH corrected")]
+    datatable(
+      table,
+      selection = 'single',
+      options = list(
+        pageLength = 10,
+        dom = 't',
+        order = list(list(2, 'asc'), list(3, 'asc'), list(4, 'asc'))
+      )
+    ) %>%
+      formatRound(columns=c("FDR", "empirical p-value", "KS p-value BH corrected"), digits=4)
+  }
 )
 
 
