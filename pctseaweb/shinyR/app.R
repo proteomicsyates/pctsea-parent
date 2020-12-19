@@ -185,17 +185,18 @@ server <- function(input, output, session) {
       output$downloadData <- downloadHandler(
         filename = inputFileName,
         content = function(file){
-          file.copy(zipfilepath, file)
+          file.copy(zipfilepath, file, overwrite = TRUE)
         }
       )
-
+      browser()
       # unzip if not already unziped
       folderTo <- paste(dirname(zipfilepath), "/", tools::file_path_sans_ext(basename(zipfilepath)), sep = "")
       if (!file.exists(folderTo)){
         withProgress({
+          browser()
           setProgress(message = "Unzipping results...", value = 0)
           unzip(zipfilepath, exdir = folderTo)
-          setProgress(message = "Results unzipped", value = 1)
+          setProgress(message = "Unzipping results...", value = 0.5)
           rv$unziped_files <- folderTo
           rv$global_correlations_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_hist")
           rv$global_correlations_rank_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_rank_dist")
@@ -208,6 +209,7 @@ server <- function(input, output, session) {
           rv$umap_KStest_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_KStest_scatter")
           rv$umap_sig001_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.01_scatter")
           rv$umap_sig005_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.05_scatter")
+          setProgress(message = "Results unzipped", value = 1)
         },
         detail = "This just will take a few seconds"
         )
@@ -305,34 +307,44 @@ server <- function(input, output, session) {
   # get files by uploading them and unzip them
   observeEvent(input$inputUploadedFile, {
     file <- input$inputUploadedFile
-    rv$run_name <- file$name
+    tmp <- tools::file_path_sans_ext(basename(file$name))
+    rv$run_name <- sub("_results.*", "", tmp)
+
     zipfilepath = file$datapath
-    # copy file to data
-    newZipFilepath <- paste("data/", file$name, sep = "")
-    file.move(files = c(zipfilepath) , destinations = "data/", overwrite = TRUE)
-    file.rename(from = paste("data/", basename(zipfilepath), sep = ""), to = newZipFilepath)
-    folderTo <- paste("data/", tools::file_path_sans_ext(basename(file$name)), sep = "")
     withProgress({
-      setProgress(message = "Unzipping results...", value = 0)
+      setProgress(message = "Receiving file...", value = 0)
+      # copy file to data
+      newZipFilepath <- paste("data/", file$name, sep = "")
+      file.move(files = c(zipfilepath) , destinations = "data/", overwrite = TRUE)
+      # file.rename(from = paste("data/", basename(zipfilepath), sep = ""), to = newZipFilepath)
+      folderTo <- paste("data/", tools::file_path_sans_ext(basename(file$name)), sep = "")
+
+
+      setProgress(message = "Unzipping results...", value = 0.1)
       unzip(newZipFilepath, exdir = folderTo)
+      setProgress(message = "Unzipping results...", value = 0.5)
+
+
       setProgress(message = "Results unzipped", value = 1)
-      rv$unziped_files <- folderTo
-      # global files:
-      rv$global_correlations_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_hist")
-      rv$global_correlations_rank_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_rank_dist")
-      rv$global_genes_file <- get_global_file(rv$unziped_files, rv$run_name, "genes_hist")
-      rv$multiple_testing_correction_file <- get_global_file(rv$unziped_files, rv$run_name, "ews_obs_null_hist")
-      rv$suprema_histogram_file <- get_global_file(rv$unziped_files, rv$run_name, "suprema_hist")
-      rv$suprema_scatter_file <- get_global_file(rv$unziped_files, rv$run_name, "suprema_scatter")
-      rv$umap_all_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_all_scatter")
-      rv$umap_hypG_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_hypG_pvalue_0.05_scatter")
-      rv$umap_KStest_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_KStest_scatter")
-      rv$umap_sig001_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.01_scatter")
-      rv$umap_sig005_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.05_scatter")
     },
     detail = "This just will take a few seconds"
     )
+    rv$unziped_files <- folderTo
+    # global files:
+    rv$global_correlations_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_hist")
+    rv$global_correlations_rank_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_rank_dist")
+    rv$global_genes_file <- get_global_file(rv$unziped_files, rv$run_name, "genes_hist")
+    rv$multiple_testing_correction_file <- get_global_file(rv$unziped_files, rv$run_name, "ews_obs_null_hist")
+    rv$suprema_histogram_file <- get_global_file(rv$unziped_files, rv$run_name, "suprema_hist")
+    rv$suprema_scatter_file <- get_global_file(rv$unziped_files, rv$run_name, "suprema_scatter")
+    rv$umap_all_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_all_scatter")
+    rv$umap_hypG_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_hypG_pvalue_0.05_scatter")
+    rv$umap_KStest_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_KStest_scatter")
+    rv$umap_sig001_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.01_scatter")
+    rv$umap_sig005_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.05_scatter")
   })
+
+
 
 
   # select the scores file

@@ -51,8 +51,8 @@ observeEvent(enrichment_table(),{
   table <- enrichment_table()
   req(table)
   table = table[table$ews>0,]
-  table <- table[!is.na(table$cell_type),]
-  unique_cell_types = unique(table$cell_type)
+  table <- table[!is.na(table$`cell type`),]
+  unique_cell_types = unique(table$`cell type`)
   unique_cell_types <- c("",sort(unique_cell_types))
   updateSelectInput(session, "selectCellType",
                     choices = unique_cell_types)
