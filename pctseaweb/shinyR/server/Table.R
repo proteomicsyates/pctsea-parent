@@ -67,18 +67,30 @@ output$enrichmentDataTable2 <- DT::renderDataTable(
       selection = 'single',
       options = list(
         pageLength = 10,
-        dom = 't',
+        dom = 'lftipr',
         order = list(list(2, 'asc'), list(3, 'asc'), list(4, 'asc'))
       )
     ) %>%
       formatRound(columns=c("FDR", "empirical p-value", "KS p-value BH corrected"), digits=4)
   }
 )
+# event that catches the selection on the table and updates the input selection of the dropdown
+observeEvent(input$enrichmentDataTable2_rows_selected,{
+  selected_cell_type <- input$enrichmentDataTable2_rows_selected
+  table <- enrichment_table()
+  req(table)
+  selected_choice <- table[[selected_cell_type,"cell type"]]
+  # update the dropdown menu selectCellType
+  updateSelectInput(session, "selectCellType",  selected = selected_choice)
+}
+)
 
 output$enrichmentDataTableForCluster <- DT::renderDataTable(
   {
     table <- enrichment_table()
     table <- table[, c("cell type", "FDR", "empirical p-value", "KS p-value BH corrected")]
+    
+    
     datatable(
       table,
       selection = 'single',
@@ -91,5 +103,13 @@ output$enrichmentDataTableForCluster <- DT::renderDataTable(
       formatRound(columns=c("FDR", "empirical p-value", "KS p-value BH corrected"), digits=4)
   }
 )
-
+# event that catches the selection on the table and highlights the charts
+observeEvent(input$enrichmentDataTableForCluster_rows_selected,{
+  selected_cell_type <- input$enrichmentDataTableForCluster_rows_selected
+  table <- enrichment_table()
+  req(table)
+  selected_choice <- table[[selected_cell_type,"cell type"]]
+  
+}
+)
 

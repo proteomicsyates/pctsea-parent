@@ -80,13 +80,16 @@ ui <- fluidPage(title = "PCTSEA",
                                      tabPanel("Charts per cell type",
                                               br(),
                                               fluidRow(
-                                                column(4, selectInput(inputId = "selectCellType", label = "Select cell type", choices = c()))
-
+                                                h4("Select a cell type from the drop down menu or the table")
                                               ),
                                               fluidRow(
                                                 column(3, plotlyOutput(outputId = "cellTypeCorrelationsPlot", height = "300px")),
                                                 column(3, plotlyOutput(outputId = "cellTypeScoreCalculationPlot", height = "300px")),
                                                 column(3, plotlyOutput(outputId = "genesPerCellTypePlot", height = "300px"))
+                                              ),
+                                              fluidRow(
+                                                column(4, selectInput(inputId = "selectCellType", label = "Select cell type", choices = c()))
+
                                               ),
                                               fluidRow(
                                                 column(width = 6,
@@ -315,12 +318,15 @@ server <- function(input, output, session) {
       setProgress(message = "Receiving file...", value = 0)
       # copy file to data
       newZipFilepath <- paste("data/", file$name, sep = "")
+      # gets moved as temporally name at data/
       file.move(files = c(zipfilepath) , destinations = "data/", overwrite = TRUE)
-      # file.rename(from = paste("data/", basename(zipfilepath), sep = ""), to = newZipFilepath)
+      # now we need to rename it to its original name
+      file.rename(from = paste("data/", basename(zipfilepath), sep = ""), to = newZipFilepath)
       folderTo <- paste("data/", tools::file_path_sans_ext(basename(file$name)), sep = "")
 
 
       setProgress(message = "Unzipping results...", value = 0.1)
+      
       unzip(newZipFilepath, exdir = folderTo)
       setProgress(message = "Unzipping results...", value = 0.5)
 
