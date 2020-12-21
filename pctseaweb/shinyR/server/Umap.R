@@ -18,7 +18,7 @@ createPlotWithUmap <- function(table, title){
         text = title,
         font = list(size = 10)
       )
-
+      
     )
 }
 
@@ -36,9 +36,18 @@ observeEvent(rv$umap_all_file, {
   umap_all_table(table)
 })
 observeEvent(umap_all_table(),{
-  output$umapAllPlot <- renderPlotly(umap_all_table() %>% createPlotWithUmap(title = 'UMAP clustering of all cell types<br> (no sig threshold)'))
+  output$umapAllPlot <- renderPlotly(
+    umap_all_table() %>% 
+      createPlotWithUmap(title = 'UMAP clustering of all cell types<br> (no sig threshold)') %>% 
+      layout(dragmode = 'select') # to make selection by defaul
+  )
 })
+# umap.selection <- reactive({
+#   req(umap_all_table())
+#   event_data('plotly_selected', source = 'umap_selection')
+# })
 
+##########################################################
 umap_hypG_table <- reactiveVal()
 observeEvent(rv$umap_hypG_file, {
   req(rv$umap_hypG_file)
@@ -46,7 +55,10 @@ observeEvent(rv$umap_hypG_file, {
   umap_hypG_table(table)
 })
 observeEvent(umap_hypG_table(),{
-  output$umapHypGPlot <- renderPlotly(umap_hypG_table() %>% createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> by hypergeometric test (p<0.05)'))
+  output$umapHypGPlot <- renderPlotly(
+    umap_hypG_table() %>% 
+      createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> by hypergeometric test (p<0.05)')
+  )
 })
 
 umap_KStest_table <- reactiveVal()
@@ -56,7 +68,10 @@ observeEvent(rv$umap_KStest_file, {
   umap_KStest_table(table)
 })
 observeEvent(umap_KStest_table(),{
-  output$umapKSTestPlot <- renderPlotly(umap_KStest_table() %>% createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> by K-S test'))
+  output$umapKSTestPlot <- renderPlotly(
+    umap_KStest_table() %>% 
+      createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> by K-S test')
+  )
 })
 
 umap_sig001_table <- reactiveVal()
@@ -66,7 +81,10 @@ observeEvent(rv$umap_sig001_file, {
   umap_sig001_table(table)
 })
 observeEvent(umap_sig001_table(),{
-  output$umapSig001Plot <- renderPlotly(umap_sig001_table() %>% createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> (sig<0.01)'))
+  output$umapSig001Plot <- renderPlotly(
+    umap_sig001_table() %>% 
+      createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> (sig<0.01)')
+  )
 })
 
 umap_sig005_table <- reactiveVal()
@@ -76,7 +94,10 @@ observeEvent(rv$umap_sig005_file, {
   umap_sig005_table(table)
 })
 observeEvent(umap_sig005_table(),{
-  output$umapSig005Plot <- renderPlotly(umap_sig005_table() %>% createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> (sig<0.05)'))
+  output$umapSig005Plot <- renderPlotly(
+    umap_sig005_table() %>% 
+      createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> (sig<0.05)')
+  )
 })
 
 
