@@ -1,6 +1,9 @@
 package edu.scripps.yates.pctsea.views.about;
 
+import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.dependency.CssImport;
+import com.vaadin.flow.component.details.Details;
+import com.vaadin.flow.component.details.DetailsVariant;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Label;
@@ -47,11 +50,18 @@ public class AboutView extends Div {
 		add(horizontal);
 
 		try {
+
 			final String pctseaResultsViewerURL = PCTSEALocalConfiguration.getPCTSEAResultsViewerURL();
 
-			add("Viewer of results located at: " + pctseaResultsViewerURL);
-			add("Emails with the results will be sent by: " + PCTSEALocalConfiguration.getFromEmail());
-			add("Results are stored at: " + PCTSEALocalConfiguration.getPCTSEAResultsFolder());
+			;
+
+			final Details details = new Details();
+			details.setSummaryText("Server status");
+			details.addContent(new Text("Viewer of results located at: " + pctseaResultsViewerURL),
+					new Text("Emails with the results will be sent by: " + PCTSEALocalConfiguration.getFromEmail()),
+					new Text("Results are stored at: " + PCTSEALocalConfiguration.getPCTSEAResultsFolder()));
+			details.addThemeVariants(DetailsVariant.SMALL);
+			add(details);
 		} catch (final PCTSEAConfigurationException e) {
 			add(new Label("There is some error in this server: " + e.getMessage()));
 		}
