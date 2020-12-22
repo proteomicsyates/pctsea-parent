@@ -8,6 +8,8 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
+import edu.scripps.yates.pctsea.util.PCTSEAConfigurationException;
+import edu.scripps.yates.pctsea.util.PCTSEALocalConfiguration;
 import edu.scripps.yates.pctsea.views.main.MainView;
 
 @Route(value = "about", layout = MainView.class)
@@ -44,6 +46,15 @@ public class AboutView extends Div {
 		horizontal.add(link);
 		add(horizontal);
 
+		try {
+			final String pctseaResultsViewerURL = PCTSEALocalConfiguration.getPCTSEAResultsViewerURL();
+
+			add("Viewer of results located at: " + pctseaResultsViewerURL);
+			add("Emails with the results will be sent by: " + PCTSEALocalConfiguration.getFromEmail());
+			add("Results are stored at: " + PCTSEALocalConfiguration.getPCTSEAResultsFolder());
+		} catch (final PCTSEAConfigurationException e) {
+			add(new Label("There is some error in this server: " + e.getMessage()));
+		}
 	}
 
 }
