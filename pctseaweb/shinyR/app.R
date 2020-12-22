@@ -191,12 +191,10 @@ server <- function(input, output, session) {
           file.copy(zipfilepath, file, overwrite = TRUE)
         }
       )
-      browser()
       # unzip if not already unziped
       folderTo <- paste(dirname(zipfilepath), "/", tools::file_path_sans_ext(basename(zipfilepath)), sep = "")
       if (!file.exists(folderTo)){
         withProgress({
-          browser()
           setProgress(message = "Unzipping results...", value = 0)
           unzip(zipfilepath, exdir = folderTo)
           setProgress(message = "Unzipping results...", value = 0.5)
