@@ -42,13 +42,12 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	private final KolmogorovSmirnovTest test = new KolmogorovSmirnovTest();
 	private final CellTypeBranch cellTypeBranch;
 	private final boolean permutatedData;
-	private final boolean generatePDFCharts;
 	private final int minCellsPerCellTypeForPDF;
 	private final boolean plotNegativeEnrichedCellTypes;
 
 	public EnrichmentWeigthedScoreParallel(ParIterator<CellTypeClassification> iterator, int numCore,
 			List<SingleCell> singleCellList, CellTypeBranch cellTypeBranch, boolean permutatedData,
-			boolean generatePDFCharts, int minCellsPerCellTypeForPDF, boolean plotNegativeEnrichedCellTypes) {
+			int minCellsPerCellTypeForPDF, boolean plotNegativeEnrichedCellTypes) {
 		this.iterator = iterator;
 		this.numCore = numCore;
 		this.singleCellList.addAll(singleCellList);
@@ -56,7 +55,6 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		PCTSEAUtils.sortByDescendingCorrelation(this.singleCellList);
 		this.cellTypeBranch = cellTypeBranch;
 		this.permutatedData = permutatedData;
-		this.generatePDFCharts = generatePDFCharts;
 		this.minCellsPerCellTypeForPDF = minCellsPerCellTypeForPDF;
 		this.plotNegativeEnrichedCellTypes = plotNegativeEnrichedCellTypes;
 	}
@@ -81,7 +79,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			//
 			final CellTypeClassification cellType = iterator.next();
 			// create chart if not permutated Data, just for real score
-			if (generatePDFCharts && !permutatedData) {
+			if (!permutatedData) {
 
 				// defining two series for score chart
 				scoreSeriesType = new XYSeries(cellType.getName());
@@ -99,7 +97,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 //			final float denominatorB = 1.0f * (n - nk);
 			final List<SingleCell> cellsOfType = new ArrayList<SingleCell>();
 			for (final SingleCell singleCell : singleCellList) {
-				if (cellTypeName.equals(singleCell.getCellType(this.cellTypeBranch))) {
+				if (cellTypeName.equals(singleCell.getCellType(cellTypeBranch))) {
 					cellsOfType.add(singleCell);
 					denominatorA += Double.valueOf(singleCell.getCorrelation()).floatValue();
 				} else {
@@ -131,7 +129,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 
 				float a = 0.0f;
 				float b = 0.0f;
-				if (cellTypeName.equals(singleCell.getCellType(this.cellTypeBranch))) {
+				if (cellTypeName.equals(singleCell.getCellType(cellTypeBranch))) {
 					// this is the difference with the unweigthed, using the correlation, instead of
 					// just counting
 					numeratorA += singleCell.getCorrelation();
@@ -140,7 +138,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 					cellType.addToCellTypeCorrelationDistribution(
 							Double.valueOf(singleCell.getCorrelation()).floatValue());
 					b = previousB;
-					if (generatePDFCharts && corrFrequencyType != null && !Double.isNaN(singleCell.getCorrelation())) {
+					if (corrFrequencyType != null && !Double.isNaN(singleCell.getCorrelation())) {
 						corrFrequencyType.add(singleCell.getCorrelation());
 					}
 					final int numGenes = singleCell.getGenesForCorrelation().size();
@@ -157,12 +155,11 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 					b = numeratorB / denominatorB;
 					cellType.addOtherCellTypesCorrelationDistribution(
 							Double.valueOf(singleCell.getCorrelation()).floatValue());
-					if (generatePDFCharts && corrFrequencyOthers != null
-							&& !Double.isNaN(singleCell.getCorrelation())) {
+					if (corrFrequencyOthers != null && !Double.isNaN(singleCell.getCorrelation())) {
 						corrFrequencyOthers.add(singleCell.getCorrelation());
 					}
 				}
-				if (generatePDFCharts && !permutatedData) {
+				if (!permutatedData) {
 					scoreSeriesType.add(i + 1, a);
 					scoreSeriesOtherType.add(i + 1, b);
 				}
@@ -171,7 +168,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 				if (Math.abs(difference) > Math.abs(supremum)) {
 					supremum = difference;
 					supremumX = i + 1;
-					if (generatePDFCharts && !permutatedData) {
+					if (!permutatedData) {
 						supremumLineSeries.clear();
 						supremumLineSeries.add(i + 1, a);
 						supremumLineSeries.add(i + 1, b);
@@ -231,7 +228,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 							float a = 0.0f;
 							float b = 0.0f;
 
-							if (cellTypeName.equals(singleCell.getCellType(this.cellTypeBranch))) {
+							if (cellTypeName.equals(singleCell.getCellType(cellTypeBranch))) {
 								// this is the difference with the unweigthed, using the correlation, instead of
 								// just counting
 								numeratorA += Math.abs(singleCell.getCorrelation());
@@ -248,14 +245,14 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 								if (Math.abs(difference) > Math.abs(secondarySupremum)) {
 									secondarySupremum = difference;
 									secondarySupremumX = i + 1;
-									if (generatePDFCharts) {
-										if (secondarySupremumLineSeries == null) {
-											secondarySupremumLineSeries = new XYSeries("secondary supremum");
-										}
-										secondarySupremumLineSeries.clear();
-										secondarySupremumLineSeries.add(i + 1, a);
-										secondarySupremumLineSeries.add(i + 1, b);
+
+									if (secondarySupremumLineSeries == null) {
+										secondarySupremumLineSeries = new XYSeries("secondary supremum");
 									}
+									secondarySupremumLineSeries.clear();
+									secondarySupremumLineSeries.add(i + 1, a);
+									secondarySupremumLineSeries.add(i + 1, b);
+
 								}
 							}
 							previousA = a;
@@ -287,7 +284,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			if (!plotNegativeEnrichedCellTypes && cellType.getEnrichmentScore() < 0f) {
 				continue;
 			}
-			if (generatePDFCharts && !permutatedData && minCellsPerCellTypeForPDF <= cellsOfType.size()) {
+			if (!permutatedData && minCellsPerCellTypeForPDF <= cellsOfType.size()) {
 
 				final String title = "Enrichment Score calculation for cell type: '" + cellTypeName + "'";
 

@@ -399,9 +399,11 @@ public class PCTSEA {
 					// export charts to a single PDF
 					final File resultsSubfolder = getResultsSubfolderForCellTypes();
 					try {
-						logStatus("Writting charts into PDF files...");
-						ChartsGenerated.getInstance().saveChartsAsPDF();
-						logStatus("PDFs created");
+						if (generatePDFCharts) {
+							logStatus("Writting charts into PDF files...");
+							ChartsGenerated.getInstance().saveChartsAsPDF();
+							logStatus("PDFs created");
+						}
 						// add pdf file to tar file
 
 						// create tar.gz with all output files
@@ -1263,9 +1265,11 @@ public class PCTSEA {
 		try {
 			final String fileName = "ews_obs_null_hist";
 			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
-			final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
-			ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, 500, 500, true, chartFile);
-			PCTSEA.logStatus("Chart with the multiple testing correction is created.");
+			if (generatePDFCharts) {
+				final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
+				ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, 500, 500, true, chartFile);
+				PCTSEA.logStatus("Chart with the multiple testing correction is created.");
+			}
 
 		} catch (final IOException e) {
 			e.printStackTrace();
@@ -1954,18 +1958,30 @@ public class PCTSEA {
 					numPositiveCorrelated++;
 				}
 			}
+			logStatus("Correlations between single cell expressions and input data are calculated.");
 
+			ProgressCounter counter2 = null;
 			if (writeCorrelationsFile) {
-				// we sort the single cell list to have them sorted by correlation
-				correlationThreshold.sortSingleCellsByCorrelation(singleCellList);
+				logStatus("Writting correlations to file...");
+				counter2 = new ProgressCounter(singleCellList.size(), ProgressPrintingType.PERCENTAGE_STEPS, 0, true);
+			}
 
-				// print to file and create chart
-				final TDoubleList correlations = new TDoubleArrayList();
+			// we sort the single cell list to have them sorted by correlation
+			correlationThreshold.sortSingleCellsByCorrelation(singleCellList);
 
-				for (final SingleCell singleCell : singleCellList) {
-					ConcurrentUtil.sleep(1L);
-					if (!Double.isNaN(singleCell.getCorrelation())) {
-						correlations.add(singleCell.getCorrelation());
+			// print to file and create chart
+			final TDoubleList correlations = new TDoubleArrayList();
+			ConcurrentUtil.sleep(1L);
+
+			for (final SingleCell singleCell : singleCellList) {
+				if (!Double.isNaN(singleCell.getCorrelation())) {
+					correlations.add(singleCell.getCorrelation());
+				}
+				if (writeCorrelationsFile) {
+					counter2.increment();
+					final String printIfNecessary = counter2.printIfNecessary();
+					if (!"".equals(printIfNecessary)) {
+						logStatus(printIfNecessary);
 					}
 					correlationsFileWriter.write(singleCell.getName() + "\t" + singleCell.getCellType(cellTypeBranch)
 							+ "\t" + +singleCell.getCorrelation() + "\t" + singleCell.getExpressionsUsedForCorrelation()
@@ -1973,10 +1989,13 @@ public class PCTSEA {
 							+ singleCell.getGenesForCorrelation().size() + "\t" + singleCell.getGeneExpressionVariance()
 							+ "\n");
 				}
-
-				createWholeDatasetCorrelationDistributionChart(correlations);
-
 			}
+
+			createWholeDatasetCorrelationDistributionChart(correlations);
+			if (writeCorrelationsFile) {
+				logStatus("Correlations written to file single cell expressions and input data are done.");
+			}
+
 			return numPositiveCorrelated;
 		} finally {
 			if (writeCorrelationsFile) {
@@ -1984,7 +2003,7 @@ public class PCTSEA {
 			}
 			if (outputToLog) {
 				logStatus(numPositiveCorrelated + " cells pass the correlation threshold out of " + originalNumCells);
-				logStatus("Correlations calculated");
+
 				if (writeCorrelationsFile) {
 					logStatus("Correlations file created at: " + correlationsOutputFile.getAbsolutePath());
 				}
@@ -2123,7 +2142,7 @@ public class PCTSEA {
 		for (int numCore = 1; numCore <= threadCount; numCore++) {
 			// take current DB session
 			final EnrichmentWeigthedScoreParallel runner = new EnrichmentWeigthedScoreParallel(iterator, numCore,
-					singleCellList, cellTypeBranch, permutatedData, generatePDFCharts, minCellsPerCellTypeForPDF,
+					singleCellList, cellTypeBranch, permutatedData, minCellsPerCellTypeForPDF,
 					plotNegativeEnrichedCellTypes);
 			runners.add(runner);
 			runner.start();

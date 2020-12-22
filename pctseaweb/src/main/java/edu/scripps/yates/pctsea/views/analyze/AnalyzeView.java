@@ -123,6 +123,7 @@ public class AnalyzeView extends VerticalLayout {
 
 	private HorizontalLayout resultsPanel;
 	private ExecutorService executor;
+	private List<Dataset> datasetsFromDB;
 
 	class MyUpload extends Upload {
 		private static final long serialVersionUID = 1L;
@@ -242,7 +243,7 @@ public class AnalyzeView extends VerticalLayout {
 
 		resultsPanel = new HorizontalLayout();
 		resultsPanel.add(
-				"Results will appear here as soon as the analysis is done. Also, an email will be sent to the provided email adress.");
+				"Results will appear here as soon as the analysis is done. Also, an email will be sent to the provided email address.");
 		resultsPanel.setVisible(false);
 		add(resultsPanel);
 		initializeInputParamsToDefaults();
@@ -257,7 +258,7 @@ public class AnalyzeView extends VerticalLayout {
 	}
 
 	private void loadDatasetsInComboList() {
-		final List<Dataset> datasetsFromDB = dmr.findAll();
+		datasetsFromDB = dmr.findAll();
 
 		datasetsCombo.setItems(datasetsFromDB);
 
@@ -289,7 +290,7 @@ public class AnalyzeView extends VerticalLayout {
 		inputParameters.setWriteCorrelationsFile(false);
 
 		startPCTSEAAnalysis(inputParameters);
-		Notification.show("Run starting...");
+		Notification.show("Run starting. See below its progress..");
 
 	}
 
@@ -428,6 +429,11 @@ public class AnalyzeView extends VerticalLayout {
 			}
 
 		});
+		// if there is onlly one item, select it
+		if (datasetsFromDB != null && datasetsFromDB.size() == 1) {
+			datasetsCombo.setValue(datasetsFromDB.get(0));
+		}
+
 		//
 		cellTypeBranchCombo.setAutoOpen(true);
 		cellTypeBranchCombo.setHelperText(
@@ -449,6 +455,7 @@ public class AnalyzeView extends VerticalLayout {
 			}
 
 		});
+		cellTypeBranchCombo.setValue(CellTypeBranch.TYPE);
 		//
 		//
 		upload.setMaxFiles(1);
@@ -638,7 +645,7 @@ public class AnalyzeView extends VerticalLayout {
 //		uploadLayout.addClassName("button-layout");
 
 		final Label label = new Label(
-				"Tab-separated text file with two columns, one the protein accessions (UniprotKB) or gene symbols "
+				"Tab-separated text file with two columns, the first, containing the protein accessions (UniprotKB) or gene symbols "
 						+ "and the second, the quantitative values. Any other column will be ignored.");
 		uploadLayout.add(label);
 
