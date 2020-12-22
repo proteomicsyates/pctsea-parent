@@ -129,6 +129,7 @@ public class AnalyzeView extends VerticalLayout {
 
 		public MyUpload(MemoryBuffer buffer) {
 			super(buffer);
+			super.setMaxFileSize(100 * 1024 * 1024); // 100 Mb
 		}
 
 		Registration addFileRemoveListener(ComponentEventListener<FileRemoveEvent> listener) {
@@ -258,7 +259,7 @@ public class AnalyzeView extends VerticalLayout {
 	private void loadDatasetsInComboList() {
 		final List<Dataset> datasetsFromDB = dmr.findAll();
 
-		this.datasetsCombo.setItems(datasetsFromDB);
+		datasetsCombo.setItems(datasetsFromDB);
 
 	}
 
@@ -350,22 +351,22 @@ public class AnalyzeView extends VerticalLayout {
 		submitButton.setEnabled(false);
 		cancelButton.setEnabled(true);
 		clearButton.setEnabled(false);
-		this.minCorrelationField.setEnabled(false);
-		this.minGenesCellsField.setEnabled(false);
-		this.numPermutationsField.setEnabled(false);
-		this.outputPrefixField.setEnabled(false);
-		this.statusArea.setVisible(true);
-		this.resultsPanel.setVisible(true);
+		minCorrelationField.setEnabled(false);
+		minGenesCellsField.setEnabled(false);
+		numPermutationsField.setEnabled(false);
+		outputPrefixField.setEnabled(false);
+		statusArea.setVisible(true);
+		resultsPanel.setVisible(true);
 	}
 
 	private void setEnabledStatusAsReady() {
 		submitButton.setEnabled(true);
 		cancelButton.setEnabled(false);
 		clearButton.setEnabled(true);
-		this.minCorrelationField.setEnabled(true);
-		this.minGenesCellsField.setEnabled(true);
-		this.numPermutationsField.setEnabled(true);
-		this.outputPrefixField.setEnabled(true);
+		minCorrelationField.setEnabled(true);
+		minGenesCellsField.setEnabled(true);
+		numPermutationsField.setEnabled(true);
+		outputPrefixField.setEnabled(true);
 	}
 
 	protected void showLinkToResults(URL url) {
@@ -407,19 +408,19 @@ public class AnalyzeView extends VerticalLayout {
 		numPermutationsField.setHelperText(
 				"Number of permutations for calculating significance of the enrichment scores, being a value of 1000 reasonable. Minimum value: 10");
 		//
-		this.datasetsCombo.setAutoOpen(true);
-		this.datasetsCombo.setHelperText(
+		datasetsCombo.setAutoOpen(true);
+		datasetsCombo.setHelperText(
 				"Datasets stored in the database that can be used to compare your data against. Select the one that is more appropiate to your input.");
-		this.datasetsCombo.setClearButtonVisible(true);
-		this.datasetsCombo.setItemLabelGenerator(new ItemLabelGenerator<Dataset>() {
+		datasetsCombo.setClearButtonVisible(true);
+		datasetsCombo.setItemLabelGenerator(new ItemLabelGenerator<Dataset>() {
 
 			@Override
 			public String apply(Dataset item) {
 				return item.getTag() + ": " + item.getName();
 			}
 		});
-		this.datasetsCombo.setPlaceholder("Select dataset");
-		this.datasetsCombo.addValueChangeListener(event -> {
+		datasetsCombo.setPlaceholder("Select dataset");
+		datasetsCombo.addValueChangeListener(event -> {
 			final Dataset value = event.getValue();
 			if (value != null) {
 				// TODO
@@ -428,19 +429,19 @@ public class AnalyzeView extends VerticalLayout {
 
 		});
 		//
-		this.cellTypeBranchCombo.setAutoOpen(true);
-		this.cellTypeBranchCombo.setHelperText(
+		cellTypeBranchCombo.setAutoOpen(true);
+		cellTypeBranchCombo.setHelperText(
 				"Level of cell type classification according to the hierarchical structure of its classification. Consult the administrator to know more about it.");
-		this.cellTypeBranchCombo.setClearButtonVisible(true);
-		this.cellTypeBranchCombo.setItemLabelGenerator(new ItemLabelGenerator<CellTypeBranch>() {
+		cellTypeBranchCombo.setClearButtonVisible(true);
+		cellTypeBranchCombo.setItemLabelGenerator(new ItemLabelGenerator<CellTypeBranch>() {
 
 			@Override
 			public String apply(CellTypeBranch item) {
 				return item.name();
 			}
 		});
-		this.cellTypeBranchCombo.setPlaceholder("Select level");
-		this.cellTypeBranchCombo.addValueChangeListener(event -> {
+		cellTypeBranchCombo.setPlaceholder("Select level");
+		cellTypeBranchCombo.addValueChangeListener(event -> {
 			final CellTypeBranch value = event.getValue();
 			if (value != null) {
 				// TODO
