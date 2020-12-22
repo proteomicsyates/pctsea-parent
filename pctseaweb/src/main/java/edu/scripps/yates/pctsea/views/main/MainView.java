@@ -28,7 +28,6 @@ import edu.scripps.yates.pctsea.util.VaadinUtil;
 import edu.scripps.yates.pctsea.views.about.AboutView;
 import edu.scripps.yates.pctsea.views.analyze.AnalyzeView;
 import edu.scripps.yates.pctsea.views.home.HomeView;
-import edu.scripps.yates.pctsea.views.results.ResultsView;
 
 /**
  * The main view is a top-level placeholder for other views.
@@ -85,7 +84,8 @@ public class MainView extends AppLayout {
 
 	private static Tab[] getAvailableTabs() {
 		return new Tab[] { createTab("Home", HomeView.class), createTab("Analyze", AnalyzeView.class),
-				createTab("Results", ResultsView.class), createTab("About", AboutView.class) };
+//				createTab("Results", ResultsView.class), 
+				createTab("About", AboutView.class) };
 	}
 
 	private static Tab createTab(String text, Class<? extends Component> navigationTarget) {
