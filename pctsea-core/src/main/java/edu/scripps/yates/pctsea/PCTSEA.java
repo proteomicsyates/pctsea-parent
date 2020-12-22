@@ -2155,11 +2155,13 @@ public class PCTSEA {
 			@Override
 			public void run() {
 				PCTSEA.logStatus("Creating charts for each cell type in the background...");
+				final File resultsSubfolderForCellTypes = getResultsSubfolderForCellTypes();
+
 				// we create the writableImages on the FX thread and store them in a list, so
 				// that then we can save them
 				for (final CellTypeClassification cellTypeClassification : newList) {
 					try {
-						cellTypeClassification.saveCharts(getResultsSubfolderForCellTypes(), prefix, generatePDFCharts);
+						cellTypeClassification.saveCharts(resultsSubfolderForCellTypes, prefix, generatePDFCharts);
 					} catch (final IOException e) {
 						e.printStackTrace();
 						PCTSEA.logStatus("Some error occurred while saving chart for "
