@@ -6,6 +6,7 @@ import com.vaadin.flow.component.details.Details;
 import com.vaadin.flow.component.details.DetailsVariant;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Label;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.router.PageTitle;
@@ -22,7 +23,11 @@ public class AboutView extends Div {
 
 	public AboutView() {
 		setId("about-view");
-		add(new Label("Proteomics Cell Type Set Enrichment Analysis (pCtSEA)"));
+		add(new Label("Proteomics Cell Type Set Enrichment Analysis (PCTSEA)"));
+
+		final Image logo = new Image("images/yateslab.png", "pCtSEA Proteomics Cell Type Set Enrichment Analysis");
+//		logo.setHeight("225px");
+//		logo.setWidth("225px");
 
 		final String labURL = "http://www.scripps.edu/yates/";
 		final Anchor lablink = new Anchor(labURL, "John Yates's laboratory");
@@ -39,6 +44,7 @@ public class AboutView extends Div {
 		horizontalLinks.add(" at the ");
 		horizontalLinks.add(scrippsLink);
 		add(horizontalLinks);
+		add(logo);
 		// link to github
 		final String url = "https://github.com/proteomicsyates/pctsea-parent";
 		final Anchor link = new Anchor(url, url);

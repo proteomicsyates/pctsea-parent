@@ -35,7 +35,7 @@ import edu.scripps.yates.pctsea.views.home.HomeView;
 @JsModule("./styles/shared-styles.js")
 @CssImport(value = "./styles/views/main/main-view.css", themeFor = "vaadin-app-layout")
 @CssImport("./styles/views/main/main-view.css")
-@PWA(name = "pCtSEAweb", shortName = "pCtSEAweb", enableInstallPrompt = false)
+@PWA(name = "PCTSEAweb", shortName = "PCTSEAweb", enableInstallPrompt = false)
 @Push
 public class MainView extends AppLayout {
 
@@ -65,12 +65,12 @@ public class MainView extends AppLayout {
 		header.setWidthFull();
 		header.setAlignItems(FlexComponent.Alignment.CENTER);
 		header.setId("header");
-		final Image logo = new Image("images/logo.png", "pCtSEAweb logo");
+		final Image logo = new Image("images/logo.png", "pCtSEA Proteomics Cell Type Set Enrichment Analysis");
 		logo.setId("logo");
 		header.add(logo);
 //        Image avatar = new Image("images/user.svg", "Avatar");
 //        avatar.setId("avatar");
-		header.add(new H1("pCtSEAweb"));
+		header.add(new H1("PCTSEA: Proteomics Cell Type Set Enrichment Analysis"));
 //        header.add(avatar);
 		return header;
 	}

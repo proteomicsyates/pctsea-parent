@@ -51,7 +51,12 @@ public class EmailUtil {
 			body.append(
 					"Alternatively, you can go to this URL to visualize the results (also to download the results): "
 							+ result.getUrlToViewer() + "\n");
+<<<<<<< HEAD
 
+=======
+			body.append("<a href=\"" + result.getUrlToViewer() + "\">testing this link: " + result.getUrlToViewer()
+					+ "</a>");
+>>>>>>> 69b32127545ebd5131be06a02f5e8207df397177
 			body.append("\n\n\n");
 		}
 		body.append("Please, don't hesitate to contact salvador@scripps.edu for more information about pCtSEA");

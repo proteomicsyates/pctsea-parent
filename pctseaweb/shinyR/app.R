@@ -49,9 +49,9 @@ ui <- fluidPage(title = "PCTSEA",
                          tabsetPanel(id = "tabs",
                                      tabPanel("Import data",
                                               br(),
-
+                                              
                                               uiOutput(outputId = "importSideControlUI"),
-
+                                              
                                               br(),
                                               uiOutput(outputId = "importControlUI"),
                                      ),
@@ -89,7 +89,7 @@ ui <- fluidPage(title = "PCTSEA",
                                               ),
                                               fluidRow(
                                                 column(4, selectInput(inputId = "selectCellType", label = "Select cell type", choices = c()))
-
+                                                
                                               ),
                                               fluidRow(
                                                 column(width = 6,
@@ -99,21 +99,27 @@ ui <- fluidPage(title = "PCTSEA",
                                      ),
                                      tabPanel("Clustering",
                                               br(),
-                                              splitLayout(
-                                                cellWidths = c("30%", "70%"),
-                                                fluidRow(
-                                                  column(12, DT::dataTableOutput(outputId = "enrichmentDataTableForCluster"), style = "font-size:80%; rowHeight: 75%")
+                                              # splitLayout(
+                                              #   cellWidths = c("30%", "70%"),
+                                              
+                                              fluidRow(
+                                                column(3, verticalLayout(
+                                                  checkboxInput(inputId = 'showLabels', label = 'Show cell types labels', value = FALSE),
+                                                  DT::dataTableOutput(outputId = "enrichmentDataTableForCluster"), style = "font-size:80%; rowHeight: 75%")
+                                                  
                                                 ),
-                                                verticalLayout(
-                                                  fluidRow(
-                                                    column(4, plotlyOutput(outputId = "umapAllPlot", height = "300px")),
-                                                    column(4, plotlyOutput(outputId = "umapHypGPlot", height = "300px")),
-                                                    column(4, plotlyOutput(outputId = "umapKSTestPlot", height = "300px"))
-                                                  ),
-                                                  fluidRow(
-                                                    column(4, plotlyOutput(outputId = "umapSig001Plot", height = "300px")),
-                                                    column(4, plotlyOutput(outputId = "umapSig005Plot", height = "300px"))
-                                                  )
+                                                column(9,
+                                                       verticalLayout(
+                                                         fluidRow(
+                                                           column(4, plotlyOutput(outputId = "umapAllPlot", height = "300px")),
+                                                           column(4, plotlyOutput(outputId = "umapHypGPlot", height = "300px")),
+                                                           column(4, plotlyOutput(outputId = "umapKSTestPlot", height = "300px"))
+                                                         ),
+                                                         fluidRow(
+                                                           column(4, plotlyOutput(outputId = "umapSig001Plot", height = "300px")),
+                                                           column(4, plotlyOutput(outputId = "umapSig005Plot", height = "300px"))
+                                                         )
+                                                       )
                                                 )
                                               )
                                      )
@@ -128,18 +134,19 @@ server <- function(input, output, session) {
   observe({
     query <-parseQueryString(session$clientData$url_search)
     if (!is.null(query$results)) {
-      inputFileName <- query$results
+      inputFileName <- paste0(query$results,'.zip')
       tmp <- tools::file_path_sans_ext(basename(inputFileName))
-      rv$run_name <- sub("_results.*", "", tmp)
+      rv$run_name <- str_extract(tmp, '[^_]+$') # extract every after the last '_' until the end
+      
       # input file should be in data folder
       zipfilepath = paste('data/', inputFileName, sep = "")
-
+      
       # check if the file exist
       if (!file.exists(zipfilepath)){
         output$importSideControlUI <- renderUI({
           tagList(
             fluidRow(
-              column(width = 12, h4("Opps!"), align='center')
+              column(width = 12, h4("Opps!"))
             )
           )
         })
@@ -155,22 +162,22 @@ server <- function(input, output, session) {
         })
         return()
       }
-
+      
       # side panel
       output$importSideControlUI <- renderUI({
         tagList(
-          wellPanel(
-
-            h5("Analysis from ptcSEA run:"),
-            h5(tags$b(rv$run_name)))
-
+          fluidRow(
+            column(4,wellPanel(
+              
+              h5("Analysis from ptcSEA run:", tags$b(rv$run_name))))
+          ) 
         )
       })
       url <- paste(session$clientData$url_protocol, "//", session$clientData$url_hostname, ":", session$clientData$url_port, session$clientData$url_pathname, sep = "")
       output$importControlUI <- renderUI({
         tagList(
-          p("Your dataset is imported in the pCtSEA results viewer. This URL will only be valid a limited time because the results will only be kept for ."),
-
+          p("Your dataset is imported in the pCtSEA results viewer."),
+          
           p("You can also download your Zip file with your results here:",
             downloadButton(outputId = 'downloadData', label = "Download results Zip")),
           p("You could come back anytime here ", a(url, href = url), " and import the zip file to explore the results again."),
@@ -183,7 +190,7 @@ server <- function(input, output, session) {
           )
         )
       })
-
+      
       # create download data button
       output$downloadData <- downloadHandler(
         filename = inputFileName,
@@ -228,16 +235,15 @@ server <- function(input, output, session) {
         rv$umap_sig001_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.01_scatter")
         rv$umap_sig005_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.05_scatter")
       }
-
-
-
+      
+      
+      
     }else{
       output$importSideControlUI <- renderUI({
         tagList(
           ##############################################
-          p("PcTSEA generates a zip file with all the output files compiled together."),
+          p("pCtSEA generates a ", tags$b("zip file"), " with all the files generated by the analysis."),
           p("Here you can upload that zip file and it will be imported to show the results"),
-          p("After uploading the file, click on 'Import'")
           ##############################################
         )
       })
@@ -246,7 +252,7 @@ server <- function(input, output, session) {
         tagList(
           fluidRow(
             column(width = 12,
-                   p("Click on ", tags$b(tags$i('Browse')), " to select your results zipped file and then click on ", tags$b(tags$i("Import")), " to process it.")
+                   p("Click on ", tags$b(tags$i('Browse')), " to select and import your results zipped file.")
             )
           ),
           fluidRow(
@@ -254,28 +260,24 @@ server <- function(input, output, session) {
                    textOutput(outputId = "inputDataError")
             )
           ),
-
+          
           fluidRow(
             column(width = 6,
                    wellPanel(
                      fileInput(inputId = "inputUploadedFile", label = "Upload your pCtSEA results (Zip file)", multiple = FALSE)
                    )
             )
-          ),
-          fluidRow(
-            column(width = 1, actionButton(inputId = "importButton", label = "Import")),
-            column(width = 11, textOutput(outputId = "inputDataStatus"))
           )
         )
-
+        
         #####################################
       })
     }
   }) # end of observe
-
-
-
-
+  
+  
+  
+  
   rv <- reactiveValues(errorMessage="",
                        scoresCalculationsTable=NULL,
                        unziped_files=NULL,
@@ -301,16 +303,16 @@ server <- function(input, output, session) {
   source("./server/MultipleTestingCorrection.R", local=TRUE)
   source("./server/Suprema.R", local=TRUE)
   source("./server/Umap.R", local=TRUE)
-
+  
   output$data_loaded <- reactive({FALSE})
   outputOptions(output, "data_loaded", suspendWhenHidden = FALSE)
-
+  
   # get files by uploading them and unzip them
   observeEvent(input$inputUploadedFile, {
     file <- input$inputUploadedFile
     tmp <- tools::file_path_sans_ext(basename(file$name))
-    rv$run_name <- sub("_results.*", "", tmp)
-
+    rv$run_name <- str_extract(tmp, '[^_]+$') # extract every after the last '_' until the end
+    
     zipfilepath = file$datapath
     withProgress({
       setProgress(message = "Receiving file...", value = 0)
@@ -319,16 +321,15 @@ server <- function(input, output, session) {
       # gets moved as temporally name at data/
       file.move(files = c(zipfilepath) , destinations = "data/", overwrite = TRUE)
       # now we need to rename it to its original name
-      file.rename(from = paste("data/", basename(zipfilepath), sep = ""), to = newZipFilepath)
-      folderTo <- paste("data/", tools::file_path_sans_ext(basename(file$name)), sep = "")
-
-
-      setProgress(message = "Unzipping results...", value = 0.1)
+      file.rename(from = paste0("data/", basename(zipfilepath)), to = newZipFilepath)
       
-      unzip(newZipFilepath, exdir = folderTo)
-      setProgress(message = "Unzipping results...", value = 0.5)
-
-
+      folderTo <- paste0("data/", tools::file_path_sans_ext(basename(file$name)))
+      # only unzip if the folder doesn't exist
+      if(!file.exists(folderTo)){
+        setProgress(message = "Unzipping results...", value = 0.1)
+        unzip(newZipFilepath, exdir = "data")
+      }
+      
       setProgress(message = "Results unzipped", value = 1)
     },
     detail = "This just will take a few seconds"
@@ -346,11 +347,14 @@ server <- function(input, output, session) {
     rv$umap_KStest_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_KStest_scatter")
     rv$umap_sig001_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.01_scatter")
     rv$umap_sig005_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.05_scatter")
+    
+    # jump to enrichment table 
+    updateTabsetPanel(session, "tabs", selected = "Enrichment Table")
   })
-
-
-
-
+  
+  
+  
+  
   # select the scores file
   # scores_file <- eventReactive(rv$unziped_files,{
   #   browser()
@@ -364,19 +368,19 @@ server <- function(input, output, session) {
   #          table = read.csv(file = scores_file(), header = TRUE, sep = "\t")
   #     })
   # })
-
-
+  
+  
   output$inputDataError <- renderText(rv$errorMessage)
-
-
-
-
-
+  
+  
+  
+  
+  
   # output$cellTypeCorrelationsPlot <- renderPlot(createPlotWithCorrelations(isolate({rv$correlationsTable}), 0.1, input$selectCellType))
-
+  
   # output$cellTypeScoreCalculationPlot <- renderPlot(createPlotWithScoreCalculation(isolate({rv$scoresCalculationsTable}), input$selectCellType))
-
-
+  
+  
 }
 
 

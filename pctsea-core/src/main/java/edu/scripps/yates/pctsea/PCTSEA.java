@@ -240,10 +240,13 @@ public class PCTSEA {
 //	}
 
 	public PCTSEAResult run() {
+		logStatus("Before starting...");
 		logInputParams(getInputParameters());
-
+		logStatus("Starting...");
+		logStatus("Looking for dataset in DB with tag '" + getInputParameters().getDataset().getTag() + "'...");
 		// check dataset input parameters
 		final List<Dataset> datasetFromDB = datasetMongoRepo.findByTag(getInputParameters().getDataset().getTag());
+		logStatus(datasetFromDB.size() + " datasets in DB with tag'" + getInputParameters().getDataset().getTag());
 		if (datasetFromDB == null || datasetFromDB.isEmpty()) {
 			final List<String> datasetTags = datasetMongoRepo.findAll().stream().map(dataset -> dataset.getTag())
 					.sorted().collect(Collectors.toList());
@@ -270,7 +273,7 @@ public class PCTSEA {
 			URL urlToViewer = null;
 			if (resultsViewerURL != null) {
 				urlToViewer = new URL(
-						resultsViewerURL + "/?results=" + FilenameUtils.getName(zipOutputFile.getAbsolutePath()));
+						resultsViewerURL + "/?results=" + FilenameUtils.getBaseName(zipOutputFile.getAbsolutePath()));
 			}
 			result = new PCTSEAResult(zipOutputFile, urlToViewer, runLog);
 			if (generatePDFCharts) {
@@ -407,7 +410,7 @@ public class PCTSEA {
 						// add pdf file to tar file
 
 						// create tar.gz with all output files
-						printGZipOutputFile(getCurrentTimeStampFolder(), zipOutputFile);
+						writeGZipOutputFile(getCurrentTimeStampFolder(), zipOutputFile);
 
 						// set finish time
 						runLog.setFinished(getDateNow());
@@ -527,10 +530,10 @@ public class PCTSEA {
 		}
 	}
 
-	private void printGZipOutputFile(File folder, File zipFile) throws IOException {
+	private void writeGZipOutputFile(File folder, File zipFile) throws IOException {
 		logStatus("Compacting output files in single zip file...");
 		// move out the correlations file so that is not included in the zip file
-		final File tempFile = File.createTempFile("correlations", "txt");
+
 		final String fileName = FilenameUtils.getName(getCorrelationsOutputFile().getAbsolutePath());
 		// it may be or not
 		final File[] correlationsFiles = folder.listFiles(new FilenameFilter() {
@@ -544,7 +547,9 @@ public class PCTSEA {
 				return false;
 			}
 		});
+		File tempFile = null;
 		if (correlationsFiles.length > 0) {
+			tempFile = File.createTempFile("correlations", "txt");
 			Files.move(correlationsFiles[0], tempFile);
 		}
 		ZipManager.addFileToZipFile(folder, zipFile, true);
@@ -2293,12 +2298,13 @@ public class PCTSEA {
 	}
 
 	private File getZipOutputFile() {
-		File file = new File(getCurrentTimeStampFolder().getParent() + File.separator + prefix + "_results.zip");
+		File file = new File(getCurrentTimeStampFolder().getParent() + File.separator
+				+ FilenameUtils.getBaseName(getCurrentTimeStampFolder().getAbsolutePath()) + ".zip");
 		if (file.exists()) {
 			int i = 2;
 			while (file.exists()) {
-				file = new File(
-						getCurrentTimeStampFolder().getParent() + File.separator + prefix + "_results_" + i + ".zip");
+				file = new File(getCurrentTimeStampFolder().getParent() + File.separator
+						+ FilenameUtils.getBaseName(getCurrentTimeStampFolder().getAbsolutePath()) + "_" + i + ".zip");
 				i++;
 			}
 		}

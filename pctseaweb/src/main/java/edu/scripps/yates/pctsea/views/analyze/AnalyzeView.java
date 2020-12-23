@@ -80,7 +80,7 @@ import edu.scripps.yates.utilities.swing.StatusListener;
 import edu.scripps.yates.utilities.util.Pair;
 
 @Route(value = "analyze", layout = MainView.class)
-@PageTitle("pCtSEAweb - Analyze")
+@PageTitle("PCTSEA web - Analyze")
 @CssImport("./styles/views/analyze/analyze-view.css")
 public class AnalyzeView extends VerticalLayout {
 
@@ -329,11 +329,11 @@ public class AnalyzeView extends VerticalLayout {
 						showLinkToResults(results.getUrlToViewer());
 					});
 
-				} catch (final RuntimeException e) {
+				} catch (final Exception e) {
 					e.printStackTrace();
 					ui.access(() -> {
-						VaadinUtil.showErrorDialog("pCtSEA has stopped.");
-						showMessage("pCtSEA has stopped.");
+						VaadinUtil.showErrorDialog("PCTSEA has stopped because: " + e.getMessage());
+						showMessage("PCTSEA has stopped.");
 					});
 				} finally {
 					ui.access(() -> {
@@ -611,7 +611,7 @@ public class AnalyzeView extends VerticalLayout {
 	}
 
 	private Component createTitle() {
-		return new H3("pCtSEA input parameters");
+		return new H3("PCTSEA input parameters");
 	}
 
 	private Component createFormLayout() {
