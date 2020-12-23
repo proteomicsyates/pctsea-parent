@@ -240,6 +240,7 @@ public class PCTSEA {
 //	}
 
 	public PCTSEAResult run() {
+		logStatus("Before starting...");
 		logInputParams(getInputParameters());
 		logStatus("Starting...");
 		logStatus("Looking for dataset in DB with tag '" + getInputParameters().getDataset().getTag() + "'...");
