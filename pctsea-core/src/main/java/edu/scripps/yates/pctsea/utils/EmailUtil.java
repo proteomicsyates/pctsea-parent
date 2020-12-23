@@ -51,7 +51,7 @@ public class EmailUtil {
 			body.append(
 					"Alternatively, you can go to this URL to visualize the results (also to download the results): "
 							+ result.getUrlToViewer() + "\n");
-			body.append("<a hre=\"" + result.getUrlToViewer() + "\">testing this link: " + result.getUrlToViewer()
+			body.append("<a href=\"" + result.getUrlToViewer() + "\">testing this link: " + result.getUrlToViewer()
 					+ "</a>");
 			body.append("\n\n\n");
 		}
