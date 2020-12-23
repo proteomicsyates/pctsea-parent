@@ -17,21 +17,21 @@ public class EmailUtil {
 		final InputParameters inputParameters = result.getRunLog().getInputParameters();
 		PCTSEA.logStatus("Sending email with results to " + inputParameters.getEmail());
 		// SUBJECT
-		final String subject = "PCTSEA results '" + result.getRunLog().getTimeStamp() + " - "
+		final String subject = "pCtSEA results '" + result.getRunLog().getTimeStamp() + " - "
 				+ inputParameters.getOutputPrefix();
 
 		// BODY
 		final StringBuilder body = new StringBuilder();
-		body.append("This email is generated from PCTSEA tool\n");
-		body.append("Run submited: " + result.getRunLog().getStarted() + "\n");
-		body.append("Run finished: " + result.getRunLog().getFinished() + "\n");
+		body.append("This email is generated from pCtSEA tool \n ");
+		body.append("Run submited: " + result.getRunLog().getStarted() + " \n ");
+		body.append("Run finished: " + result.getRunLog().getFinished() + " \n ");
 		body.append("Running time: " + DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime())
-				+ "\n");
+				+ " \n\n ");
 
 		// parameters
-		body.append("Parameters:\n");
-		body.append(InputParameters.EEF + ": " + FilenameUtils.getName(inputParameters.getInputDataFile()) + "\n");
-		body.append(InputParameters.MIN_CELLS_PER_CELL_TYPE + ": " + inputParameters.getMinCellsPerCellType() + "\n");
+		body.append("Parameters: \n ");
+		body.append(InputParameters.EEF + ": " + FilenameUtils.getName(inputParameters.getInputDataFile()) + " \n ");
+		body.append(InputParameters.MIN_CELLS_PER_CELL_TYPE + ": " + inputParameters.getMinCellsPerCellType() + " \n ");
 		body.append(InputParameters.MIN_CORRELATION + ": " + inputParameters.getMinCorrelation() + "\n");
 		body.append(InputParameters.MIN_GENES_CELLS + ": " + inputParameters.getMinGenesCells() + "\n");
 		body.append(InputParameters.DATASETS + ": " + inputParameters.getDataset().getTag() + " ("
@@ -51,11 +51,10 @@ public class EmailUtil {
 			body.append(
 					"Alternatively, you can go to this URL to visualize the results (also to download the results): "
 							+ result.getUrlToViewer() + "\n");
-			body.append("<a hre=\"" + result.getUrlToViewer() + "\">testing this link: " + result.getUrlToViewer()
-					+ "</a>");
+
 			body.append("\n\n\n");
 		}
-		body.append("Please, don't hesitate to contact 'salvador@scripps.edu' for more information about PCTSEA");
+		body.append("Please, don't hesitate to contact salvador@scripps.edu for more information about pCtSEA");
 
 		// DESTINATION EMAIL
 		final String destinationEmail = inputParameters.getEmail();
