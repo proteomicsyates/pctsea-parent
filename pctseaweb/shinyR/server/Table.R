@@ -6,7 +6,7 @@ enrichment_file <- reactiveVal()
 # select the enrichment file
 observeEvent(rv$unziped_files,{
   folder <- rv$unziped_files
-  folder <-list.dirs(folder, recursive = FALSE)[1] # go one folder up
+  # folder <-list.dirs(folder, recursive = FALSE)[1] # go one folder up
   files <- list.files(folder, pattern = ".*cell_types_enrichment.txt")
   if(length(files) > 0){
     file <- paste(folder, .Platform$file.sep, files[1], sep = "")
@@ -31,7 +31,7 @@ enrichment_table <- eventReactive(enrichment_file(),{
 })
 
 # plot the table as soon as is loaded
-output$enrichmentDataTable <- DT::renderDataTable(
+output$enrichmentDataTable <- DT::renderDT(
   datatable(
     enrichment_table(),
     filter = 'top',
@@ -58,7 +58,7 @@ observeEvent(enrichment_table(),{
                     choices = unique_cell_types)
 })
 
-output$enrichmentDataTable2 <- DT::renderDataTable(
+output$enrichmentDataTable2 <- DT::renderDT(
   {
     table <- enrichment_table()
     table <- table[, c("cell type", "FDR", "empirical p-value", "KS p-value BH corrected")]
@@ -85,31 +85,32 @@ observeEvent(input$enrichmentDataTable2_rows_selected,{
 }
 )
 
-output$enrichmentDataTableForCluster <- DT::renderDataTable(
+output$enrichmentDataTableForCluster <- DT::renderDT(
   {
     table <- enrichment_table()
     table <- table[, c("cell type", "FDR", "empirical p-value", "KS p-value BH corrected")]
-    
-    
     datatable(
       table,
       selection = 'single',
+      # rownames = FALSE,
       options = list(
         pageLength = 10,
-        dom = 't',
-        order = list(list(2, 'asc'), list(3, 'asc'), list(4, 'asc'))
+        dom = 'lftipr',
+        order = list(list(2, 'asc'), list(3, 'asc'), list(4, 'asc')),
+        autoWidth = TRUE,
+        columnDefs = list(list(width = '10px', targets = c(2,3,4)))
       )
     ) %>%
       formatRound(columns=c("FDR", "empirical p-value", "KS p-value BH corrected"), digits=4)
   }
 )
-# event that catches the selection on the table and highlights the charts
-observeEvent(input$enrichmentDataTableForCluster_rows_selected,{
-  selected_cell_type <- input$enrichmentDataTableForCluster_rows_selected
-  table <- enrichment_table()
-  req(table)
-  selected_choice <- table[[selected_cell_type,"cell type"]]
-  
-}
-)
+# # event that catches the selection on the table and highlights the charts
+# observeEvent(input$enrichmentDataTableForCluster_rows_selected,{
+#   selected_cell_type <- input$enrichmentDataTableForCluster_rows_selected
+#   table <- enrichment_table()
+#   req(table)
+#   selected_choice <- table[[selected_cell_type,"cell type"]]
+#   
+# }
+# )
 

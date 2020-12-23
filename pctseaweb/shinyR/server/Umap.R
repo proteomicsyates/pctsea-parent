@@ -1,12 +1,16 @@
 createPlotWithUmap <- function(table, title){
   req(table)
   colnames(table) <- c('cell type', 'x', 'y')
-  plot <- ggplot(data = table, aes(x=x, y=y, color = `cell type`)) +
+  showLabels <- input$showLabels
+  plot <- ggplot(data = table, aes(x = x, y = y, color = `cell type`, label = `cell type`)) +
     geom_point(shape = 1) +
     labs(x = 'UMAP x', y = 'UMAP y') +
     theme_classic() +
     theme(legend.position = 'none')
-  ggplotly(plot) %>%
+  if(showLabels){ 
+    plot <- plot + geom_text(size=3, aes(x = x, y = y, label = `cell type`),  nudge_y = 0.2)
+  }
+  ploty <- ggplotly(plot) %>%
     layout(
       xaxis = list(
         title = plot_axis_title_format
@@ -20,6 +24,10 @@ createPlotWithUmap <- function(table, title){
       )
       
     )
+  # if(showLabels){
+  #   ploty %>% add_text(text = '', textposition = "top right")
+  # }
+  ploty
 }
 
 
