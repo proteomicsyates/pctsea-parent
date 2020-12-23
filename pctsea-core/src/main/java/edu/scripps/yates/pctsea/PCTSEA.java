@@ -241,9 +241,11 @@ public class PCTSEA {
 
 	public PCTSEAResult run() {
 		logInputParams(getInputParameters());
-
+		logStatus("Starting...");
+		logStatus("Looking for dataset in DB with tag '" + getInputParameters().getDataset().getTag() + "'...");
 		// check dataset input parameters
 		final List<Dataset> datasetFromDB = datasetMongoRepo.findByTag(getInputParameters().getDataset().getTag());
+		logStatus(datasetFromDB.size() + " datasets in DB with tag'" + getInputParameters().getDataset().getTag());
 		if (datasetFromDB == null || datasetFromDB.isEmpty()) {
 			final List<String> datasetTags = datasetMongoRepo.findAll().stream().map(dataset -> dataset.getTag())
 					.sorted().collect(Collectors.toList());

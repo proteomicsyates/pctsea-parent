@@ -329,10 +329,10 @@ public class AnalyzeView extends VerticalLayout {
 						showLinkToResults(results.getUrlToViewer());
 					});
 
-				} catch (final RuntimeException e) {
+				} catch (final Exception e) {
 					e.printStackTrace();
 					ui.access(() -> {
-						VaadinUtil.showErrorDialog("pCtSEA has stopped.");
+						VaadinUtil.showErrorDialog("pCtSEA has stopped because: " + e.getMessage());
 						showMessage("pCtSEA has stopped.");
 					});
 				} finally {
