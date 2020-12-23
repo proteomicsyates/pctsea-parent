@@ -23,7 +23,7 @@ public class HomeView extends Div {
 
 	public HomeView() {
 		setId("home-view");
-		add(new H3("Welcome to the Proteomics Cell Type Set Enrichment Analysis (pCtSEA) web tool"));
+		add(new H3("Welcome to the Proteomics Cell Type Set Enrichment Analysis (PCTSEA) web tool"));
 		add(new Label("Go to Analyze tab to analyze your data"));
 
 		String url = PCTSEALocalConfiguration.getPCTSEAResultsViewerURL();
