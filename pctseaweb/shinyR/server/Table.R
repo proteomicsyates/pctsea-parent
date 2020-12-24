@@ -61,17 +61,17 @@ observeEvent(enrichment_table(),{
 output$enrichmentDataTable2 <- DT::renderDT(
   {
     table <- enrichment_table()
-    table <- table[, c("cell type", "FDR", "empirical p-value", "KS p-value BH corrected")]
+    table <- table[, c("cell type", "empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value")]
     datatable(
       table,
       selection = 'single',
       options = list(
         pageLength = 10,
         dom = 'lftipr',
-        order = list(list(2, 'asc'), list(3, 'asc'), list(4, 'asc'))
+        order = list(list(3, 'asc'), list(4, 'asc'))
       )
     ) %>%
-      formatRound(columns=c("FDR", "empirical p-value", "KS p-value BH corrected"), digits=4)
+      formatRound(columns=c("empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value"), digits=4)
   }
 )
 # event that catches the selection on the table and updates the input selection of the dropdown
@@ -88,7 +88,7 @@ observeEvent(input$enrichmentDataTable2_rows_selected,{
 output$enrichmentDataTableForCluster <- DT::renderDT(
   {
     table <- enrichment_table()
-    table <- table[, c("cell type", "FDR", "empirical p-value", "KS p-value BH corrected")]
+    table <- table[, c("cell type", "empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value")]
     datatable(
       table,
       selection = 'single',
@@ -96,12 +96,12 @@ output$enrichmentDataTableForCluster <- DT::renderDT(
       options = list(
         pageLength = 10,
         dom = 'lftipr',
-        order = list(list(2, 'asc'), list(3, 'asc'), list(4, 'asc')),
+        order = list(list(3, 'asc'), list(4, 'asc')),
         autoWidth = TRUE,
-        columnDefs = list(list(width = '10px', targets = c(2,3,4)))
+        columnDefs = list(list(width = '10px', targets = c(2,3,4,5)))
       )
     ) %>%
-      formatRound(columns=c("FDR", "empirical p-value", "KS p-value BH corrected"), digits=4)
+      formatRound(columns=c("empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value"), digits=4)
   }
 )
 # # event that catches the selection on the table and highlights the charts

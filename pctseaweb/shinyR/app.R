@@ -47,7 +47,7 @@ ui <- fluidPage(title = "PCTSEA",
                 fluidRow(
                   column(width = 12,
                          tabsetPanel(id = "tabs",
-                                     tabPanel("Import data",
+                                     tabPanel("Import data", icon = icon("file-import"),
                                               br(),
                                               
                                               uiOutput(outputId = "importSideControlUI"),
@@ -55,7 +55,7 @@ ui <- fluidPage(title = "PCTSEA",
                                               br(),
                                               uiOutput(outputId = "importControlUI"),
                                      ),
-                                     tabPanel("Enrichment Table",
+                                     tabPanel("Enrichment Table", icon = icon("table"),
                                               br(),
                                               p("Here you have the main output table"),
                                               fluidRow(
@@ -64,28 +64,102 @@ ui <- fluidPage(title = "PCTSEA",
                                                 )
                                               )
                                      ),
-                                     tabPanel("Global charts",
+                                     tabPanel("Global charts",icon = icon("bar-chart-o"),
                                               br(),
                                               fluidRow(
-                                                column(3, plotlyOutput(outputId = "globalCorrelationsPlot", height = "300px")),
-                                                column(3, plotlyOutput(outputId = "globalCorrelationsRankPlot", height = "300px")),
-                                                column(3, plotlyOutput(outputId = "globalGenesPerCellTypePlot", height = "300px"))
+                                                column(4,
+                                                       wellPanel(
+                                                         style = "background: white",
+                                                         fluidRow(
+                                                           column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'globalCorrelationsPlotHelp', label = '', icon = icon('question-circle'))))
+                                                         ),
+                                                         plotlyOutput(outputId = "globalCorrelationsPlot", height = "300px")
+                                                       )
+                                                ),
+                                                
+                                                column(4, 
+                                                       wellPanel(
+                                                         style = "background: white",
+                                                         fluidRow(
+                                                           column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'globalCorrelationsRankPlotHelp', label = '', icon = icon('question-circle'))))
+                                                         ), 
+                                                         plotlyOutput(outputId = "globalCorrelationsRankPlot", height = "300px")
+                                                       )
+                                                ),
+                                                column(4, 
+                                                       wellPanel(
+                                                         style = "background: white",
+                                                         fluidRow(
+                                                           column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'globalGenesPerCellTypePlotHelp', label = '', icon = icon('question-circle'))))
+                                                         ),  
+                                                         plotlyOutput(outputId = "globalGenesPerCellTypePlot", height = "300px")
+                                                       )
+                                                )
                                               ),
+                                              
                                               fluidRow(
-                                                column(3, plotlyOutput(outputId = "globalMultipleTestingCorrectionPlot", height = "300px")),
-                                                column(3, plotlyOutput(outputId = "globalSupremaHistogramPlot", height = "300px")),
-                                                column(3, plotlyOutput(outputId = "globalSupremaScatterPlot", height = "300px"))
+                                                column(4, 
+                                                       wellPanel(
+                                                         style = "background: white",
+                                                         fluidRow(
+                                                           column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'globalMultipleTestingCorrectionPlotHelp', label = '', icon = icon('question-circle'))))
+                                                         ),
+                                                         plotlyOutput(outputId = "globalMultipleTestingCorrectionPlot", height = "300px")
+                                                       )
+                                                ),
+                                                column(4, 
+                                                       wellPanel(
+                                                         style = "background: white",
+                                                         fluidRow(
+                                                           column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'globalSupremaHistogramPlotHelp', label = '', icon = icon('question-circle'))))
+                                                         ),
+                                                         plotlyOutput(outputId = "globalSupremaHistogramPlot", height = "300px")
+                                                       )
+                                                ),
+                                                column(4, 
+                                                       wellPanel(
+                                                         style = "background: white",
+                                                         fluidRow(
+                                                           column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'globalSupremaScatterPlotHelp', label = '', icon = icon('question-circle'))))
+                                                         ),
+                                                         plotlyOutput(outputId = "globalSupremaScatterPlot", height = "300px")
+                                                       )
+                                                )
                                               )
                                      ),
-                                     tabPanel("Charts per cell type",
+                                     tabPanel("Charts per cell type", icon = icon("bar-chart-o"),
                                               br(),
-                                              fluidRow(
-                                                h4("Select a cell type from the drop down menu or the table")
+                                              fluidRow(style='padding-left:10px;',
+                                                       h4("Select a cell type from the drop down menu or the table")
                                               ),
                                               fluidRow(
-                                                column(3, plotlyOutput(outputId = "cellTypeCorrelationsPlot", height = "300px")),
-                                                column(3, plotlyOutput(outputId = "cellTypeScoreCalculationPlot", height = "300px")),
-                                                column(3, plotlyOutput(outputId = "genesPerCellTypePlot", height = "300px"))
+                                                column(4, 
+                                                       wellPanel(
+                                                         style = "background: white",
+                                                         fluidRow(
+                                                           column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'cellTypeCorrelationsPlotHelp', label = '', icon = icon('question-circle'))))
+                                                         ),
+                                                         plotlyOutput(outputId = "cellTypeCorrelationsPlot", height = "300px")
+                                                       )
+                                                ),
+                                                column(4, 
+                                                       wellPanel(
+                                                         style = "background: white",
+                                                         fluidRow(
+                                                           column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'cellTypeScoreCalculationPlotHelp', label = '', icon = icon('question-circle'))))
+                                                         ),
+                                                         plotlyOutput(outputId = "cellTypeScoreCalculationPlot", height = "300px")
+                                                       )
+                                                ),
+                                                column(4, 
+                                                       wellPanel(
+                                                         style = "background: white",
+                                                         fluidRow(
+                                                           column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'genesPerCellTypePlotHelp', label = '', icon = icon('question-circle'))))
+                                                         ),
+                                                         plotlyOutput(outputId = "genesPerCellTypePlot", height = "300px")
+                                                       )
+                                                )
                                               ),
                                               fluidRow(
                                                 column(4, selectInput(inputId = "selectCellType", label = "Select cell type", choices = c()))
@@ -93,31 +167,72 @@ ui <- fluidPage(title = "PCTSEA",
                                               ),
                                               fluidRow(
                                                 column(width = 6,
-                                                       DT::dataTableOutput(outputId = "enrichmentDataTable2"), style = "font-size:80%; rowHeight: 75%"
+                                                       div(DT::dataTableOutput(outputId = "enrichmentDataTable2"), style = "font-size:80%; rowHeight: 75%")
                                                 )
                                               )
                                      ),
-                                     tabPanel("Clustering",
+                                     tabPanel("Clustering",icon = icon("project-diagram"),
                                               br(),
                                               # splitLayout(
                                               #   cellWidths = c("30%", "70%"),
                                               
                                               fluidRow(
-                                                column(3, verticalLayout(
+                                                column(4, verticalLayout(
                                                   checkboxInput(inputId = 'showLabels', label = 'Show cell types labels', value = FALSE),
-                                                  DT::dataTableOutput(outputId = "enrichmentDataTableForCluster"), style = "font-size:80%; rowHeight: 75%")
-                                                  
+                                                  div(DT::dataTableOutput(outputId = "enrichmentDataTableForCluster"), style = "font-size:70%; rowHeight: 65%")
+                                                )
+                                                
                                                 ),
-                                                column(9,
+                                                column(8,
                                                        verticalLayout(
                                                          fluidRow(
-                                                           column(4, plotlyOutput(outputId = "umapAllPlot", height = "300px")),
-                                                           column(4, plotlyOutput(outputId = "umapHypGPlot", height = "300px")),
-                                                           column(4, plotlyOutput(outputId = "umapKSTestPlot", height = "300px"))
+                                                           column(4, 
+                                                                  wellPanel(
+                                                                    style = "background: white",
+                                                                    fluidRow(
+                                                                      column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'umapAllPlotHelp', label = '', icon = icon('question-circle'))))
+                                                                    ),
+                                                                    plotlyOutput(outputId = "umapAllPlot", height = "250px")
+                                                                  )
+                                                           ),
+                                                           column(4, 
+                                                                  wellPanel(
+                                                                    style = "background: white",
+                                                                    fluidRow(
+                                                                      column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'umapHypGPlotHelp', label = '', icon = icon('question-circle'))))
+                                                                    ),
+                                                                    plotlyOutput(outputId = "umapHypGPlot", height = "250px")
+                                                                  )
+                                                           ),
+                                                           column(4, 
+                                                                  wellPanel(
+                                                                    style = "background: white",
+                                                                    fluidRow(
+                                                                      column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'umapKSTestPlotHelp', label = '', icon = icon('question-circle'))))
+                                                                    ),
+                                                                    plotlyOutput(outputId = "umapKSTestPlot", height = "250px")
+                                                                  )
+                                                           )
                                                          ),
                                                          fluidRow(
-                                                           column(4, plotlyOutput(outputId = "umapSig001Plot", height = "300px")),
-                                                           column(4, plotlyOutput(outputId = "umapSig005Plot", height = "300px"))
+                                                           column(4, 
+                                                                  wellPanel(
+                                                                    style = "background: white",
+                                                                    fluidRow(
+                                                                      column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'umapSig001PlotHelp', label = '', icon = icon('question-circle'))))
+                                                                    ),
+                                                                    plotlyOutput(outputId = "umapSig001Plot", height = "250px")
+                                                                  )
+                                                           ),
+                                                           column(4, 
+                                                                  wellPanel(
+                                                                    style = "background: white",
+                                                                    fluidRow(
+                                                                      column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'umapSig005PlotHelp', label = '', icon = icon('question-circle'))))
+                                                                    ),
+                                                                    plotlyOutput(outputId = "umapSig005Plot", height = "250px")
+                                                                  )
+                                                           )
                                                          )
                                                        )
                                                 )
@@ -303,6 +418,7 @@ server <- function(input, output, session) {
   source("./server/MultipleTestingCorrection.R", local=TRUE)
   source("./server/Suprema.R", local=TRUE)
   source("./server/Umap.R", local=TRUE)
+  source("./server/Help.R", local=TRUE)
   
   output$data_loaded <- reactive({FALSE})
   outputOptions(output, "data_loaded", suspendWhenHidden = FALSE)
@@ -376,12 +492,13 @@ server <- function(input, output, session) {
   
   
   
-  # output$cellTypeCorrelationsPlot <- renderPlot(createPlotWithCorrelations(isolate({rv$correlationsTable}), 0.1, input$selectCellType))
   
-  # output$cellTypeScoreCalculationPlot <- renderPlot(createPlotWithScoreCalculation(isolate({rv$scoresCalculationsTable}), input$selectCellType))
+  
+  
   
   
 }
+
 
 
 
