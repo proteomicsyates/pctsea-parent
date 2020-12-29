@@ -49,9 +49,9 @@ ui <- fluidPage(title = "PCTSEA",
                          tabsetPanel(id = "tabs",
                                      tabPanel("Import data", icon = icon("file-import"),
                                               br(),
-                                              
+
                                               uiOutput(outputId = "importSideControlUI"),
-                                              
+
                                               br(),
                                               uiOutput(outputId = "importControlUI"),
                                      ),
@@ -76,29 +76,29 @@ ui <- fluidPage(title = "PCTSEA",
                                                          plotlyOutput(outputId = "globalCorrelationsPlot", height = "300px")
                                                        )
                                                 ),
-                                                
-                                                column(4, 
+
+                                                column(4,
                                                        wellPanel(
                                                          style = "background: white",
                                                          fluidRow(
                                                            column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'globalCorrelationsRankPlotHelp', label = '', icon = icon('question-circle'))))
-                                                         ), 
+                                                         ),
                                                          plotlyOutput(outputId = "globalCorrelationsRankPlot", height = "300px")
                                                        )
                                                 ),
-                                                column(4, 
+                                                column(4,
                                                        wellPanel(
                                                          style = "background: white",
                                                          fluidRow(
                                                            column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'globalGenesPerCellTypePlotHelp', label = '', icon = icon('question-circle'))))
-                                                         ),  
+                                                         ),
                                                          plotlyOutput(outputId = "globalGenesPerCellTypePlot", height = "300px")
                                                        )
                                                 )
                                               ),
-                                              
+
                                               fluidRow(
-                                                column(4, 
+                                                column(4,
                                                        wellPanel(
                                                          style = "background: white",
                                                          fluidRow(
@@ -107,7 +107,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                          plotlyOutput(outputId = "globalMultipleTestingCorrectionPlot", height = "300px")
                                                        )
                                                 ),
-                                                column(4, 
+                                                column(4,
                                                        wellPanel(
                                                          style = "background: white",
                                                          fluidRow(
@@ -116,7 +116,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                          plotlyOutput(outputId = "globalSupremaHistogramPlot", height = "300px")
                                                        )
                                                 ),
-                                                column(4, 
+                                                column(4,
                                                        wellPanel(
                                                          style = "background: white",
                                                          fluidRow(
@@ -133,7 +133,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                        h4("Select a cell type from the drop down menu or the table")
                                               ),
                                               fluidRow(
-                                                column(4, 
+                                                column(4,
                                                        wellPanel(
                                                          style = "background: white",
                                                          fluidRow(
@@ -142,7 +142,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                          plotlyOutput(outputId = "cellTypeCorrelationsPlot", height = "300px")
                                                        )
                                                 ),
-                                                column(4, 
+                                                column(4,
                                                        wellPanel(
                                                          style = "background: white",
                                                          fluidRow(
@@ -151,7 +151,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                          plotlyOutput(outputId = "cellTypeScoreCalculationPlot", height = "300px")
                                                        )
                                                 ),
-                                                column(4, 
+                                                column(4,
                                                        wellPanel(
                                                          style = "background: white",
                                                          fluidRow(
@@ -163,7 +163,7 @@ ui <- fluidPage(title = "PCTSEA",
                                               ),
                                               fluidRow(
                                                 column(4, selectInput(inputId = "selectCellType", label = "Select cell type", choices = c()))
-                                                
+
                                               ),
                                               fluidRow(
                                                 column(width = 6,
@@ -175,18 +175,18 @@ ui <- fluidPage(title = "PCTSEA",
                                               br(),
                                               # splitLayout(
                                               #   cellWidths = c("30%", "70%"),
-                                              
+
                                               fluidRow(
                                                 column(4, verticalLayout(
                                                   checkboxInput(inputId = 'showLabels', label = 'Show cell types labels', value = FALSE),
                                                   div(DT::dataTableOutput(outputId = "enrichmentDataTableForCluster"), style = "font-size:70%; rowHeight: 65%")
                                                 )
-                                                
+
                                                 ),
                                                 column(8,
                                                        verticalLayout(
                                                          fluidRow(
-                                                           column(4, 
+                                                           column(4,
                                                                   wellPanel(
                                                                     style = "background: white",
                                                                     fluidRow(
@@ -195,7 +195,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                                     plotlyOutput(outputId = "umapAllPlot", height = "250px")
                                                                   )
                                                            ),
-                                                           column(4, 
+                                                           column(4,
                                                                   wellPanel(
                                                                     style = "background: white",
                                                                     fluidRow(
@@ -204,7 +204,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                                     plotlyOutput(outputId = "umapHypGPlot", height = "250px")
                                                                   )
                                                            ),
-                                                           column(4, 
+                                                           column(4,
                                                                   wellPanel(
                                                                     style = "background: white",
                                                                     fluidRow(
@@ -215,7 +215,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                            )
                                                          ),
                                                          fluidRow(
-                                                           column(4, 
+                                                           column(4,
                                                                   wellPanel(
                                                                     style = "background: white",
                                                                     fluidRow(
@@ -224,7 +224,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                                     plotlyOutput(outputId = "umapSig001Plot", height = "250px")
                                                                   )
                                                            ),
-                                                           column(4, 
+                                                           column(4,
                                                                   wellPanel(
                                                                     style = "background: white",
                                                                     fluidRow(
@@ -236,6 +236,13 @@ ui <- fluidPage(title = "PCTSEA",
                                                          )
                                                        )
                                                 )
+                                              )
+                                     ),
+                                     tabPanel("Go to PCTSEA Analysis",icon = icon("cogs"),
+                                              fluidRow(
+                                                br(),
+                                                br(),
+                                                column(12, uiOutput("analysis_url"))
                                               )
                                      )
                          )
@@ -252,10 +259,10 @@ server <- function(input, output, session) {
       inputFileName <- paste0(query$results,'.zip')
       tmp <- tools::file_path_sans_ext(basename(inputFileName))
       rv$run_name <- str_extract(tmp, '[^_]+$') # extract every after the last '_' until the end
-      
+
       # input file should be in data folder
       zipfilepath = paste('data/', inputFileName, sep = "")
-      
+
       # check if the file exist
       if (!file.exists(zipfilepath)){
         output$importSideControlUI <- renderUI({
@@ -277,22 +284,22 @@ server <- function(input, output, session) {
         })
         return()
       }
-      
+
       # side panel
       output$importSideControlUI <- renderUI({
         tagList(
           fluidRow(
             column(4,wellPanel(
-              
+
               h5("Analysis from ptcSEA run:", tags$b(rv$run_name))))
-          ) 
+          )
         )
       })
       url <- paste(session$clientData$url_protocol, "//", session$clientData$url_hostname, ":", session$clientData$url_port, session$clientData$url_pathname, sep = "")
       output$importControlUI <- renderUI({
         tagList(
           p("Your dataset is imported in the pCtSEA results viewer."),
-          
+
           p("You can also download your Zip file with your results here:",
             downloadButton(outputId = 'downloadData', label = "Download results Zip")),
           p("You could come back anytime here ", a(url, href = url), " and import the zip file to explore the results again."),
@@ -305,7 +312,7 @@ server <- function(input, output, session) {
           )
         )
       })
-      
+
       # create download data button
       output$downloadData <- downloadHandler(
         filename = inputFileName,
@@ -350,9 +357,9 @@ server <- function(input, output, session) {
         rv$umap_sig001_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.01_scatter")
         rv$umap_sig005_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.05_scatter")
       }
-      
-      
-      
+
+
+
     }else{
       output$importSideControlUI <- renderUI({
         tagList(
@@ -375,7 +382,7 @@ server <- function(input, output, session) {
                    textOutput(outputId = "inputDataError")
             )
           ),
-          
+
           fluidRow(
             column(width = 6,
                    wellPanel(
@@ -384,15 +391,19 @@ server <- function(input, output, session) {
             )
           )
         )
-        
+
         #####################################
       })
     }
   }) # end of observe
-  
-  
-  
-  
+
+
+  output$analysis_url <- renderUI({
+    tagList("Go back to PCTSEA Analysis page: ", a("http://sealion.scripps.edu:28080/pctsea-web/analyze", href="http://sealion.scripps.edu:28080/pctsea-web/analyze"))
+  }
+  )
+
+
   rv <- reactiveValues(errorMessage="",
                        scoresCalculationsTable=NULL,
                        unziped_files=NULL,
@@ -419,16 +430,16 @@ server <- function(input, output, session) {
   source("./server/Suprema.R", local=TRUE)
   source("./server/Umap.R", local=TRUE)
   source("./server/Help.R", local=TRUE)
-  
+
   output$data_loaded <- reactive({FALSE})
   outputOptions(output, "data_loaded", suspendWhenHidden = FALSE)
-  
+
   # get files by uploading them and unzip them
   observeEvent(input$inputUploadedFile, {
     file <- input$inputUploadedFile
     tmp <- tools::file_path_sans_ext(basename(file$name))
     rv$run_name <- str_extract(tmp, '[^_]+$') # extract every after the last '_' until the end
-    
+
     zipfilepath = file$datapath
     withProgress({
       setProgress(message = "Receiving file...", value = 0)
@@ -438,14 +449,14 @@ server <- function(input, output, session) {
       file.move(files = c(zipfilepath) , destinations = "data/", overwrite = TRUE)
       # now we need to rename it to its original name
       file.rename(from = paste0("data/", basename(zipfilepath)), to = newZipFilepath)
-      
+
       folderTo <- paste0("data/", tools::file_path_sans_ext(basename(file$name)))
       # only unzip if the folder doesn't exist
       if(!file.exists(folderTo)){
         setProgress(message = "Unzipping results...", value = 0.1)
         unzip(newZipFilepath, exdir = "data")
       }
-      
+
       setProgress(message = "Results unzipped", value = 1)
     },
     detail = "This just will take a few seconds"
@@ -463,14 +474,14 @@ server <- function(input, output, session) {
     rv$umap_KStest_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_KStest_scatter")
     rv$umap_sig001_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.01_scatter")
     rv$umap_sig005_file <- get_global_file(rv$unziped_files, rv$run_name, "umap_sig_0.05_scatter")
-    
-    # jump to enrichment table 
+
+    # jump to enrichment table
     updateTabsetPanel(session, "tabs", selected = "Enrichment Table")
   })
-  
-  
-  
-  
+
+
+
+
   # select the scores file
   # scores_file <- eventReactive(rv$unziped_files,{
   #   browser()
@@ -484,19 +495,19 @@ server <- function(input, output, session) {
   #          table = read.csv(file = scores_file(), header = TRUE, sep = "\t")
   #     })
   # })
-  
-  
+
+
   output$inputDataError <- renderText(rv$errorMessage)
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
+
+
+
+
 }
 
 
