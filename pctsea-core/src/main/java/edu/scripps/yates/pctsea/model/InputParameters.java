@@ -7,12 +7,18 @@ import edu.scripps.yates.pctsea.db.Dataset;
 public class InputParameters {
 	@Override
 	public String toString() {
-		return "InputParameters [writeCorrelationsFile=" + writeCorrelationsFile + ", email=" + email
+		String string = "InputParameters [writeCorrelationsFile=" + writeCorrelationsFile + ", email=" + email
 				+ ", inputDataFile=" + inputDataFile + ", minCorrelation=" + minCorrelation + ", minGenesCells="
 				+ minGenesCells + ", outputPrefix=" + outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations="
 				+ numPermutations + ", cellTypesClassification=" + cellTypesClassification + ", generatePDFCharts="
 				+ generatePDFCharts + ", minCellsPerCellType=" + minCellsPerCellType + ", plotNegativeEnriched="
-				+ plotNegativeEnriched + ", dataset=" + dataset.getTag() + "]";
+				+ plotNegativeEnriched + ", dataset=";
+		if (dataset != null) {
+			string += dataset.getTag();
+		} else {
+			string += "not specified";
+		}
+		return string + "]";
 	}
 
 //	private String getSeparatedValueString(Set<String> datasets2, String separator) {
@@ -117,7 +123,7 @@ public class InputParameters {
 	}
 
 	public void setGeneratePDFCharts(boolean generateCharts) {
-		this.generatePDFCharts = generateCharts;
+		generatePDFCharts = generateCharts;
 	}
 
 	public int getMinCellsPerCellType() {

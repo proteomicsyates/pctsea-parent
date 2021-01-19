@@ -243,17 +243,29 @@ public class PCTSEA {
 		logStatus("Before starting...");
 		logInputParams(getInputParameters());
 		logStatus("Starting...");
-		logStatus("Looking for dataset in DB with tag '" + getInputParameters().getDataset().getTag() + "'...");
+
 		// check dataset input parameters
-		final List<Dataset> datasetFromDB = datasetMongoRepo.findByTag(getInputParameters().getDataset().getTag());
-		logStatus(datasetFromDB.size() + " datasets in DB with tag'" + getInputParameters().getDataset().getTag());
-		if (datasetFromDB == null || datasetFromDB.isEmpty()) {
+		List<Dataset> datasetFromDB = null;
+		if (getInputParameters().getDataset() != null) {
+			logStatus("Looking for dataset in DB with tag '" + getInputParameters().getDataset().getTag() + "'...");
+			datasetFromDB = datasetMongoRepo.findByTag(getInputParameters().getDataset().getTag());
+			logStatus(datasetFromDB.size() + " datasets in DB with tag'" + getInputParameters().getDataset().getTag());
+
+			if (datasetFromDB == null || datasetFromDB.isEmpty()) {
+				final List<String> datasetTags = datasetMongoRepo.findAll().stream().map(dataset -> dataset.getTag())
+						.sorted().collect(Collectors.toList());
+				final String datasetsString = StringUtils.getSortedSeparatedValueStringFromChars(datasetTags, ",");
+				throw new IllegalArgumentException("Dataset " + getInputParameters().getDataset().getTag()
+						+ " doesn't exist in DB. Available datasets are: " + datasetsString);
+			}
+		} else {
 			final List<String> datasetTags = datasetMongoRepo.findAll().stream().map(dataset -> dataset.getTag())
 					.sorted().collect(Collectors.toList());
-			throw new IllegalArgumentException("Dataset " + getInputParameters().getDataset().getTag()
-					+ " doesn't exist in DB. Available datasets are: "
-					+ StringUtils.getSortedSeparatedValueStringFromChars(datasetTags, ","));
+			final String datasetsString = StringUtils.getSortedSeparatedValueStringFromChars(datasetTags, ",");
+			throw new IllegalArgumentException(
+					"Dataset is not specified! Use '-datasets' option with any of these values: " + datasetsString);
 		}
+
 		// first of all create a time stamp
 		currentTimeStamp = createTimeStamp(prefix);
 		// create log
