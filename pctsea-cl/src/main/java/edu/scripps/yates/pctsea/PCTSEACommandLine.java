@@ -293,7 +293,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		//
 		final Option datasets = new Option(InputParameters.DATASETS, true,
 				"Comma separated values of the dataset against you want to analyze your data.");
-		option5.setRequired(true);
+		datasets.setRequired(true);
 		options.add(datasets);
 
 		final Option writeCorrelationsFileOpton = new Option(InputParameters.WRITE_CORRELATIONS, false,
