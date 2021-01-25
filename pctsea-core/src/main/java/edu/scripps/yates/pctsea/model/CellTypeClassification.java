@@ -21,8 +21,8 @@ import gnu.trove.list.array.TFloatArrayList;
 import gnu.trove.map.hash.THashMap;
 
 public class CellTypeClassification {
-	private final String name;
-	private final double hypergeometricPValue;
+	private String name;
+	private double hypergeometricPValue;
 	private float enrichmentUnweightedScore;
 	private float enrichmentScore = Float.NaN;
 	private long numCellsOfType;
@@ -57,6 +57,7 @@ public class CellTypeClassification {
 	private int sizeA;
 	private int sizeB;
 	private double ksTestCorrectedPValue;
+	private ArrayList<GeneOccurrence> geneOccurrences;
 
 	public long getNumCellsOfTypePassingCorrelationThreshold() {
 		return numCellsOfTypePassingCorrelationThreshold;
@@ -89,7 +90,7 @@ public class CellTypeClassification {
 	}
 
 	public void setEnrichment(float supremum, float dStatistic, int supremumX, double normalizedSupremumX) {
-		this.enrichmentScore = supremum;
+		enrichmentScore = supremum;
 		this.dStatistic = dStatistic;
 		this.supremumX = supremumX;
 		this.normalizedSupremumX = normalizedSupremumX;
@@ -115,15 +116,15 @@ public class CellTypeClassification {
 	}
 
 	public TFloatList getRandomEnrichmentScores() {
-		return this.randomEnrichmentScores;
+		return randomEnrichmentScores;
 	}
 
 	public TFloatList getNormalizedRandomEnrichmentScores() {
-		return this.normalizedRandomEnrichmentScores;
+		return normalizedRandomEnrichmentScores;
 	}
 
 	public TFloatList getRandomKSTestDStatistics() {
-		return this.randomKSTestStatistics;
+		return randomKSTestStatistics;
 	}
 
 	public long getNumCellsOfType() {
@@ -135,41 +136,43 @@ public class CellTypeClassification {
 	}
 
 	public void setNumCellsOfTypePassingCorrelationThreshold(long numCellsOfTypeWithPositiveCorrelation) {
-		this.numCellsOfTypePassingCorrelationThreshold = numCellsOfTypeWithPositiveCorrelation;
+		numCellsOfTypePassingCorrelationThreshold = numCellsOfTypeWithPositiveCorrelation;
 
 	}
 
 	public void setSingleCells(List<SingleCell> cellsOfCellType) {
-		this.singleCellsOfThisType.addAll(cellsOfCellType);
+		singleCellsOfThisType.addAll(cellsOfCellType);
 	}
 
 	public List<GeneOccurrence> getRankingOfGenesThatContributedToTheCorrelation(
 			CorrelationThreshold correlationThreshold) {
-		final Map<String, GeneOccurrence> map = new THashMap<String, GeneOccurrence>();
-		final List<SingleCell> cells = correlationThreshold.getSingleCellsPassingThreshold(singleCellsOfThisType);
-		for (final SingleCell singleCell : cells) {
-			final Set<String> genes = singleCell.getGenesForCorrelation().stream().collect(Collectors.toSet());
-			for (final String gene : genes) {
-				if (!map.containsKey(gene)) {
-					map.put(gene, new GeneOccurrence(gene));
+		if (geneOccurrences == null || geneOccurrences.isEmpty()) {
+			final Map<String, GeneOccurrence> map = new THashMap<String, GeneOccurrence>();
+			final List<SingleCell> cells = correlationThreshold.getSingleCellsPassingThreshold(singleCellsOfThisType);
+			for (final SingleCell singleCell : cells) {
+				final Set<String> genes = singleCell.getGenesForCorrelation().stream().collect(Collectors.toSet());
+				for (final String gene : genes) {
+					if (!map.containsKey(gene)) {
+						map.put(gene, new GeneOccurrence(gene));
+					}
+					map.get(gene).incrementOccurrence();
 				}
-				map.get(gene).incrementOccurrence();
 			}
-		}
-		final List<GeneOccurrence> geneOccurrences = new ArrayList<GeneOccurrence>();
-		geneOccurrences.addAll(map.values());
-		Collections.sort(geneOccurrences, new Comparator<GeneOccurrence>() {
+			geneOccurrences = new ArrayList<GeneOccurrence>();
+			geneOccurrences.addAll(map.values());
+			Collections.sort(geneOccurrences, new Comparator<GeneOccurrence>() {
 
-			@Override
-			public int compare(GeneOccurrence o1, GeneOccurrence o2) {
-				final int ret = Integer.compare(o2.getOccurrence(), o1.getOccurrence());
-				if (ret != 0) {
-					return ret;
-				} else {
-					return o1.getGene().compareTo(o2.getGene());
+				@Override
+				public int compare(GeneOccurrence o1, GeneOccurrence o2) {
+					final int ret = Integer.compare(o2.getOccurrence(), o1.getOccurrence());
+					if (ret != 0) {
+						return ret;
+					} else {
+						return o1.getGene().compareTo(o2.getGene());
+					}
 				}
-			}
-		});
+			});
+		}
 		return geneOccurrences;
 	}
 
@@ -186,12 +189,41 @@ public class CellTypeClassification {
 		return sb.toString();
 	}
 
+	/**
+	 * parse a geneOccurrence line in the opposite order than the getter!
+	 * 
+	 * @param geneOccurrencesLine
+	 */
+	public void setRankingOfGenesThatContributedToTheCorrelation(String geneOccurrencesLine) {
+		final List<String> set = new ArrayList<String>();
+		if (geneOccurrencesLine.contains(",")) {
+			final String[] split = geneOccurrencesLine.split(",");
+			for (final String string : split) {
+				set.add(string);
+			}
+		} else {
+			set.add(geneOccurrencesLine);
+		}
+		geneOccurrences = new ArrayList<GeneOccurrence>();
+		for (final String geneOcurrenceString : set) {
+			// the gene is before the brackets
+			final String geneName = geneOcurrenceString.substring(0, geneOcurrenceString.indexOf("["));
+			// the ocurrence is in between the brackes
+			final String ocurrenceString = geneOcurrenceString.substring(geneOcurrenceString.indexOf("[") + 1,
+					geneOcurrenceString.indexOf("]"));
+			final int occurrence = Integer.valueOf(ocurrenceString);
+			final GeneOccurrence geneOcurrence = new GeneOccurrence(geneName);
+			geneOcurrence.setOccurrence(occurrence);
+			geneOccurrences.add(geneOcurrence);
+		}
+	}
+
 	public void addToCellTypeCorrelationDistribution(float correlationValue) {
-		this.cellTypeCorrelationDistribution.add(correlationValue);
+		cellTypeCorrelationDistribution.add(correlationValue);
 	}
 
 	public void addOtherCellTypesCorrelationDistribution(float b) {
-		this.otherCellTypesCorrelationDistribution.add(b);
+		otherCellTypesCorrelationDistribution.add(b);
 	}
 
 	public TFloatList getCellTypeCorrelationDistribution() {
@@ -203,7 +235,7 @@ public class CellTypeClassification {
 	}
 
 	public void setEnrichmentSignificance(double pvalue) {
-		this.enrichmentSignificance = pvalue;
+		enrichmentSignificance = pvalue;
 	}
 
 	public double getEnrichmentSignificance() {
@@ -211,15 +243,15 @@ public class CellTypeClassification {
 	}
 
 	public void clearCellTypeDistribution() {
-		if (this.cellTypeCorrelationDistribution != null) {
-			this.cellTypeCorrelationDistribution.clear();
+		if (cellTypeCorrelationDistribution != null) {
+			cellTypeCorrelationDistribution.clear();
 		}
 
 	}
 
 	public void clearOutsideCellTypeDistribution() {
-		if (this.otherCellTypesCorrelationDistribution != null) {
-			this.otherCellTypesCorrelationDistribution.clear();
+		if (otherCellTypesCorrelationDistribution != null) {
+			otherCellTypesCorrelationDistribution.clear();
 		}
 	}
 
@@ -228,7 +260,7 @@ public class CellTypeClassification {
 	}
 
 	public void setCasimirsEnrichmentScore(float casimirsEnrichmentScore2) {
-		this.casimirsEnrichmentScore = casimirsEnrichmentScore2;
+		casimirsEnrichmentScore = casimirsEnrichmentScore2;
 	}
 
 	@Override
@@ -238,7 +270,7 @@ public class CellTypeClassification {
 	}
 
 	public void setCorrelationDistributionChart(JFreeChart chart) {
-		this.correlationDistributionChart = chart;
+		correlationDistributionChart = chart;
 	}
 
 	public void setEnrichmentScoreCalculationLineChart(JFreeChart chartScoreCalculation) {
@@ -247,17 +279,17 @@ public class CellTypeClassification {
 	}
 
 	public JFreeChart getEnrichmentScorecalculationLineChart() {
-		return this.chartScoreCalculation;
+		return chartScoreCalculation;
 	}
 
 	public List<File> saveCharts(File resultsSubFolder, String prefix, boolean generatePDFCharts) throws IOException {
 		final List<File> txtfiles = new ArrayList<File>();
-		txtfiles.add(saveChartToFileAndToBufferedImage(this.correlationDistributionChart, this.getName() + "_corr",
+		txtfiles.add(saveChartToFileAndToBufferedImage(correlationDistributionChart, getName() + "_corr",
 				resultsSubFolder, prefix, generatePDFCharts));
-		txtfiles.add(saveChartToFileAndToBufferedImage(this.chartScoreCalculation, this.getName() + "_ews",
-				resultsSubFolder, prefix, generatePDFCharts));
-		txtfiles.add(saveChartToFileAndToBufferedImage(this.histogramOfCorrelatingGenesChart,
-				this.getName() + "_genes_per_cell_hist", resultsSubFolder, prefix, generatePDFCharts));
+		txtfiles.add(saveChartToFileAndToBufferedImage(chartScoreCalculation, getName() + "_ews", resultsSubFolder,
+				prefix, generatePDFCharts));
+		txtfiles.add(saveChartToFileAndToBufferedImage(histogramOfCorrelatingGenesChart,
+				getName() + "_genes_per_cell_hist", resultsSubFolder, prefix, generatePDFCharts));
 		// remove any null
 		final List<File> ret = txtfiles.stream().filter(f -> f != null).collect(Collectors.toList());
 		return ret;
@@ -296,16 +328,16 @@ public class CellTypeClassification {
 
 	public void setUmapClustering(Float x, Float y) {
 
-		this.umapClusteringX = x;
-		this.umapClusteringY = y;
+		umapClusteringX = x;
+		umapClusteringY = y;
 	}
 
 	public Float getUmapClusteringX() {
-		return this.umapClusteringX;
+		return umapClusteringX;
 	}
 
 	public Float getUmapClusteringY() {
-		return this.umapClusteringY;
+		return umapClusteringY;
 	}
 
 	/**
@@ -314,7 +346,7 @@ public class CellTypeClassification {
 	 * @param chart
 	 */
 	public void setHistogramOfCorrelatingGenesChart(JFreeChart chart) {
-		this.histogramOfCorrelatingGenesChart = chart;
+		histogramOfCorrelatingGenesChart = chart;
 
 	}
 
@@ -327,8 +359,12 @@ public class CellTypeClassification {
 	}
 
 	public void setSecondaryEnrichment(float secondaryEnrichmentWeigthedScore, int secondarySupremumX) {
-		this.secondaryEnrichmentScore = secondaryEnrichmentWeigthedScore;
+		secondaryEnrichmentScore = secondaryEnrichmentWeigthedScore;
 		this.secondarySupremumX = secondarySupremumX;
+	}
+
+	public void setSecondaryEnrichment(float secondaryEnrichmentWeigthedScore) {
+		secondaryEnrichmentScore = secondaryEnrichmentWeigthedScore;
 	}
 
 	public Integer getSecondarySupremumX() {
@@ -336,7 +372,11 @@ public class CellTypeClassification {
 	}
 
 	public float getKSTestDStatistic() {
-		return this.dStatistic;
+		return dStatistic;
+	}
+
+	public void setKSTestDStatistic(float ksTestDStatistic) {
+		dStatistic = ksTestDStatistic;
 	}
 
 	public void setKSTestPvalue(double ksPvalue) {
@@ -344,7 +384,7 @@ public class CellTypeClassification {
 	}
 
 	public double getKSTestPvalue() {
-		return this.ksPvalue;
+		return ksPvalue;
 	}
 
 	/**
@@ -355,10 +395,10 @@ public class CellTypeClassification {
 	 * @return
 	 */
 	public float getNormalizedEnrichmentScore() {
-		if (this.normalizedEnrichmentScore == null) {
+		if (normalizedEnrichmentScore == null) {
 			if (Float.isNaN(enrichmentScore)) {
-				this.normalizedEnrichmentScore = Float.NaN;
-				return this.normalizedEnrichmentScore;
+				normalizedEnrichmentScore = Float.NaN;
+				return normalizedEnrichmentScore;
 			}
 			final TFloatList randomScores = getRandomEnrichmentScores();
 			final TFloatList positiveRandomScores = new TFloatArrayList();
@@ -384,18 +424,22 @@ public class CellTypeClassification {
 				final float normalizedRandomScore = randomScore / expectedRandomScore;
 				normalizedRandomScores.add(normalizedRandomScore);
 			}
-			this.normalizedRandomEnrichmentScores = new TFloatArrayList();
-			this.normalizedRandomEnrichmentScores.addAll(normalizedRandomScores);
+			normalizedRandomEnrichmentScores = new TFloatArrayList();
+			normalizedRandomEnrichmentScores.addAll(normalizedRandomScores);
 		}
-		return this.normalizedEnrichmentScore;
+		return normalizedEnrichmentScore;
+	}
+
+	public void setNormalizedEnrichmentScore(Float normalizedEnrichmentScore) {
+		this.normalizedEnrichmentScore = normalizedEnrichmentScore;
 	}
 
 	public void setEnrichmentFDR(double fdr) {
-		this.enrichmentFDR = fdr;
+		enrichmentFDR = fdr;
 	}
 
 	public double getEnrichmentFDR() {
-		return this.enrichmentFDR;
+		return enrichmentFDR;
 	}
 
 	public double getNormalizedSupremumX() {
@@ -424,5 +468,30 @@ public class CellTypeClassification {
 
 	public double getKSTestCorrectedPvalue() {
 		return ksTestCorrectedPValue;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+
+	}
+
+	public void setHypergeometricPValue(Double hypergeometricPValue) {
+		this.hypergeometricPValue = hypergeometricPValue;
+	}
+
+	public void setEnrichmentScore(float enrichmentScore) {
+		this.enrichmentScore = enrichmentScore;
+	}
+
+	public void setSecondarySupremumX(Integer secondarySupremum) {
+		secondarySupremumX = secondarySupremum;
+	}
+
+	public void setUmapClusteringX(Float umapX) {
+		umapClusteringX = umapX;
+	}
+
+	public void setUmapClusteringY(Float umapY) {
+		umapClusteringY = umapY;
 	}
 }

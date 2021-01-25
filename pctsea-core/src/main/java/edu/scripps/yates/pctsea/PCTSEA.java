@@ -74,6 +74,7 @@ import edu.scripps.yates.pctsea.model.charts.DoubleCategoryItemLabelGenerator;
 import edu.scripps.yates.pctsea.model.charts.IntegerCategoryItemLabelGenerator;
 import edu.scripps.yates.pctsea.model.charts.LabelGenerator;
 import edu.scripps.yates.pctsea.model.charts.LabeledXYDataset;
+import edu.scripps.yates.pctsea.utils.CellTypesOutputTableColumns;
 import edu.scripps.yates.pctsea.utils.EmailUtil;
 import edu.scripps.yates.pctsea.utils.PCTSEAUtils;
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
@@ -484,6 +485,7 @@ public class PCTSEA {
 	}
 
 	public static final FastDateFormat dateFormatter = FastDateFormat.getInstance("yyyy-MM-dd_HH-mm-ss");
+	public static final String NEGATIVE_EWS_FROM_HERE = "------------------------- Negative ews from here -------------------------";
 
 	private String createTimeStamp(String prefix) {
 		return FileUtils.checkInvalidCharacterNameForFileName(dateFormatter.format(new Date()) + "_" + prefix);
@@ -1717,67 +1719,19 @@ public class PCTSEA {
 
 			////////////////////
 			// Header of table
-			fw.write("cell_type" //
-					+ "\tnum_cells_of_type" //
-					+ "\tnum_total_cells" //
-					+ "\tnum_cells_of_type_corr" //
-					+ "\tnum_cells_corr" //
-					+ "\thyperG_p-value"//
-					+ "\tlog2_ratio"//
-//				+ "\teus"//
-//				+ "\teus p-value"//
-					+ "\tews"//
-					+ "\tnorm-ews"//
-					+ "\tsupX"//
-					+ "\tnorm-supX"//
-					+ "\tempirical_p-value"//
-					+ "\tFDR"//
-					+ "\t2nd_ews"//
-					+ "\t2nd_supX"//
-					+ "\tsize_a_type"//
-					+ "\tsize_b_others"//
-					+ "\tDab"//
-					+ "\tKS_p-value"//
-					+ "\tKS_p-value_BH_corrected"//
-					+ "\tKS_significance_level"//
-					+ "\tUmap_x"//
-					+ "\tUmap_y"//
+			fw.write(CellTypesOutputTableColumns.getHeaderString("\t") + "\n");
 
-					+ "\tgenes"//
-
-					+ "\n");
 			boolean positiveScore = true;
 			for (final CellTypeClassification cellType : cellTypeClassifications) {
-
 				if (positiveScore && cellType.getEnrichmentScore() < 0.0f) {
-					fw.write("------------------------- Negative ews from here -------------------------\n");
+					fw.write(NEGATIVE_EWS_FROM_HERE + "\n");
 					positiveScore = false;
 				}
-				fw.write(cellType.getName() + "\t" + cellType.getNumCellsOfType() + "\t" + numSingleCells + "\t"
-						+ cellType.getNumCellsOfTypePassingCorrelationThreshold() + "\t"
-						+ numSingleCellsWithPositiveCorrelation + "\t" + cellType.getHypergeometricPValue() + "\t"
-						+ cellType.getCasimirsEnrichmentScore() + "\t"
-//					+ cellType.getEnrichmentUnweightedScore() + "\t"
-						+ cellType.getEnrichmentScore() + "\t"//
-						+ cellType.getNormalizedEnrichmentScore() + "\t"//
-						+ cellType.getSupremumX() + "\t"//
-						+ cellType.getNormalizedSupremumX() + "\t"//
-						+ cellType.getEnrichmentSignificance() + "\t"//
-						+ cellType.getEnrichmentFDR() + "\t"//
-						+ parseNullableNumber(cellType.getSecondaryEnrichmentScore()) + "\t"//
-						+ parseNullableNumber(cellType.getSecondarySupremumX()) + "\t"//
-						+ cellType.getSizeA() + "\t" //
-						+ cellType.getSizeB() + "\t" //
-						+ cellType.getKSTestDStatistic() + "\t"//
-						+ cellType.getKSTestPvalue() + "\t"//
-						+ cellType.getKSTestCorrectedPvalue() + "\t"//
-						+ cellType.getSignificancyString() + "\t"//
-
-						+ parseNullableNumber(cellType.getUmapClusteringX()) + "\t" //
-						+ parseNullableNumber(cellType.getUmapClusteringY()) + "\t" //
-
-						+ cellType.getStringOfRankingOfGenesThatContributedToTheCorrelation(correlationThreshold)
-						+ "\n");
+				for (final CellTypesOutputTableColumns column : CellTypesOutputTableColumns.values()) {
+					fw.write(column.getValue(cellType, numSingleCells, numSingleCellsWithPositiveCorrelation,
+							correlationThreshold) + "\t");
+				}
+				fw.write("\n");
 				fw.flush();
 			}
 			logStatus("File writen at " + cellTypesFile.getAbsolutePath());
