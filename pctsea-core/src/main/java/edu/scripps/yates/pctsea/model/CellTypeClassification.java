@@ -65,7 +65,7 @@ public class CellTypeClassification {
 
 	public CellTypeClassification(String name, double hypergeometricPValue) {
 		super();
-		this.name = name;
+		setName(name);
 		this.hypergeometricPValue = hypergeometricPValue;
 	}
 
@@ -472,7 +472,13 @@ public class CellTypeClassification {
 
 	public void setName(String name) {
 		this.name = name;
+		try {
+			Double.valueOf(name);
+			// if it is a number append a prefix to avoid problems in R
+			this.name = "_" + name;
+		} catch (final NumberFormatException e) {
 
+		}
 	}
 
 	public void setHypergeometricPValue(Double hypergeometricPValue) {
