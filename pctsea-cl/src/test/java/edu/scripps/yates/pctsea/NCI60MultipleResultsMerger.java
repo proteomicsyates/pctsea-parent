@@ -59,7 +59,7 @@ public class NCI60MultipleResultsMerger {
 		}
 		System.out.println();
 		final File resultsZipFolder = new File(resultsZipFolderPathLocal);
-		final double fdrThreshold = 0.05;
+		final double fdrThreshold = 1;
 		final NCI60MultipleResultsMerger nci60resultsMerger = new NCI60MultipleResultsMerger(resultsZipFolder,
 				fdrThreshold);
 		try {

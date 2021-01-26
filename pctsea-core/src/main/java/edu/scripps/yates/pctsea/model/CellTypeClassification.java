@@ -471,13 +471,16 @@ public class CellTypeClassification {
 	}
 
 	public void setName(String name) {
-		this.name = name;
+		this.name = name.trim();
 		try {
-			Double.valueOf(name);
+			Double.valueOf(this.name);
 			// if it is a number append a prefix to avoid problems in R
 			this.name = "_" + name;
 		} catch (final NumberFormatException e) {
 
+		}
+		if ("".equals(this.name)) {
+			this.name = "_";
 		}
 	}
 
