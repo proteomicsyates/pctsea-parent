@@ -33,6 +33,9 @@ import gnu.trove.map.hash.TObjectIntHashMap;
 import gnu.trove.set.hash.THashSet;
 
 /**
+ * After generating the input for PCTSEA in
+ * {@link PCTSEAInputBatchGeneratorFromDTASelects}, we got the results, that is,
+ * 60 zip files.<br>
  * This class is going to read a set of zip files that are results from pctsea
  * and it will create a table in which each column will be a result and each
  * row, a significantly enriched cell type and each cell of the matrix, the
