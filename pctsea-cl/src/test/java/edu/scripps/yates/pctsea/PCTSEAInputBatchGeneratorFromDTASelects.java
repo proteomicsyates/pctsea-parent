@@ -38,8 +38,8 @@ public class PCTSEAInputBatchGeneratorFromDTASelects {
 
 	public static void main(String[] args) {
 		try {
-			File folder = new File("Z:\\share\\Salva\\data\\cbamberg\\NCI60_cell_lines\\all_data_092019");
-			String filesRegexp = "DTASelect-filter*";
+			File folder = new File("Z:\\share\\Salva\\data\\cbamberg\\NCI60_cell_lines\\dtaselects_regular_search");
+			String filesRegexp = "NCI60_*DTASelect-filter.txt";
 			String cellLineRegexp = "_(Line_\\d+)_";
 			if (args.length == 3) {
 				folder = new File(args[0]);

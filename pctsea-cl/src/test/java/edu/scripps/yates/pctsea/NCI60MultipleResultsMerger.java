@@ -32,15 +32,6 @@ import gnu.trove.map.hash.THashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import gnu.trove.set.hash.THashSet;
 
-/**
- * This class is going to read a set of zip files that are results from pctsea
- * and it will create a table in which each column will be a result and each
- * row, a significantly enriched cell type and each cell of the matrix, the
- * enrichment score or p-value
- * 
- * @author salvador
- *
- */
 public class NCI60MultipleResultsMerger {
 	private final Logger log = Logger.getLogger(NCI60MultipleResultsMerger.class);
 	public static final String resultsZipFolderPathLocal = "D:\\Dropbox (Scripps Research)\\NCI60_pctsea";
@@ -75,13 +66,16 @@ public class NCI60MultipleResultsMerger {
 
 	public void run(CellTypesOutputTableColumns columnToPrint) throws ZipException, IOException {
 		log.info("Processing results for " + columnToPrint.getColumnName());
+		if (columnToPrint == CellTypesOutputTableColumns.SUPX) {
+			log.info("asdf");
+		}
 		final File[] resultsFiles = getResultFiles(resultsZipFolderPath);
 		final Set<String> cellTypeNames = new THashSet<String>(); // to keep the total set of cell types across the
 		// experiments
 		final Map<String, Map<String, CellTypeClassification>> cellTypesByExperiment = new THashMap<String, Map<String, CellTypeClassification>>();
 		final ProgressCounter counter = new ProgressCounter(resultsFiles.length, ProgressPrintingType.EVERY_STEP, 0,
 				true);
-		counter.setSuffix("reading result files...");
+		counter.setSuffix("reading result files for " + columnToPrint.getColumnName() + "...");
 		for (final File resultsFile : resultsFiles) {
 			final String printIfNecessary = counter.printIfNecessary();
 			if (!"".equals(printIfNecessary)) {
