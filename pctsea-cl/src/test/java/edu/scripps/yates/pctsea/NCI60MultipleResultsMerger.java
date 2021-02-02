@@ -32,6 +32,18 @@ import gnu.trove.map.hash.THashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import gnu.trove.set.hash.THashSet;
 
+/**
+ * After generating the input for PCTSEA in
+ * {@link PCTSEAInputBatchGeneratorFromDTASelects}, we got the results, that is,
+ * 60 zip files.<br>
+ * This class is going to read a set of zip files that are results from pctsea
+ * and it will create a table in which each column will be a result and each
+ * row, a significantly enriched cell type and each cell of the matrix, the
+ * enrichment score or p-value
+ * 
+ * @author salvador
+ *
+ */
 public class NCI60MultipleResultsMerger {
 	private final Logger log = Logger.getLogger(NCI60MultipleResultsMerger.class);
 	public static final String resultsZipFolderPathLocal = "D:\\Dropbox (Scripps Research)\\NCI60_pctsea";
