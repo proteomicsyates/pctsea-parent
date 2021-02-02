@@ -96,6 +96,14 @@ public class CellTypeClassification {
 		this.normalizedSupremumX = normalizedSupremumX;
 	}
 
+	public void setSupremumX(int supremumX) {
+		this.supremumX = supremumX;
+	}
+
+	public void setNormalizedSupremumX(double normalizedSupremumX) {
+		this.normalizedSupremumX = normalizedSupremumX;
+	}
+
 	public void addRandomEnrichment(float supremum, float dStatistic) {
 		addRandomEnrichmentScore(supremum);
 		addRandomKSTestDStatistic(dStatistic);

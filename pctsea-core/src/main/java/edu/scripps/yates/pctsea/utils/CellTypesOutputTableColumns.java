@@ -193,6 +193,13 @@ public enum CellTypesOutputTableColumns {
 			case GENES:
 				ret.setRankingOfGenesThatContributedToTheCorrelation(columnValue);
 				break;
+			case SUPX:
+				ret.setSupremumX(Integer.valueOf(columnValue));
+				break;
+			case NORM_SUPX:
+				ret.setNormalizedSupremumX(Double.valueOf(columnValue));
+				break;
+
 			default:
 				break;
 			}
