@@ -48,6 +48,7 @@ public class InputParameters {
 	private boolean plotNegativeEnriched;
 	private Dataset dataset;
 	private boolean writeCorrelationsFile;
+	private String uniprotRelease;
 	public static final String EMAIL = "email";
 	public static final String OUT = "out";
 	public static final String PERM = "perm";
@@ -61,6 +62,7 @@ public class InputParameters {
 	public static final String MIN_CELLS_PER_CELL_TYPE = "min_cells_per_cell_type";
 	public static final String DATASETS = "datasets";
 	public static final String WRITE_CORRELATIONS = "write_correlations";
+	public static final String UNIPROT_RELEASE = "uniprot_release";
 
 	public String getInputDataFile() {
 		return inputDataFile;
@@ -164,5 +166,13 @@ public class InputParameters {
 
 	public void setWriteCorrelationsFile(boolean writeCorrelationsFile) {
 		this.writeCorrelationsFile = writeCorrelationsFile;
+	}
+
+	public String getUniprotRelease() {
+		return uniprotRelease;
+	}
+
+	public void setUniprotRelease(String uniprotRelease) {
+		this.uniprotRelease = uniprotRelease;
 	}
 }

@@ -40,6 +40,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private boolean plotNegativeEnrichedCellTypes;
 	private Dataset datasets;
 	private boolean writeCorrelationsFile;
+	private String uniprotRelease;
 
 	public PCTSEACommandLine(String[] args, DatasetMongoRepository dmr, ExpressionMongoRepository emr,
 			SingleCellMongoRepository scmr, PctseaRunLogRepository runLog, MongoBaseService mbs)
@@ -66,6 +67,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			pctsea.setPlotNegativeEnrichedCellTypes(plotNegativeEnrichedCellTypes);
 			pctsea.setDataset(datasets);
 			pctsea.setWriteCorrelationsFile(writeCorrelationsFile);
+			pctsea.setUniprotRelease(uniprotRelease);
 			// to make log go to the textarea when calling to the status listener
 			pctsea.setStatusListener(this);
 			final PCTSEAResult result = pctsea.run();
@@ -222,6 +224,10 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		if (cmd.hasOption(InputParameters.WRITE_CORRELATIONS)) {
 			writeCorrelationsFile = true;
 		}
+		uniprotRelease = null;
+		if (cmd.hasOption(InputParameters.UNIPROT_RELEASE)) {
+			uniprotRelease = cmd.getOptionValue(InputParameters.UNIPROT_RELEASE).trim();
+		}
 
 	}
 
@@ -299,6 +305,10 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		final Option writeCorrelationsFileOpton = new Option(InputParameters.WRITE_CORRELATIONS, false,
 				"Whether to write or not a file with the correlation values between all single cells and the input data. Default value if not provided: False.");
 		options.add(writeCorrelationsFileOpton);
+
+		final Option uniprotReleaseOpton = new Option(InputParameters.UNIPROT_RELEASE, true,
+				"Uniprot release to use as stated at ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/reldate.txt.");
+		options.add(uniprotReleaseOpton);
 
 		return options;
 	}

@@ -52,6 +52,7 @@ public class InteractorsExpressionsRetriever {
 	private final ExpressionMongoRepository expresssionsMongoRepository;
 	private final MongoBaseService mongoBaseService;
 	private final Dataset dataset;
+	private final String uniprotRelease;
 	private static InteractorsExpressionsRetriever instance;
 
 	/**
@@ -59,10 +60,12 @@ public class InteractorsExpressionsRetriever {
 	 * @param expresssionsMongoRepository
 	 * @param experimentalExpressionsFile
 	 * @param minNumInteractorsForCorrelation
+	 * @param uniprotRelease
 	 * @throws IOException
 	 */
 	public InteractorsExpressionsRetriever(ExpressionMongoRepository expresssionsMongoRepository,
-			MongoBaseService mongoBaseService, File experimentalExpressionsFile, Dataset dataset) throws IOException {
+			MongoBaseService mongoBaseService, File experimentalExpressionsFile, Dataset dataset, String uniprotRelease)
+			throws IOException {
 //		if (SingleCellsMetaInformationReader.singleCellIDsBySingleCellNameMap.isEmpty()) {
 //			throw new IllegalArgumentException(
 //					"We need to read the single cell metainformation before reading expressions");
@@ -73,6 +76,7 @@ public class InteractorsExpressionsRetriever {
 		this.dataset = dataset;
 		this.mongoBaseService = mongoBaseService;
 		this.expresssionsMongoRepository = expresssionsMongoRepository;
+		this.uniprotRelease = uniprotRelease;
 		genes = readExperimentalExpressionsFile(experimentalExpressionsFile);
 		instance = this;
 	}
@@ -291,7 +295,7 @@ public class InteractorsExpressionsRetriever {
 					new File(System.getProperty("user.dir")), true);
 			uplr.setRetrieveFastaIsoforms(false);
 			uplr.setRetrieveFastaIsoformsFromMainForms(false);
-			annotatedProteins.putAll(uplr.getAnnotatedProteins(null, uniprotAccs));
+			annotatedProteins.putAll(uplr.getAnnotatedProteins(uniprotRelease, uniprotAccs));
 
 			for (final String uniprotAcc : uniprotAccs) {
 				final int geneID = geneIDsByGeneNameMap.get(uniprotAcc);
