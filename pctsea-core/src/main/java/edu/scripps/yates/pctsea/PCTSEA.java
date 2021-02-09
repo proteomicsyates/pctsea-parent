@@ -160,6 +160,7 @@ public class PCTSEA {
 	private boolean writeCorrelationsFile = false;
 
 	private String fromEmail;
+	private String uniprotRelease;
 
 	public PCTSEA(InputParameters inputParameters, ExpressionMongoRepository expressionMongoRepo,
 			SingleCellMongoRepository singleCellMongoRepo, PctseaRunLogRepository runLogsRepo,
@@ -181,6 +182,7 @@ public class PCTSEA {
 		writeCorrelationsFile = inputParameters.isWriteCorrelationsFile();
 		email = inputParameters.getEmail();
 		dataset = inputParameters.getDataset();
+		uniprotRelease = inputParameters.getUniprotRelease();
 		// we check validity of prefix as file name
 		if (inputParameters.getOutputPrefix() != null) {
 			prefix = FileUtils.checkInvalidCharacterNameForFileName(inputParameters.getOutputPrefix());
@@ -304,7 +306,7 @@ public class PCTSEA {
 			final List<SingleCell> singleCellList = getSingleCellListFromDB(dataset);
 
 			interactorExpressions = new InteractorsExpressionsRetriever(expressionMongoRepo, mongoBaseService,
-					experimentExpressionFile, dataset);
+					experimentExpressionFile, dataset, uniprotRelease);
 			// log
 			runLog.setNumInputGenes(interactorExpressions.getInteractorsGeneIDs().size());
 
@@ -1758,6 +1760,8 @@ public class PCTSEA {
 		sb.append(InputParameters.LOAD_RANDOM + " = " + loadRandomDistributionsIfExist + "\n");
 		sb.append(InputParameters.MIN_CELLS_PER_CELL_TYPE + " = " + minCellsPerCellTypeForPDF + "\n");
 		sb.append(InputParameters.PLOT_NEGATIVE_ENRICHED + " = " + plotNegativeEnrichedCellTypes + "\n");
+		sb.append(InputParameters.WRITE_CORRELATIONS + " = " + writeCorrelationsFile + "\n");
+		sb.append(InputParameters.UNIPROT_RELEASE + " = " + uniprotRelease + "\n");
 		return sb.toString();
 	}
 
@@ -2403,5 +2407,9 @@ public class PCTSEA {
 
 	public void setWriteCorrelationsFile(boolean writeCorrelationsFile) {
 		this.writeCorrelationsFile = writeCorrelationsFile;
+	}
+
+	public void setUniprotRelease(String uniprotRelease) {
+		this.uniprotRelease = uniprotRelease;
 	}
 }

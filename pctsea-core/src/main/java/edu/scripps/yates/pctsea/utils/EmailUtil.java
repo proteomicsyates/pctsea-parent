@@ -43,6 +43,8 @@ public class EmailUtil {
 		body.append(InputParameters.PLOT_NEGATIVE_ENRICHED + ": " + inputParameters.isPlotNegativeEnriched() + "\n");
 		body.append(InputParameters.LOAD_RANDOM + ": " + inputParameters.isLoadRandom() + "\n");
 		body.append(InputParameters.CHARTS + ": " + inputParameters.isGeneratePDFCharts() + "\n");
+		body.append(InputParameters.WRITE_CORRELATIONS + ": " + inputParameters.isWriteCorrelationsFile() + "\n");
+		body.append(InputParameters.UNIPROT_RELEASE + ": " + inputParameters.getUniprotRelease() + "\n");
 		body.append("\n\n");
 		// results
 		body.append("You can access to your results at this location in the machine you run it: "
