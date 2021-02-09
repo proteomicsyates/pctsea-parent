@@ -78,9 +78,7 @@ public class NCI60MultipleResultsMerger {
 
 	public void run(CellTypesOutputTableColumns columnToPrint) throws ZipException, IOException {
 		log.info("Processing results for " + columnToPrint.getColumnName());
-		if (columnToPrint == CellTypesOutputTableColumns.SUPX) {
-			log.info("asdf");
-		}
+
 		final File[] resultsFiles = getResultFiles(resultsZipFolderPath);
 		final Set<String> cellTypeNames = new THashSet<String>(); // to keep the total set of cell types across the
 		// experiments
@@ -227,7 +225,7 @@ public class NCI60MultipleResultsMerger {
 	}
 
 	private File[] getResultFiles(File resultsZipFolderPath2) {
-		return resultsZipFolderPath2.listFiles(new FilenameFilter() {
+		final File[] ret = resultsZipFolderPath2.listFiles(new FilenameFilter() {
 
 			@Override
 			public boolean accept(File dir, String name) {
@@ -238,5 +236,6 @@ public class NCI60MultipleResultsMerger {
 				return false;
 			}
 		});
+		return ret;
 	}
 }
