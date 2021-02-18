@@ -8,6 +8,15 @@ public enum CellTypeBranch {
 				+ "'" + separator + "'" + CHARACTERISTIC + "'";
 	}
 
+	public static CellTypeBranch fromSource(String source) {
+		for (final CellTypeBranch cellTypeBranch : CellTypeBranch.values()) {
+			if (cellTypeBranch.name().equalsIgnoreCase(source)) {
+				return cellTypeBranch;
+			}
+		}
+
+		return null;
+	}
 //	public static List<CellTypeBranch> parseCellTypeBranchesString(String optionValue) {
 //		final List<CellTypeBranch> ret = new ArrayList<CellTypeBranch>();
 //		final Set<String> elements = new THashSet<String>();

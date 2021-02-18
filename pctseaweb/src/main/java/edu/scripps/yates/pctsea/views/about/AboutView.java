@@ -3,6 +3,8 @@ package edu.scripps.yates.pctsea.views.about;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
+import javax.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.vaadin.flow.component.Text;
@@ -32,6 +34,10 @@ public class AboutView extends Div {
 	private PctseaRunLogRepository runRepo;
 
 	public AboutView() {
+	}
+
+	@PostConstruct
+	public void init() {
 		setId("about-view");
 		add(new Label("Proteomics Cell Type Set Enrichment Analysis (PCTSEA)"));
 
@@ -86,8 +92,15 @@ public class AboutView extends Div {
 		for (int i = runs.size() - 1; i >= 0; i--) {
 			final PctseaRunLog run = runs.get(i);
 			final String started = dateFormat.format(run.getStarted());
-			final String finished = dateFormat.format(run.getFinished());
-			final String timeRunning = DatesUtil.getDescriptiveTimeFromMillisecs(run.getRunningTime());
+
+			String finished = "-";
+			if (run.getFinished() != null) {
+				finished = dateFormat.format(run.getFinished());
+			}
+			String timeRunning = "-";
+			if (run.getRunningTime() != 0l) {
+				timeRunning = DatesUtil.getDescriptiveTimeFromMillisecs(run.getRunningTime());
+			}
 			detailsRuns.addContent(new Text("Run " + run.getId() + ", started: " + started + ", finished: " + finished
 					+ ", run time: " + timeRunning + " # input genes: " + run.getNumInputGenes()));
 			detailsRuns.addThemeVariants(DetailsVariant.SMALL);

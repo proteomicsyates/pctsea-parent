@@ -36,7 +36,11 @@ public class PctseaRunLog {
 	}
 
 	public long getRunningTime() {
-		return finished.toInstant().toEpochMilli() - started.toInstant().toEpochMilli();
+		if (finished != null && started != null) {
+			return finished.toInstant().toEpochMilli() - started.toInstant().toEpochMilli();
+		} else {
+			return 0l;
+		}
 	}
 
 	public String getTimeStamp() {
