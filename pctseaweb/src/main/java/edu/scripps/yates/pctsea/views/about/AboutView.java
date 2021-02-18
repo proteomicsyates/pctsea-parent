@@ -1,6 +1,5 @@
 package edu.scripps.yates.pctsea.views.about;
 
-import java.text.SimpleDateFormat;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
@@ -11,6 +10,7 @@ import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.details.Details;
 import com.vaadin.flow.component.details.DetailsVariant;
+import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Image;
@@ -24,7 +24,6 @@ import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.util.PCTSEAConfigurationException;
 import edu.scripps.yates.pctsea.util.PCTSEALocalConfiguration;
 import edu.scripps.yates.pctsea.views.main.MainView;
-import edu.scripps.yates.utilities.dates.DatesUtil;
 
 @Route(value = "about", layout = MainView.class)
 @PageTitle("About")
@@ -87,25 +86,34 @@ public class AboutView extends Div {
 		// runs
 		final Details detailsRuns = new Details();
 		detailsRuns.setSummaryText("Runs log");
-		final List<PctseaRunLog> runs = runRepo.findAll();
-		final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-		for (int i = runs.size() - 1; i >= 0; i--) {
-			final PctseaRunLog run = runs.get(i);
-			final String started = dateFormat.format(run.getStarted());
-
-			String finished = "-";
-			if (run.getFinished() != null) {
-				finished = dateFormat.format(run.getFinished());
-			}
-			String timeRunning = "-";
-			if (run.getRunningTime() != 0l) {
-				timeRunning = DatesUtil.getDescriptiveTimeFromMillisecs(run.getRunningTime());
-			}
-			detailsRuns.addContent(new Text("Run " + run.getId() + ", started: " + started + ", finished: " + finished
-					+ ", run time: " + timeRunning + " # input genes: " + run.getNumInputGenes()));
-			detailsRuns.addThemeVariants(DetailsVariant.SMALL);
-		}
 		add(detailsRuns);
+		final List<PctseaRunLog> runs = runRepo.findAll();
+		final Grid<PctseaRunLog> gridRunLog = new Grid<>();
+		gridRunLog.setItems(runs);
+		gridRunLog.addColumn(PctseaRunLog::getTimeStamp).setHeader("Time Stamp");
+		gridRunLog.addColumn(PctseaRunLog::getStarted).setHeader("Started");
+		gridRunLog.addColumn(PctseaRunLog::getNumInputGenes).setHeader("# input genes");
+		detailsRuns.addContent(gridRunLog);
+		detailsRuns.addThemeVariants(DetailsVariant.FILLED);
+
+//		final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+//		for (int i = runs.size() - 1; i >= 0; i--) {
+//			final PctseaRunLog run = runs.get(i);
+//			final String started = dateFormat.format(run.getStarted());
+//
+//			String finished = "-";
+//			if (run.getFinished() != null) {
+//				finished = dateFormat.format(run.getFinished());
+//			}
+//			String timeRunning = "-";
+//			if (run.getRunningTime() != 0l) {
+//				timeRunning = DatesUtil.getDescriptiveTimeFromMillisecs(run.getRunningTime());
+//			}
+//			detailsRuns.addContent(new Text("Run " + run.getId() + ", started: " + started + ", finished: " + finished
+//					+ ", run time: " + timeRunning + " # input genes: " + run.getNumInputGenes()));
+//			detailsRuns.addThemeVariants(DetailsVariant.SMALL);
+//		}
+
 	}
 
 }
