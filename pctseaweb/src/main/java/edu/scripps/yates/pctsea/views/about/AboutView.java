@@ -92,18 +92,21 @@ public class AboutView extends Div {
 		detailsRuns.setSummaryText("Runs log");
 		add(detailsRuns);
 		final Details detailsRunsFinished = new Details();
-		detailsRunsFinished.setSummaryText("Finished runs");
+
 		detailsRuns.addContent(detailsRunsFinished);
 
 		final Details detailsRunsFailed = new Details();
-		detailsRunsFailed.setSummaryText("Failed runs");
+
 		detailsRuns.addContent(detailsRunsFailed);
 
 		final List<PctseaRunLog> runs = runRepo.findAll();
 		Collections.reverse(runs);
 		final Grid<PctseaRunLog> gridFinishedRuns = new Grid<>();
 
-		gridFinishedRuns.setItems(runs.stream().filter(run -> run.getFinished() != null).collect(Collectors.toList()));
+		final List<PctseaRunLog> finishedRuns = runs.stream().filter(run -> run.getFinished() != null)
+				.collect(Collectors.toList());
+		gridFinishedRuns.setItems(finishedRuns);
+		detailsRunsFinished.setSummaryText("Finished runs: " + finishedRuns.size());
 		gridFinishedRuns.addColumn(PctseaRunLog::getTimeStamp).setHeader("Time Stamp");
 		gridFinishedRuns.addColumn(PctseaRunLog::getStarted).setHeader("Started");
 		gridFinishedRuns.addColumn(PctseaRunLog::getFinished).setHeader("Finished");
@@ -142,7 +145,10 @@ public class AboutView extends Div {
 		detailsRunsFinished.addThemeVariants(DetailsVariant.FILLED);
 
 		final Grid<PctseaRunLog> gridFailingRuns = new Grid<>();
-		gridFailingRuns.setItems(runs.stream().filter(run -> run.getFinished() == null).collect(Collectors.toList()));
+		final List<PctseaRunLog> failedRuns = runs.stream().filter(run -> run.getFinished() == null)
+				.collect(Collectors.toList());
+		detailsRunsFailed.setSummaryText("Failed runs: " + failedRuns.size());
+		gridFailingRuns.setItems(failedRuns);
 		gridFailingRuns.addColumn(PctseaRunLog::getTimeStamp).setHeader("Time Stamp");
 		gridFailingRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
 
