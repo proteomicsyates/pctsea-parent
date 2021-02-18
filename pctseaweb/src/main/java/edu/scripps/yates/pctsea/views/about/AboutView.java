@@ -1,6 +1,8 @@
 package edu.scripps.yates.pctsea.views.about;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
@@ -16,6 +18,7 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Label;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.function.ValueProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
@@ -24,6 +27,7 @@ import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.util.PCTSEAConfigurationException;
 import edu.scripps.yates.pctsea.util.PCTSEALocalConfiguration;
 import edu.scripps.yates.pctsea.views.main.MainView;
+import edu.scripps.yates.utilities.dates.DatesUtil;
 
 @Route(value = "about", layout = MainView.class)
 @PageTitle("About")
@@ -87,33 +91,112 @@ public class AboutView extends Div {
 		final Details detailsRuns = new Details();
 		detailsRuns.setSummaryText("Runs log");
 		add(detailsRuns);
-		final List<PctseaRunLog> runs = runRepo.findAll();
-		final Grid<PctseaRunLog> gridRunLog = new Grid<>();
-		gridRunLog.setItems(runs);
-		gridRunLog.addColumn(PctseaRunLog::getTimeStamp).setHeader("Time Stamp");
-		gridRunLog.addColumn(PctseaRunLog::getStarted).setHeader("Started");
-		gridRunLog.addColumn(PctseaRunLog::getNumInputGenes).setHeader("# input genes");
-		detailsRuns.addContent(gridRunLog);
-		detailsRuns.addThemeVariants(DetailsVariant.FILLED);
+		final Details detailsRunsFinished = new Details();
+		detailsRunsFinished.setSummaryText("Finished runs");
+		detailsRuns.addContent(detailsRunsFinished);
 
-//		final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-//		for (int i = runs.size() - 1; i >= 0; i--) {
-//			final PctseaRunLog run = runs.get(i);
-//			final String started = dateFormat.format(run.getStarted());
-//
-//			String finished = "-";
-//			if (run.getFinished() != null) {
-//				finished = dateFormat.format(run.getFinished());
-//			}
-//			String timeRunning = "-";
-//			if (run.getRunningTime() != 0l) {
-//				timeRunning = DatesUtil.getDescriptiveTimeFromMillisecs(run.getRunningTime());
-//			}
-//			detailsRuns.addContent(new Text("Run " + run.getId() + ", started: " + started + ", finished: " + finished
-//					+ ", run time: " + timeRunning + " # input genes: " + run.getNumInputGenes()));
-//			detailsRuns.addThemeVariants(DetailsVariant.SMALL);
-//		}
+		final Details detailsRunsFailed = new Details();
+		detailsRunsFailed.setSummaryText("Failed runs");
+		detailsRuns.addContent(detailsRunsFailed);
+
+		final List<PctseaRunLog> runs = runRepo.findAll();
+		Collections.reverse(runs);
+		final Grid<PctseaRunLog> gridFinishedRuns = new Grid<>();
+
+		gridFinishedRuns.setItems(runs.stream().filter(run -> run.getFinished() != null).collect(Collectors.toList()));
+		gridFinishedRuns.addColumn(PctseaRunLog::getTimeStamp).setHeader("Time Stamp");
+		gridFinishedRuns.addColumn(PctseaRunLog::getStarted).setHeader("Started");
+		gridFinishedRuns.addColumn(PctseaRunLog::getFinished).setHeader("Finished");
+		gridFinishedRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
+
+			@Override
+			public String apply(PctseaRunLog run) {
+				if (run.getRunningTime() > 0l) {
+					return DatesUtil.getDescriptiveTimeFromMillisecs(run.getRunningTime());
+				}
+				return "";
+			}
+		}).setHeader("Running time");
+		gridFinishedRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
+
+			@Override
+			public String apply(PctseaRunLog run) {
+				if (run.getInputParameters() != null && run.getInputParameters().getDataset() != null) {
+					return run.getInputParameters().getDataset().getTag();
+				}
+				return "";
+			}
+		}).setHeader("Dataset");
+		gridFinishedRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
+
+			@Override
+			public String apply(PctseaRunLog run) {
+				if (run.getInputParameters() != null && run.getInputParameters().getEmail() != null) {
+					return anonymazeEmail(run.getInputParameters().getEmail());
+				}
+				return "";
+			}
+		}).setHeader("Email");
+		gridFinishedRuns.addColumn(PctseaRunLog::getNumInputGenes).setHeader("# input genes");
+		detailsRunsFinished.addContent(gridFinishedRuns);
+		detailsRunsFinished.addThemeVariants(DetailsVariant.FILLED);
+
+		final Grid<PctseaRunLog> gridFailingRuns = new Grid<>();
+		gridFailingRuns.setItems(runs.stream().filter(run -> run.getFinished() == null).collect(Collectors.toList()));
+		gridFailingRuns.addColumn(PctseaRunLog::getTimeStamp).setHeader("Time Stamp");
+		gridFailingRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
+
+			@Override
+			public String apply(PctseaRunLog run) {
+				if (run.getInputParameters() != null && run.getInputParameters().getDataset() != null) {
+					return run.getInputParameters().getDataset().getTag();
+				}
+				return "";
+			}
+		}).setHeader("Dataset");
+		gridFailingRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
+
+			@Override
+			public String apply(PctseaRunLog run) {
+				if (run.getInputParameters() != null && run.getInputParameters().getEmail() != null) {
+					return anonymazeEmail(run.getInputParameters().getEmail());
+				}
+				return "";
+			}
+		}).setHeader("Email");
+		detailsRunsFailed.addContent(gridFailingRuns);
+		detailsRunsFailed.addThemeVariants(DetailsVariant.FILLED);
 
 	}
 
+	protected String anonymazeEmail(String email) {
+		if (email.contains("@")) {
+			final String[] split = email.split("@");
+			final String userName = split[0];
+			String domain = split[1];
+			String extension = "";
+			if (domain.contains(".")) {
+				final String[] split2 = domain.split("\\.");
+				extension = split2[1];
+				domain = split2[0];
+			}
+			final StringBuilder sb = new StringBuilder();
+			sb.append(getHalfRedacted(userName) + " @ " + getHalfRedacted(domain) + "." + extension);
+			return sb.toString();
+		} else {
+			return getHalfRedacted(email);
+		}
+	}
+
+	private String getHalfRedacted(String string) {
+		final StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < string.length(); i++) {
+			if (i <= string.length() / 2) {
+				sb.append(string.charAt(i));
+			} else {
+				sb.append(".");
+			}
+		}
+		return sb.toString();
+	}
 }
