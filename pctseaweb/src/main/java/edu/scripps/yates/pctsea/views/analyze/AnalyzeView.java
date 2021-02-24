@@ -475,6 +475,9 @@ public class AnalyzeView extends VerticalLayout {
 				final String fileName = event.getFileName();
 				final File pctseaResultsFolder = PCTSEALocalConfiguration.getPCTSEAResultsFolder();
 				if (pctseaResultsFolder != null) {
+					if (!pctseaResultsFolder.exists()) {
+						pctseaResultsFolder.mkdirs();
+					}
 					inputFile = new File(pctseaResultsFolder.getAbsolutePath() + File.separator + fileName);
 				} else {
 					inputFile = Files.createTempFile("pctsea", "upload.txt").toFile();
