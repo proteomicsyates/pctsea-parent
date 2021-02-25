@@ -6,7 +6,8 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface DatasetMongoRepository extends MongoRepository<Dataset, String> {
 
-	List<Dataset> findByName(String name);
+	public List<Dataset> findByName(String name);
 
+//
 	List<Dataset> findByTag(String tag);
 }

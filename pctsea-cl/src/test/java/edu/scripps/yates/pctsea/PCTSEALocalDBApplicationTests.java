@@ -15,6 +15,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import edu.scripps.yates.pctsea.db.Dataset;
+import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.Expression;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.SingleCell;
@@ -41,6 +43,26 @@ public class PCTSEALocalDBApplicationTests {
 
 	@Autowired
 	ExpressionMongoRepository expressionsRepo;
+	@Autowired
+	DatasetMongoRepository datasetRepo;
+
+	@Test
+	public void testDatasets() {
+		final Dataset toSave = new Dataset("mitag", "miname", "reference_asdfasdf");
+		datasetRepo.save(toSave);
+
+		Assert.assertTrue(toSave.getId() != null);
+		System.out.println("Saved with ID:  " + toSave.getId());
+		final List<Dataset> findAll = datasetRepo.findAll();
+		for (final Dataset dataset : findAll) {
+			System.out.println(dataset.getId() + "\t'" + dataset.getTag() + "'\t" + dataset.getName());
+		}
+		final List<Dataset> datasets = datasetRepo.findByTag("HCL");
+		Assert.assertFalse(datasets.isEmpty());
+		for (final Dataset dataset : datasets) {
+			System.out.println(dataset.getId() + "\t" + dataset.getTag() + "\t" + dataset.getName());
+		}
+	}
 
 	@Test
 	public void testExpressions() {

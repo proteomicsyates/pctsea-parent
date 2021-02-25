@@ -27,7 +27,8 @@ public class MongoDBConfig {
 
 		final MongoTemplate mongoTemplate = new MongoTemplate(mongoClient, mongoProperties.getDatabase());
 		final MappingMongoConverter mongoMapping = (MappingMongoConverter) mongoTemplate.getConverter();
-		mongoMapping.setCustomConversions(customConversions()); // tell mongodb to use the custom converters
+		// disabled because it makes to save all to null and retrieve all as null
+//		mongoMapping.setCustomConversions(customConversions()); // tell mongodb to use the custom converters
 		mongoMapping.afterPropertiesSet();
 		return mongoTemplate;
 

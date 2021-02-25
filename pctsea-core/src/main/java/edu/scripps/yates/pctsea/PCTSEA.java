@@ -250,16 +250,21 @@ public class PCTSEA {
 		// check dataset input parameters
 		List<Dataset> datasetFromDB = null;
 		if (getInputParameters().getDataset() != null) {
-			logStatus("Looking for dataset in DB with tag '" + getInputParameters().getDataset().getTag() + "'...");
-			datasetFromDB = datasetMongoRepo.findByTag(getInputParameters().getDataset().getTag());
-			logStatus(datasetFromDB.size() + " datasets in DB with tag'" + getInputParameters().getDataset().getTag());
+			final String tag = getInputParameters().getDataset().getTag();
+			logStatus("Looking for dataset in DB with tag '" + tag + "'...");
+
+			datasetFromDB = datasetMongoRepo.findByTag(tag);
 
 			if (datasetFromDB == null || datasetFromDB.isEmpty()) {
-				final List<String> datasetTags = datasetMongoRepo.findAll().stream().map(dataset -> dataset.getTag())
-						.sorted().collect(Collectors.toList());
+				logStatus("Datasets in DB with tag'" + tag + "' are not found");
+				final List<Dataset> datasets = datasetMongoRepo.findAll();
+				final List<String> datasetTags = datasets.stream().map(dataset -> dataset.getTag()).sorted()
+						.collect(Collectors.toList());
 				final String datasetsString = StringUtils.getSortedSeparatedValueStringFromChars(datasetTags, ",");
-				throw new IllegalArgumentException("Dataset " + getInputParameters().getDataset().getTag()
-						+ " doesn't exist in DB. Available datasets are: " + datasetsString);
+				throw new IllegalArgumentException(
+						"Dataset " + tag + " doesn't exist in DB. Available datasets are: " + datasetsString);
+			} else {
+				logStatus(datasetFromDB.get(0).getTag() + " dataset found in DB with tag'" + tag);
 			}
 		} else {
 			final List<String> datasetTags = datasetMongoRepo.findAll().stream().map(dataset -> dataset.getTag())
