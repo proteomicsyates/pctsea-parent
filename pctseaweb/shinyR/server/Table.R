@@ -13,11 +13,19 @@ observeEvent(rv$unziped_files,{
     enrichment_file(file)
   }
 })
+# reads the enrichment table file until finding the row in which the columns are, and returns the number of lines to skip until reading that
+getLinesToSkip <- function(file){
+  all_content = readLines(file)
+  skip = grep("cell_type	num_cells_of_type",all_content)-1
+  return(skip)
+}
+
 # read enrichment file into a table in background
 enrichment_table <- eventReactive(enrichment_file(),{
   withProgress({
     setProgress(value = 0, message = "Reading enrichment table...")
-    t <- fread(file = enrichment_file(), header = TRUE, skip = 33,  sep = "\t", fill = TRUE) # IMPORTANT: 33 is the number of rows to skip until finding the actual table on the file
+    skip <- getLinesToSkip(enrichment_file())
+    t <- fread(file = enrichment_file(), header = TRUE, skip = skip,  sep = "\t", fill = TRUE) # IMPORTANT: 33 is the number of rows to skip until finding the actual table on the file
     setProgress(value = 0.5)
     if (!("ews" %in% colnames(t) )){
       showNotification(paste("Error reading file '",enrichment_file(),","), duration = NULL, type = "error")
