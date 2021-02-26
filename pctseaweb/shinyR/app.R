@@ -26,6 +26,9 @@ plan(multicore)
 
 options(shiny.maxRequestSize = 120*1024^2,
         shiny.reactlog = TRUE
+        # ,shiny.trace = TRUE
+        ,shiny.fullstacktrace = TRUE
+        ,launch.browser = TRUE
 )
 
 # load("./data/alldata.Rdata")
@@ -321,11 +324,12 @@ server <- function(input, output, session) {
         }
       )
       # unzip if not already unziped
-      folderTo <- paste(dirname(zipfilepath), "/", tools::file_path_sans_ext(basename(zipfilepath)), sep = "")
-      if (!file.exists(folderTo)){
+      data_folder <- dirname(zipfilepath)
+      folderTo <- paste(data_folder, "/", tools::file_path_sans_ext(basename(zipfilepath)), sep = "")
+       if (!file.exists(folderTo)){
         withProgress({
           setProgress(message = "Unzipping results...", value = 0)
-          unzip(zipfilepath, exdir = folderTo)
+          unzip(zipfilepath, exdir = data_folder)
           setProgress(message = "Unzipping results...", value = 0.5)
           rv$unziped_files <- folderTo
           rv$global_correlations_file <- get_global_file(rv$unziped_files, rv$run_name, "corr_hist")
@@ -500,21 +504,10 @@ server <- function(input, output, session) {
   output$inputDataError <- renderText(rv$errorMessage)
 
 
-
-
-
-
-
-
-
-
 }
 
-
-
-
 # Run the application
-shinyApp(ui = ui, server = server, options = ( launch.browser = TRUE))
+shinyApp(ui = ui, server = server)#, options = ( launch.browser = TRUE))
 
 
 
