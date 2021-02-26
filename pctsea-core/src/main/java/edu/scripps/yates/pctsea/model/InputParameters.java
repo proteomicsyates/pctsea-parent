@@ -10,7 +10,7 @@ public class InputParameters {
 		String string = "InputParameters [writeCorrelationsFile=" + writeCorrelationsFile + ", email=" + email
 				+ ", inputDataFile=" + inputDataFile + ", minCorrelation=" + minCorrelation + ", minGenesCells="
 				+ minGenesCells + ", outputPrefix=" + outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations="
-				+ numPermutations + ", cellTypesClassification=" + cellTypesClassification + ", generatePDFCharts="
+				+ numPermutations + ", cellTypesClassification=" + cellTypeBranch + ", generatePDFCharts="
 				+ generatePDFCharts + ", minCellsPerCellType=" + minCellsPerCellType + ", plotNegativeEnriched="
 				+ plotNegativeEnriched + ", dataset=";
 		if (dataset != null) {
@@ -42,7 +42,7 @@ public class InputParameters {
 	private String outputPrefix;
 	private boolean loadRandom;
 	private int numPermutations;
-	private CellTypeBranch cellTypesClassification;
+	private CellTypeBranch cellTypeBranch;
 	private boolean generatePDFCharts;
 	private int minCellsPerCellType;
 	private boolean plotNegativeEnriched;
@@ -112,12 +112,12 @@ public class InputParameters {
 		this.numPermutations = numPermutations;
 	}
 
-	public CellTypeBranch getCellTypesClassification() {
-		return cellTypesClassification;
+	public CellTypeBranch getCellTypeBranch() {
+		return cellTypeBranch;
 	}
 
-	public void setCellTypesClassification(CellTypeBranch cellTypesClassification) {
-		this.cellTypesClassification = cellTypesClassification;
+	public void setCellTypeBranch(CellTypeBranch cellTypeBranch) {
+		this.cellTypeBranch = cellTypeBranch;
 	}
 
 	public boolean isGeneratePDFCharts() {
