@@ -172,7 +172,7 @@ public class PCTSEA {
 		this.datasetMongoRepo = datasetMongoRepo;
 		this.runLogsRepo = runLogsRepo;
 		correlationThreshold = new CorrelationThreshold(inputParameters.getMinCorrelation());
-		cellTypeBranch = inputParameters.getCellTypesClassification();
+		cellTypeBranch = inputParameters.getCellTypeBranch();
 		experimentExpressionFile = new File(inputParameters.getInputDataFile());
 		generatePDFCharts = inputParameters.isGeneratePDFCharts();
 		loadRandomDistributionsIfExist = inputParameters.isLoadRandom();
@@ -476,7 +476,7 @@ public class PCTSEA {
 
 	private InputParameters getInputParameters() {
 		final InputParameters inputParameters = new InputParameters();
-		inputParameters.setCellTypesClassification(cellTypeBranch);
+		inputParameters.setCellTypeBranch(cellTypeBranch);
 		inputParameters.setEmail(email);
 		inputParameters.setGeneratePDFCharts(generatePDFCharts);
 		inputParameters.setInputDataFile(FilenameUtils.getName(experimentExpressionFile.getAbsolutePath()));

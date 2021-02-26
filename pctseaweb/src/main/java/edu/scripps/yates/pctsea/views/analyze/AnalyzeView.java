@@ -210,7 +210,7 @@ public class AnalyzeView extends VerticalLayout {
 		binder.forField(cellTypeBranchCombo).asRequired("Required")
 				.withValidator(cellTypeBranch -> cellTypeBranch != null,
 						"A cell type classification level must be selected.")
-				.bind(InputParameters::getCellTypesClassification, InputParameters::setCellTypesClassification);
+				.bind(InputParameters::getCellTypeBranch, InputParameters::setCellTypeBranch);
 
 		binder.forField(datasetsCombo).asRequired("Required")
 				.withValidator(dataset -> dataset != null, "A dataset must be selected")
