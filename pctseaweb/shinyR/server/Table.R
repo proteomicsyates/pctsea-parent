@@ -46,8 +46,12 @@ enrichment_table <- eventReactive(enrichment_file(),{
 output$enrichmentDataTable <- DT::renderDT(
   {
     req(enrichment_table())
+    table <- enrichment_table()
+    colnames(table)[3] <- "total num cells"
+    colnames(table)[4] <- "num cells of type with corr > threshold"
+    colnames(table)[5] <- "total num cells with corr > threshold"
     datatable(
-      enrichment_table(),
+      table,
       filter = 'top',
       selection = 'single',
       options = list(
@@ -76,14 +80,15 @@ observeEvent(enrichment_table(),{
 output$enrichmentDataTable2 <- DT::renderDT(
   {
     table <- enrichment_table()
-    table <- table[, c("cell type", "empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value")]
+    table <- table[, c("cell type", "num cells of type", "num cells of type corr", "empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value")]
+    colnames(table)[3] <- "num cells of type with corr > threshold"
     datatable(
       table,
       selection = 'single',
       options = list(
         pageLength = 10,
         dom = 'lftipr',
-        order = list(list(3, 'asc'), list(4, 'asc'))
+        order = list(list(5, 'asc'), list(6, 'asc'))
       )
     ) %>%
       formatRound(columns=c("empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value"), digits=4)
