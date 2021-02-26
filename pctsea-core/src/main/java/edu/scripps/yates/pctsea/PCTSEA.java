@@ -1722,7 +1722,7 @@ public class PCTSEA {
 			glossary.append(
 					"Umap_x and Umap_y columns:\tCoordinates of the cell type after performing a Uniform Manifold Approximation and Projection (UMAP) clustering of all cell types with positive ews\n");
 			glossary.append("'KS' term in this glossary:\tKolmogorov-Smirnov goodness-of-fit test\n");
-			fw.write(glossary.toString() + "\n\n\n");
+			fw.write(glossary.toString());
 
 			////////////////////
 			// Header of table
