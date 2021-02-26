@@ -403,7 +403,7 @@ server <- function(input, output, session) {
 
 
   output$analysis_url <- renderUI({
-    tagList("Go back to PCTSEA Analysis page: ", a("http://sealion.scripps.edu:28080/pctsea-web/analyze", href="http://sealion.scripps.edu:28080/pctsea-web/analyze"))
+    tagList("Go back to PCTSEA Analysis page: ", a("http://pctsea.scripps.edu/analyze", href="http://pctsea.scripps.edu/analyze"))
   }
   )
 
