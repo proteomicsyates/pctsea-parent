@@ -437,7 +437,7 @@ public class PCTSEA {
 						// update log
 						runLogsRepo.save(runLog);
 
-						if (runLog.getInputParameters().getEmail() != null) {
+						if (runLog.getInputParameters().getEmail() != null && fromEmail != null) {
 							EmailUtil.sendEmailWithResults(result, fromEmail);
 						}
 						log.info("PCTSEA got some results in "
@@ -1136,6 +1136,9 @@ public class PCTSEA {
 
 		PCTSEA.logStatus("Calculating enrichment scores significance...");
 		for (final CellTypeClassification cellType : cellTypeClassifications) {
+			if (cellType.getName().equalsIgnoreCase("neuron")) {
+				log.info("asdf");
+			}
 			final float realScore = cellType.getEnrichmentScore();
 			if (Float.isNaN(realScore)) {
 				cellType.setEnrichmentSignificance(Double.NaN);
@@ -1166,6 +1169,9 @@ public class PCTSEA {
 		final TFloatList totalRealNormalizedScores = new TFloatArrayList();
 		final TFloatList totalRandomNormalizedScores = new TFloatArrayList();
 		for (final CellTypeClassification cellType : cellTypeClassifications) {
+			if (cellType.getName().equalsIgnoreCase("neuron")) {
+				log.info("asdf");
+			}
 			if (Float.isNaN(cellType.getNormalizedEnrichmentScore())) {
 				continue;
 			}
@@ -1256,7 +1262,7 @@ public class PCTSEA {
 		// no others as requested by Casimir
 //				histogramDataset.addSeries(seriesOhersType);
 		binStats = Histogram.calcHistogram(totalRandomNormalizedScores.toArray(), min, max, numBins);
-		for (int i = 0; i < binStats.length; i++) {
+		for (int i = 0; i < binStats[0].length; i++) {
 			final double bin = binStats[2][i] / totalRandomNormalizedScores.size();
 			final double lowerBound = binStats[0][i];
 			final double upperBound = binStats[1][i];
@@ -1970,12 +1976,12 @@ public class PCTSEA {
 							+ "\n");
 				}
 			}
-
-			createWholeDatasetCorrelationDistributionChart(correlations);
-			if (writeCorrelationsFile) {
-				logStatus("Correlations written to file single cell expressions and input data are done.");
+			if (numPositiveCorrelated > 0) {
+				createWholeDatasetCorrelationDistributionChart(correlations);
+				if (writeCorrelationsFile) {
+					logStatus("Correlations written to file single cell expressions and input data are done.");
+				}
 			}
-
 			return numPositiveCorrelated;
 		} finally {
 			if (writeCorrelationsFile) {
