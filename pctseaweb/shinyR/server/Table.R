@@ -47,6 +47,7 @@ output$enrichmentDataTable <- DT::renderDT(
   {
     req(enrichment_table())
     table <- enrichment_table()
+    colnames(table)[2] <- "total num cells of type"
     colnames(table)[3] <- "total num cells"
     colnames(table)[4] <- "num cells of type with corr > threshold"
     colnames(table)[5] <- "total num cells with corr > threshold"
@@ -81,6 +82,7 @@ output$enrichmentDataTable2 <- DT::renderDT(
   {
     table <- enrichment_table()
     table <- table[, c("cell type", "num cells of type", "num cells of type corr", "empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value")]
+    colnames(table)[2] <- "total num cells of type"
     colnames(table)[3] <- "num cells of type with corr > threshold"
     datatable(
       table,
