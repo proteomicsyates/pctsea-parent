@@ -27,7 +27,7 @@ genes_table <- eventReactive(input$selectCellType, {
   if(is.null(file)){
     return()
   }
-  table = fread(file, header = FALSE, sep = "\t", showProgress = TRUE)
+  table = fread(file, header = TRUE, sep = "\t", showProgress = TRUE)
   table
 }, ignoreInit = TRUE)
 

@@ -134,6 +134,38 @@ public class MongoBaseService {
 		return ret;
 	}
 
+	public long countExpressionsByGeneAndDatasets(String gene, String dataset) {
+		if (dataset != null) {
+
+			final long count = emr.countByGeneAndProjectTag(gene, dataset);
+			if (count > 0) {
+				return count;
+			}
+
+		} else {
+			final long count = emr.countByGene(gene);
+			return count;
+		}
+
+		return 0l;
+	}
+
+	public long countExpressionsByGeneAndDatasets(String gene, Set<String> datasets) {
+		if (datasets != null && !datasets.isEmpty()) {
+			for (final String dataset : datasets) {
+				final long count = emr.countByGeneAndProjectTag(gene, dataset);
+				if (count > 0) {
+					return count;
+				}
+			}
+		} else {
+			final long count = emr.countByGene(gene);
+			return count;
+		}
+
+		return 0l;
+	}
+
 	public List<Expression> getExpressionByGene(String gene, Dataset dataset) {
 		final List<Expression> ret = new ArrayList<Expression>();
 

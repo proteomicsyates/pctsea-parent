@@ -1,10 +1,65 @@
-createPlotWithUmap <- function(table, title){
+createPlotWithUmap <- function(table, title, dimensions){
+  req(dimensions)
+  if (dimensions=="2D"){
+    createPlotWithUmap2D(table, title)
+  }else if (dimensions=="3D"){
+    createPlotWithUmap3D(table, title)
+  }else if (dimensions=="4D"){
+    createPlotWithUmap4D(table, title)
+  }
+}
+
+createPlotWithUmap3D <- function(table, title){
+  colnames(table)[1] <- 'cell type'
+  colnames(table)[2] <- 'UMAP1'
+  colnames(table)[3] <- 'UMAP2'
+  colnames(table)[4] <- 'UMAP3'
+  colnames(table)[5] <- 'UMAP4'
+  table %>% plot_ly(x = ~UMAP1, y = ~UMAP2, z = ~UMAP3, text = ~`cell type`, color =  ~`cell type`) %>% add_markers(size=3) %>% hide_legend() %>%
+    layout(
+      xaxis = list(
+        title = plot_axis_title_format
+      ),
+      yaxis = list(
+        title = plot_axis_title_format
+      ),
+      title = list(
+        text = title,
+        font = list(size = 10)
+      )
+      
+    )
+}
+createPlotWithUmap4D <- function(table, title){
+  colnames(table)[1] <- 'cell type'
+  colnames(table)[2] <- 'UMAP1'
+  colnames(table)[3] <- 'UMAP2'
+  colnames(table)[4] <- 'UMAP3'
+  colnames(table)[5] <- 'UMAP4'
+  table %>% plot_ly(x = ~UMAP1, y = ~UMAP2, z = ~UMAP3, text = ~`cell type`, color =  ~UMAP4) %>% add_markers(size=3) %>% hide_legend()%>%
+    layout(
+      xaxis = list(
+        title = plot_axis_title_format
+      ),
+      yaxis = list(
+        title = plot_axis_title_format
+      ),
+      title = list(
+        text = title,
+        font = list(size = 10)
+      )
+      
+    )
+}
+createPlotWithUmap2D <- function(table, title){
   req(table)
-  colnames(table) <- c('cell type', 'x', 'y')
+  colnames(table)[1] <- 'cell type'
+  colnames(table)[2] <- 'x'
+  colnames(table)[3] <- 'y'
   showLabels <- input$showLabels
   plot <- ggplot(data = table, aes(x = x, y = y, color = `cell type`, label = `cell type`)) +
     geom_point(shape = 1) +
-    labs(x = 'UMAP x', y = 'UMAP y') +
+    labs(x = 'UMAP 1', y = 'UMAP 2') +
     theme_classic() +
     theme(legend.position = 'none')
   if(showLabels){ 
@@ -40,16 +95,25 @@ createPlotWithUmap <- function(table, title){
 umap_all_table <- reactiveVal()
 observeEvent(rv$umap_all_file, {
   req(rv$umap_all_file)
-  table = fread(rv$umap_all_file, header = FALSE, sep = "\t", showProgress = TRUE)
+  print(paste("Reading file ", rv$umap_all_file))
+  table = fread(rv$umap_all_file, header = TRUE, sep = "\t", showProgress = TRUE)
   umap_all_table(table)
 })
-observeEvent(umap_all_table(),{
-  output$umapAllPlot <- renderPlotly(
-    umap_all_table() %>% 
-      createPlotWithUmap(title = 'UMAP clustering of all cell types<br> (no sig threshold)') %>% 
-      layout(dragmode = 'select') # to make selection by defaul
-  )
-})
+observeEvent( 
+  eventExpr = {
+    umap_all_table()
+    input$umapPlotDimensions
+  }
+  ,
+  handlerExpr = {
+    table <- umap_all_table()
+    dimensions <- input$umapPlotDimensions
+    output$umapAllPlot <- renderPlotly(
+      table %>% 
+        createPlotWithUmap(title = 'UMAP clustering of all cell types<br> (no sig threshold)', dimensions = dimensions) %>% 
+        layout(dragmode = 'select') # to make selection by defaul
+    )
+  })
 # umap.selection <- reactive({
 #   req(umap_all_table())
 #   event_data('plotly_selected', source = 'umap_selection')
@@ -59,53 +123,78 @@ observeEvent(umap_all_table(),{
 umap_hypG_table <- reactiveVal()
 observeEvent(rv$umap_hypG_file, {
   req(rv$umap_hypG_file)
-  table = fread(rv$umap_hypG_file, header = FALSE, sep = "\t", showProgress = TRUE)
+  table = fread(rv$umap_hypG_file, header = TRUE, sep = "\t", showProgress = TRUE)
   umap_hypG_table(table)
 })
-observeEvent(umap_hypG_table(),{
-  output$umapHypGPlot <- renderPlotly(
-    umap_hypG_table() %>% 
-      createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> by hypergeometric test (p<0.05)')
-  )
-})
+observeEvent( 
+  eventExpr = {
+    umap_hypG_table() 
+    input$umapPlotDimensions
+  }
+  ,handlerExpr = {
+    dimensions <- input$umapPlotDimensions
+    output$umapHypGPlot <- renderPlotly({
+      umap_hypG_table() %>% 
+        createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> by hypergeometric test (p<0.05)', dimensions = dimensions)
+    }
+    )
+  })
 
 umap_KStest_table <- reactiveVal()
-observeEvent(rv$umap_KStest_file, {
+observeEvent(  rv$umap_KStest_file, {
   req(rv$umap_KStest_file)
-  table = fread(rv$umap_KStest_file, header = FALSE, sep = "\t", showProgress = TRUE)
+  table = fread(rv$umap_KStest_file, header = TRUE, sep = "\t", showProgress = TRUE)
   umap_KStest_table(table)
 })
-observeEvent(umap_KStest_table(),{
-  output$umapKSTestPlot <- renderPlotly(
-    umap_KStest_table() %>% 
-      createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> by K-S test')
-  )
-})
+observeEvent(
+  eventExpr = {
+    umap_KStest_table()
+    input$umapPlotDimensions
+  },
+  handlerExpr = {
+    dimensions <- input$umapPlotDimensions
+    output$umapKSTestPlot <- renderPlotly(
+      umap_KStest_table() %>% 
+        createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> by K-S test', dimensions = dimensions)
+    )
+  })
 
 umap_sig001_table <- reactiveVal()
 observeEvent(rv$umap_sig001_file, {
   req(rv$umap_sig001_file)
-  table = fread(rv$umap_sig001_file, header = FALSE, sep = "\t", showProgress = TRUE)
+  table = fread(rv$umap_sig001_file, header = TRUE, sep = "\t", showProgress = TRUE)
   umap_sig001_table(table)
 })
-observeEvent(umap_sig001_table(),{
-  output$umapSig001Plot <- renderPlotly(
-    umap_sig001_table() %>% 
-      createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> (sig<0.01)')
-  )
-})
+observeEvent(
+  eventExpr = {
+    umap_sig001_table()
+    input$umapPlotDimensions
+  },
+  handlerExpr = {
+    dimensions <- input$umapPlotDimensions
+    output$umapSig001Plot <- renderPlotly(
+      umap_sig001_table() %>% 
+        createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> (sig<0.01)', dimensions = dimensions)
+    )
+  })
 
 umap_sig005_table <- reactiveVal()
 observeEvent(rv$umap_sig005_file, {
   req(rv$umap_sig005_file)
-  table = fread(rv$umap_sig005_file, header = FALSE, sep = "\t", showProgress = TRUE)
+  table = fread(rv$umap_sig005_file, header = TRUE, sep = "\t", showProgress = TRUE)
   umap_sig005_table(table)
 })
-observeEvent(umap_sig005_table(),{
-  output$umapSig005Plot <- renderPlotly(
-    umap_sig005_table() %>% 
-      createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> (sig<0.05)')
-  )
-})
+observeEvent(
+  eventExpr = {
+    umap_sig005_table()
+    input$umapPlotDimensions
+  },
+  handlerExpr = {
+    dimensions <- input$umapPlotDimensions 
+    output$umapSig005Plot <- renderPlotly(
+      umap_sig005_table() %>% 
+        createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> (sig<0.05)', dimensions = dimensions)
+    )
+  })
 
 

@@ -19,6 +19,7 @@ import edu.scripps.yates.pctsea.db.Dataset;
 import edu.scripps.yates.pctsea.db.Expression;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
+import edu.scripps.yates.pctsea.db.PctseaRunLog;
 import edu.scripps.yates.pctsea.model.Gene;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
@@ -53,6 +54,7 @@ public class InteractorsExpressionsRetriever {
 	private final MongoBaseService mongoBaseService;
 	private final Dataset dataset;
 	private final String uniprotRelease;
+	private final PctseaRunLog runLog;
 	private static InteractorsExpressionsRetriever instance;
 
 	/**
@@ -61,11 +63,13 @@ public class InteractorsExpressionsRetriever {
 	 * @param experimentalExpressionsFile
 	 * @param minNumInteractorsForCorrelation
 	 * @param uniprotRelease
+	 * @param runLog                          to log the number of genes found from
+	 *                                        input list in the database
 	 * @throws IOException
 	 */
 	public InteractorsExpressionsRetriever(ExpressionMongoRepository expresssionsMongoRepository,
-			MongoBaseService mongoBaseService, File experimentalExpressionsFile, Dataset dataset, String uniprotRelease)
-			throws IOException {
+			MongoBaseService mongoBaseService, File experimentalExpressionsFile, Dataset dataset, String uniprotRelease,
+			PctseaRunLog runLog) throws IOException {
 //		if (SingleCellsMetaInformationReader.singleCellIDsBySingleCellNameMap.isEmpty()) {
 //			throw new IllegalArgumentException(
 //					"We need to read the single cell metainformation before reading expressions");
@@ -73,6 +77,7 @@ public class InteractorsExpressionsRetriever {
 		// clear static
 		geneIDsByGeneNameMap.clear();
 		geneNamesByGeneIDMap.clear();
+		this.runLog = runLog;
 		this.dataset = dataset;
 		this.mongoBaseService = mongoBaseService;
 		this.expresssionsMongoRepository = expresssionsMongoRepository;
@@ -93,177 +98,76 @@ public class InteractorsExpressionsRetriever {
 	 * @param dataset
 	 * @throws IOException
 	 */
-	private void getSingleCellExpressionsFromDBOLD(List<String> inputProteinGeneList) {
-//		getSingleCellExpressionsFromDB(inputProteinGeneList);
-//		if (true)
-//			return;
-		PCTSEA.logStatus("Getting single-cell expression profiles with the input protein/gene list...");
-		PCTSEA.logStatus(geneIDsByGeneNameMap.size() + " - " + geneNamesByGeneIDMap.size());
-		final Set<String> singleCellNames = new THashSet<String>();
-		final List<String> genesNotFound = new ArrayList<String>();
-		final ProgressCounter counter = new ProgressCounter(inputProteinGeneList.size(),
-				ProgressPrintingType.PERCENTAGE_STEPS, 0, true);
-		counter.setSuffix("Getting expression profiles of interest...");
-
-		// get annotations from uniprot so I can map to gene names and their synonyms
-		final Map<String, Entry> annotatedProteins = new THashMap<String, Entry>();
-		final Set<String> uniprotAccs = inputProteinGeneList.stream().filter(p -> FastaParser.isUniProtACC(p))
-				.collect(Collectors.toSet());
-		if (!uniprotAccs.isEmpty()) {
-			final UniprotProteinLocalRetriever uplr = new UniprotProteinLocalRetriever(
-					new File(System.getProperty("user.dir")), true);
-			annotatedProteins.putAll(uplr.getAnnotatedProteins(null, uniprotAccs));
-		}
-		// first we have to figure out if the input list are uniprot names, and map then
-		// to the appropriate gene name that is present in the dataset
-		for (final String inputProteinGene : inputProteinGeneList) {
-			counter.increment();
-			final String printIfNecessary = counter.printIfNecessary();
-			if (!"".equals(printIfNecessary)) {
-				PCTSEA.logStatus(printIfNecessary);
-			}
-			int geneID = 0;
-			String geneName = inputProteinGene;
-			List<Expression> expressions = null;
-			if (uniprotAccs.contains(inputProteinGene)) {
-				expressions = expresssionsMongoRepository.findByGene(inputProteinGene);
-				if (expressions == null || expressions.isEmpty()) {
-					// look for gene names from uniprot
-					if (annotatedProteins.containsKey(inputProteinGene)) {
-						final Entry entry = annotatedProteins.get(inputProteinGene);
-						if (entry != null) {
-							final List<String> geneNames = getGeneNames(
-									UniprotEntryUtil.getGeneName(entry, false, true));
-							for (final String geneName2 : geneNames) {
-								expressions = expresssionsMongoRepository.findByGene(geneName2);
-								if (expressions != null && !expressions.isEmpty()) {
-									// change map between geneID and geneName
-									geneID = geneIDsByGeneNameMap.get(inputProteinGene);
-									geneIDsByGeneNameMap.put(geneName2, geneID);
-									geneIDsByGeneNameMap.remove(inputProteinGene);
-									geneNamesByGeneIDMap.put(geneID, geneName2);
-									geneName = geneName2;
-									break;
-								}
-							}
-						}
-					}
-				}
-			} else {
-				expressions = expresssionsMongoRepository.findByGene(geneName);
-				geneID = geneIDsByGeneNameMap.get(geneName);
-			}
-			if (expressions == null || expressions.isEmpty()) {
-				genesNotFound.add(inputProteinGene);
-				continue;
-			}
-
-			final Gene gene = new Gene(geneID, geneName);
-			genesById.put(geneID, gene);
-			geneIDs.add(geneID);
-			for (final Expression expression : expressions) {
-				if (dataset != null && !dataset.equals(expression.getProjectTag())) {
-//					System.out.println(projectID + " different than " + expression.getProject().getId());
-					continue;
-				}
-				final float interactorExpressionInSingleCell = expression.getExpression();
-				final String singleCellName = expression.getCellName();
-				singleCellNames.add(singleCellName);
-				final int singleCellID = SingleCellsMetaInformationReader
-						.getSingleCellIDBySingleCellName(singleCellName);
-
-				final SingleCell cell = SingleCellsMetaInformationReader.getSingleCellByCellID(singleCellID);
-
-				cell.addGeneExpressionValue(geneID, interactorExpressionInSingleCell);
-				gene.addExpressionValueInSingleCell(singleCellID, interactorExpressionInSingleCell);
-			}
-
-		}
-
-		final String message = "Expression values from " + singleCellNames.size() + " single cells in "
-				+ genesById.size() + " genes/proteins out of a total "
-				+ SingleCellsMetaInformationReader.getNumSingleCells() + " of single cells";
-		PCTSEA.logStatus(message);
-//		System.out.println(message);
-
-		if (!genesNotFound.isEmpty()) {
-			final String message2 = "Expression values from " + genesNotFound.size()
-					+ " genes were not found in the single cells dataset:";
-			PCTSEA.logStatus(message2);
-//			System.out.println(message2);
-			String message3 = "";
-			for (final String geneNotFound : genesNotFound) {
-				message3 += geneNotFound + ",";
-			}
-			PCTSEA.logStatus(message3);
-//			System.out.println(message3);
-		}
-
-	}
-
-	/**
-	 * 
-	 * @param cellsMetadata
-	 * @param singleCellExpressionsFile table with single cells as columns, and rows
-	 *                                  as gene/protein names
-	 * @param dataset
-	 * @throws IOException
-	 */
 	private void getSingleCellExpressionsFromDB(List<String> inputProteinGeneList) {
 		PCTSEA.logStatus("Getting single-cell expression profiles with the input protein/gene list...");
 //		PCTSEA.logStatus(geneIDsByGeneNameMap.size() + " - " + geneNamesByGeneIDMap.size());
 		final Set<String> singleCellNames = new THashSet<String>();
 		final List<String> genesNotFound = new ArrayList<String>();
+		final List<String> genesFound = new ArrayList<String>();
 
-		final Set<String> genes = getGenesFromInputList(inputProteinGeneList);
+		final Map<String, List<String>> genesByInputEntry = getGenesFromInputList(inputProteinGeneList);
 
-		final ProgressCounter counter = new ProgressCounter(genes.size(), ProgressPrintingType.PERCENTAGE_STEPS, 0,
-				true);
+		final ProgressCounter counter = new ProgressCounter(inputProteinGeneList.size(),
+				ProgressPrintingType.PERCENTAGE_STEPS, 0, true);
 		counter.setSuffix("Getting expression profiles of interest...");
-		for (final String geneName : genes) {
-
-			final List<Expression> expressions = mongoBaseService.getExpressionByGene(geneName, dataset);
+		for (final String inputProteinGene : inputProteinGeneList) {
+			boolean inputProteinGeneFound = false;
 			counter.increment();
 			final String printIfNecessary = counter.printIfNecessary();
 			if (!"".equals(printIfNecessary)) {
-				PCTSEA.logStatus(printIfNecessary);
+				PCTSEA.logStatus(printIfNecessary, false);
 			}
-			// it already has an id associated from the call to getGenesFromInputList
-			final int geneID = geneIDsByGeneNameMap.get(geneName);
-			if (expressions == null || expressions.isEmpty()) {
-				genesNotFound.add(geneName);
-				continue;
+			final List<String> genes = genesByInputEntry.get(inputProteinGene);
+			for (final String geneName : genes) {
+
+				final List<Expression> expressions = mongoBaseService.getExpressionByGene(geneName, dataset);
+
+				// it already has an id associated from the call to getGenesFromInputList
+				final int geneID = geneIDsByGeneNameMap.get(geneName);
+				if (expressions == null || expressions.isEmpty()) {
+					continue; // we try the next one
+				} else {
+					genesFound.add(geneName);
+				}
+
+				final Gene gene = new Gene(geneID, geneName);
+				genesById.put(geneID, gene);
+				geneIDs.add(geneID);
+
+				for (final Expression expression : expressions) {
+
+					final float interactorExpressionInSingleCell = expression.getExpression();
+					final String singleCellName = expression.getCellName();
+					singleCellNames.add(singleCellName);
+					final int singleCellID = SingleCellsMetaInformationReader
+							.getSingleCellIDBySingleCellName(singleCellName);
+
+					final SingleCell cell = SingleCellsMetaInformationReader.getSingleCellByCellID(singleCellID);
+					cell.addGeneExpressionValue(geneID, interactorExpressionInSingleCell);
+					gene.addExpressionValueInSingleCell(singleCellID, interactorExpressionInSingleCell);
+				}
+				if (!expressions.isEmpty()) {
+					inputProteinGeneFound = true;
+					// here we override any synonym that we could have associated with that geneID
+					// number, so that we final associated with the final actual gene name final
+					// that have the final expression values in final the DB
+					geneNamesByGeneIDMap.put(geneID, geneName.toUpperCase());
+					break;
+				}
 			}
-
-			final Gene gene = new Gene(geneID, geneName);
-			genesById.put(geneID, gene);
-			geneIDs.add(geneID);
-
-			for (final Expression expression : expressions) {
-
-				final float interactorExpressionInSingleCell = expression.getExpression();
-				final String singleCellName = expression.getCellName();
-				singleCellNames.add(singleCellName);
-				final int singleCellID = SingleCellsMetaInformationReader
-						.getSingleCellIDBySingleCellName(singleCellName);
-
-				final SingleCell cell = SingleCellsMetaInformationReader.getSingleCellByCellID(singleCellID);
-
-				cell.addGeneExpressionValue(geneID, interactorExpressionInSingleCell);
-				gene.addExpressionValueInSingleCell(singleCellID, interactorExpressionInSingleCell);
+			if (!inputProteinGeneFound) {
+				genesNotFound.add(inputProteinGene);
 			}
-
 		}
 
-		final String message = "Expression values from " + singleCellNames.size() + " single cells in "
-				+ genesById.size() + " genes/proteins out of a total "
-				+ SingleCellsMetaInformationReader.getNumSingleCells() + " of single cells";
-		PCTSEA.logStatus(message);
 //		System.out.println(message);
 
+		// log num input genes that are not found
+		runLog.setInputGenesNotFound(genesNotFound);
 		if (!genesNotFound.isEmpty()) {
-			final String message2 = "Expression values from " + genesNotFound.size()
-					+ " genes were not found in the single cells dataset:";
+			final String message2 = "Expression values from " + genesFound.size()
+					+ " input entries were found in the database. Expression values from " + genesNotFound.size()
+					+ " genes were NOT found in the single cells dataset:";
 			PCTSEA.logStatus(message2);
 //			System.out.println(message2);
 			String message3 = "";
@@ -273,18 +177,29 @@ public class InteractorsExpressionsRetriever {
 			PCTSEA.logStatus(message3);
 //			System.out.println(message3);
 		}
+		final String message = singleCellNames.size() + " single cells with expression values in " + genesById.size()
+				+ " different genes/proteins out of a total " + SingleCellsMetaInformationReader.getNumSingleCells()
+				+ " of single cells";
+		PCTSEA.logStatus(message);
 
 	}
 
-	private Set<String> getGenesFromInputList(List<String> inputProteinGeneList) {
-		final Set<String> genes = new THashSet<String>();
+	/**
+	 * Returns a map for each input element, mapped to a list of genes
+	 * 
+	 * @param inputProteinGeneList
+	 * @return
+	 */
+	private Map<String, List<String>> getGenesFromInputList(List<String> inputProteinGeneList) {
+		final Map<String, List<String>> genesByInputEntry = new THashMap<String, List<String>>();
 		// get annotations from uniprot so I can map to gene names and their synonyms
 		final List<String> uniprotAccs = new ArrayList<String>();
 		for (final String proteinGene : inputProteinGeneList) {
 			if (FastaParser.isUniProtACC(proteinGene)) {
 				uniprotAccs.add(proteinGene);
 			} else {
-				genes.add(proteinGene.toUpperCase());
+				genesByInputEntry.put(proteinGene, new ArrayList<String>());
+				genesByInputEntry.get(proteinGene).add(proteinGene.toUpperCase());
 			}
 		}
 		final Map<String, Entry> annotatedProteins = new THashMap<String, Entry>();
@@ -298,24 +213,27 @@ public class InteractorsExpressionsRetriever {
 			annotatedProteins.putAll(uplr.getAnnotatedProteins(uniprotRelease, uniprotAccs));
 
 			for (final String uniprotAcc : uniprotAccs) {
+				genesByInputEntry.put(uniprotAcc, new ArrayList<String>());
 				final int geneID = geneIDsByGeneNameMap.get(uniprotAcc);
 				if (annotatedProteins.containsKey(uniprotAcc)) {
 					final Entry entry = annotatedProteins.get(uniprotAcc);
 					if (entry != null) {
 						final List<String> geneNames = getGeneNames(UniprotEntryUtil.getGeneName(entry, false, true));
 						for (final String geneName2 : geneNames) {
-							genes.add(geneName2.toUpperCase());
+							genesByInputEntry.get(uniprotAcc).add(geneName2.toUpperCase());
 							geneIDsByGeneNameMap.put(geneName2.toUpperCase(), geneID);
+							// here we are overriding some gene names but it is ok, it is just to later
+							// print which genes were involved on each correlation calculation
 							geneNamesByGeneIDMap.put(geneID, geneName2.toUpperCase());
 							geneIDsByGeneNameMap.remove(uniprotAcc);
 						}
 					}
 				} else {
-					genes.add(uniprotAcc);
+					genesByInputEntry.get(uniprotAcc).add(uniprotAcc);
 				}
 			}
 		}
-		return genes;
+		return genesByInputEntry;
 	}
 
 	/**

@@ -74,7 +74,7 @@ cell_type_scores_table <- eventReactive(input$selectCellType, {
   }
   withProgress({
     setProgress(value = 0)
-    table = fread(file, header = FALSE, sep = "\t", showProgress = TRUE)
+    table = fread(file, header = TRUE, sep = "\t", showProgress = TRUE)
     setProgress(value = 1)
     table
   }, message = paste0("Reading score calculations from ", input$selectedCellType),

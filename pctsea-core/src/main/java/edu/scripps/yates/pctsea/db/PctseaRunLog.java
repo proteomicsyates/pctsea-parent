@@ -1,6 +1,7 @@
 package edu.scripps.yates.pctsea.db;
 
 import java.util.Date;
+import java.util.List;
 
 import org.springframework.data.annotation.Id;
 
@@ -14,6 +15,8 @@ public class PctseaRunLog {
 	private String timeStamp;
 	private int numInputGenes;
 	private InputParameters inputParameters;
+	private List<String> inputGenesNotFound;
+	private int numCellsPassingScoreThreshold;
 
 	public PctseaRunLog() {
 
@@ -59,6 +62,10 @@ public class PctseaRunLog {
 		this.numInputGenes = numInputGenes;
 	}
 
+	public void setInputGenesNotFound(List<String> inputGenesNotFound) {
+		this.inputGenesNotFound = inputGenesNotFound;
+	}
+
 	public void setInputParameters(InputParameters inputParameters) {
 		this.inputParameters = inputParameters;
 	}
@@ -73,5 +80,17 @@ public class PctseaRunLog {
 
 	public void setFinished(Date finished) {
 		this.finished = finished;
+	}
+
+	public List<String> getInputGenesNotFound() {
+		return inputGenesNotFound;
+	}
+
+	public int getNumCellsPassingScoreThreshold() {
+		return numCellsPassingScoreThreshold;
+	}
+
+	public void setNumCellsPassingScoreThreshold(int numCellsPassingScoreThreshold) {
+		this.numCellsPassingScoreThreshold = numCellsPassingScoreThreshold;
 	}
 }

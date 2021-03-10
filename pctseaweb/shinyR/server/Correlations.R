@@ -30,17 +30,17 @@ createPlotWithCorrelations <- function(table, correlation_threshold, cell_type){
     theme_classic()
 }
 
-createPlotWithCorrelationsForCellType <- function(table, cell_type){
+createPlotWithCorrelationsForCellType <- function(table, cell_type, score_name){
   req(table, cell_type)
-  names(table) <- c('cell type', 'Pearson\'s correlation', 'Frequency (# cells)')
+  names(table) <- c('cell type', score_name, 'Frequency (# cells)')
   plot <- ggplot(data = table,
          aes(
-           x = `Pearson\'s correlation`,
+           x = get(score_name),
            y = `Frequency (# cells)`)) +
-    labs(x = "Pearson\'s correlation", y = "Frequency (# cells)") +
+    labs(x = score_name, y = "Frequency (# cells)") +
     geom_line(aes(color = `cell type`))+
     theme_classic() +
-    xlim(-1,1) +
+    # xlim(-1,1) +
     theme(legend.position = 'none') # no legend
 
   ggplotly(plot) %>% layout(
@@ -67,7 +67,7 @@ cell_type_correlations_table <- eventReactive(input$selectCellType, {
   if(is.null(file)){
     return()
   }
-  table = fread(file, header = FALSE, sep = "\t", showProgress = TRUE)
+  table = fread(file, header = TRUE, sep = "\t", showProgress = TRUE)
   table
 }, ignoreInit = TRUE)
 
@@ -75,7 +75,9 @@ cell_type_correlations_table <- eventReactive(input$selectCellType, {
 
 # plot the cell_type correlation histogram plot
 observeEvent(cell_type_correlations_table(),{
-  output$cellTypeCorrelationsPlot <- renderPlotly(cell_type_correlations_table() %>% createPlotWithCorrelationsForCellType(., input$selectCellType))
+  table <- cell_type_correlations_table()
+  score_name <- colnames(table)[2]
+  output$cellTypeCorrelationsPlot <- renderPlotly(table %>% createPlotWithCorrelationsForCellType(., input$selectCellType, score_name))
 })
 
 # read the file

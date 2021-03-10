@@ -182,6 +182,7 @@ ui <- fluidPage(title = "PCTSEA",
                                               fluidRow(
                                                 column(4, verticalLayout(
                                                   checkboxInput(inputId = 'showLabels', label = 'Show cell types labels', value = FALSE),
+                                                  selectInput(inputId = "umapPlotDimensions", label = "Number UMAP components", choices = c("2D","3D","4D"), selected = "2D", width = "200px"),
                                                   div(DT::dataTableOutput(outputId = "enrichmentDataTableForCluster"), style = "font-size:70%; rowHeight: 65%")
                                                 )
 
@@ -191,7 +192,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                          fluidRow(
                                                            column(4,
                                                                   wellPanel(
-                                                                    style = "background: white",
+                                                                    style = "background: white;padding:2px",
                                                                     fluidRow(
                                                                       column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'umapAllPlotHelp', label = '', icon = icon('question-circle'))))
                                                                     ),
@@ -200,7 +201,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                            ),
                                                            column(4,
                                                                   wellPanel(
-                                                                    style = "background: white",
+                                                                    style = "background: white;padding:2px",
                                                                     fluidRow(
                                                                       column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'umapHypGPlotHelp', label = '', icon = icon('question-circle'))))
                                                                     ),
@@ -209,7 +210,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                            ),
                                                            column(4,
                                                                   wellPanel(
-                                                                    style = "background: white",
+                                                                    style = "background: white;padding:2px",
                                                                     fluidRow(
                                                                       column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'umapKSTestPlotHelp', label = '', icon = icon('question-circle'))))
                                                                     ),
@@ -220,7 +221,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                          fluidRow(
                                                            column(4,
                                                                   wellPanel(
-                                                                    style = "background: white",
+                                                                    style = "background: white;padding:2px",
                                                                     fluidRow(
                                                                       column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'umapSig001PlotHelp', label = '', icon = icon('question-circle'))))
                                                                     ),
@@ -229,7 +230,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                            ),
                                                            column(4,
                                                                   wellPanel(
-                                                                    style = "background: white",
+                                                                    style = "background: white;padding:2px",
                                                                     fluidRow(
                                                                       column(12, align = 'right', tags$div(title='help about this chart', actionButton(inputId = 'umapSig005PlotHelp', label = '', icon = icon('question-circle'))))
                                                                     ),

@@ -1,12 +1,12 @@
 createPlotMultipleTestingCorrection <- function(table){
   req(table)
-  colnames(table) <- c('Distribution', 'Normalized erichment score bin', 'Normalized frequency')
-  plot <- ggplot(data = table) +
-    geom_bar(stat="identity", aes(x=factor(`Normalized erichment score bin`), y=`Normalized frequency`, fill = Distribution), position = 'dodge') +
-    labs(x = "Normalized erichment score bin", y = "Normalized frequency") +
-    theme_classic() +
+  colnames(table) <- c('Distribution', 'Enrichment score')
+  plot <- ggplot(data=table, aes(x=`Enrichment score`, fill=Distribution, color=Distribution)) +
+    geom_density(alpha=0.3) +
+    theme_classic()+
     theme(plot.title = element_text(size=10)) +
     theme(legend.title = element_blank())
+ 
   ggplotly(plot) %>%
     layout(
       legend = list(
@@ -35,8 +35,6 @@ multiple_testing_correction_table <- reactiveVal()
 observeEvent(rv$multiple_testing_correction_file, {
   req(rv$multiple_testing_correction_file)
   table = fread(rv$multiple_testing_correction_file, header = FALSE, sep = "\t", showProgress = TRUE, na.strings = "null")
-  # remove values with 3rd column as null
-  table <- table[!is.na(V3),]
   multiple_testing_correction_table(table)
 })
 
