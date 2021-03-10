@@ -44,10 +44,11 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	private final boolean permutatedData;
 	private final int minCellsPerCellTypeForPDF;
 	private final boolean plotNegativeEnrichedCellTypes;
+	private final String scoreName;
 
 	public EnrichmentWeigthedScoreParallel(ParIterator<CellTypeClassification> iterator, int numCore,
 			List<SingleCell> singleCellList, CellTypeBranch cellTypeBranch, boolean permutatedData,
-			int minCellsPerCellTypeForPDF, boolean plotNegativeEnrichedCellTypes) {
+			int minCellsPerCellTypeForPDF, boolean plotNegativeEnrichedCellTypes, String scoreName) {
 		this.iterator = iterator;
 		this.numCore = numCore;
 		this.singleCellList.addAll(singleCellList);
@@ -57,6 +58,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		this.permutatedData = permutatedData;
 		this.minCellsPerCellTypeForPDF = minCellsPerCellTypeForPDF;
 		this.plotNegativeEnrichedCellTypes = plotNegativeEnrichedCellTypes;
+		this.scoreName = scoreName;
 	}
 
 	@Override
@@ -99,9 +101,9 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			for (final SingleCell singleCell : singleCellList) {
 				if (cellTypeName.equals(singleCell.getCellType(cellTypeBranch))) {
 					cellsOfType.add(singleCell);
-					denominatorA += Double.valueOf(singleCell.getCorrelation()).floatValue();
+					denominatorA += Double.valueOf(singleCell.getScoreForRanking()).floatValue();
 				} else {
-					denominatorB += Double.valueOf(singleCell.getCorrelation()).floatValue();
+					denominatorB += Double.valueOf(singleCell.getScoreForRanking()).floatValue();
 				}
 			}
 
@@ -132,16 +134,16 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 				if (cellTypeName.equals(singleCell.getCellType(cellTypeBranch))) {
 					// this is the difference with the unweigthed, using the correlation, instead of
 					// just counting
-					numeratorA += singleCell.getCorrelation();
-					fx.add(singleCell.getCorrelation());
+					numeratorA += singleCell.getScoreForRanking();
+					fx.add(singleCell.getScoreForRanking());
 					a = numeratorA / denominatorA;
 					cellType.addToCellTypeCorrelationDistribution(
-							Double.valueOf(singleCell.getCorrelation()).floatValue());
+							Double.valueOf(singleCell.getScoreForRanking()).floatValue());
 					b = previousB;
-					if (corrFrequencyType != null && !Double.isNaN(singleCell.getCorrelation())) {
-						corrFrequencyType.add(singleCell.getCorrelation());
+					if (corrFrequencyType != null && !Double.isNaN(singleCell.getScoreForRanking())) {
+						corrFrequencyType.add(singleCell.getScoreForRanking());
 					}
-					final int numGenes = singleCell.getGenesForCorrelation().size();
+					final int numGenes = singleCell.getGenesUsedForScore().size();
 					if (!histogramOfNumGenes.containsKey(numGenes)) {
 						histogramOfNumGenes.put(numGenes, 1);
 					} else {
@@ -149,14 +151,14 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 					}
 
 				} else {
-					fy.add(singleCell.getCorrelation());
-					numeratorB += singleCell.getCorrelation();
+					fy.add(singleCell.getScoreForRanking());
+					numeratorB += singleCell.getScoreForRanking();
 					a = previousA;
 					b = numeratorB / denominatorB;
 					cellType.addOtherCellTypesCorrelationDistribution(
-							Double.valueOf(singleCell.getCorrelation()).floatValue());
-					if (corrFrequencyOthers != null && !Double.isNaN(singleCell.getCorrelation())) {
-						corrFrequencyOthers.add(singleCell.getCorrelation());
+							Double.valueOf(singleCell.getScoreForRanking()).floatValue());
+					if (corrFrequencyOthers != null && !Double.isNaN(singleCell.getScoreForRanking())) {
+						corrFrequencyOthers.add(singleCell.getScoreForRanking());
 					}
 				}
 				if (!permutatedData) {
@@ -231,11 +233,11 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 							if (cellTypeName.equals(singleCell.getCellType(cellTypeBranch))) {
 								// this is the difference with the unweigthed, using the correlation, instead of
 								// just counting
-								numeratorA += Math.abs(singleCell.getCorrelation());
+								numeratorA += Math.abs(singleCell.getScoreForRanking());
 								a = numeratorA / denominatorA;
 								b = previousB;
 							} else {
-								numeratorB += Math.abs(singleCell.getCorrelation());
+								numeratorB += Math.abs(singleCell.getScoreForRanking());
 								a = previousA;
 								b = numeratorB / denominatorB;
 							}
@@ -304,7 +306,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 
 				// and two series for correlation chart
 				final JFreeChart chart = createCorrelationDistributionChart(cellTypeName, corrFrequencyType,
-						corrFrequencyOthers);
+						corrFrequencyOthers, scoreName);
 				cellType.setCorrelationDistributionChart(chart);
 
 				// chart with the histogram of number of genes per cell in the cell type
@@ -430,7 +432,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	}
 
 	private JFreeChart createCorrelationDistributionChart(String cellTypeName, TDoubleList correlationsType,
-			TDoubleList correlationsOthers) {
+			TDoubleList correlationsOthers, String scoreName) {
 		// create chart
 		final XYSeriesCollection histogramDataset = new XYSeriesCollection();
 
@@ -465,7 +467,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 
 		final String plotTitle = "'" + cellTypeName + "' (sizes: " + correlationsType.size() + " vs "
 				+ correlationsOthers.size() + ")";
-		final String xaxis = "Pearson's correlation";
+		final String xaxis = scoreName;
 		final String yaxis = "Frequency (# of cells)";
 		final PlotOrientation orientation = PlotOrientation.VERTICAL;
 		final boolean show = true;

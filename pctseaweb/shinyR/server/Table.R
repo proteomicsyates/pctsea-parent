@@ -62,7 +62,7 @@ output$enrichmentDataTable <- DT::renderDT(
       )
     ) %>%
       formatRound(columns=c("hyperG p-value", "FDR", "empirical p-value", "KS p-value", "KS p-value BH corrected"), digits=4) %>%
-      formatRound(columns=c("log2 ratio", "ews", "2nd ews", "norm-ews", "norm-supX", "2nd supX", "Dab", "Umap x", "Umap y"), digits=2)
+      formatRound(columns=c("log2 ratio", "ews", "2nd ews", "norm-ews", "norm-supX", "2nd supX", "Dab", "Umap 1", "Umap 2", "Umap 3", "Umap 4"), digits=2)
   }
 )
 

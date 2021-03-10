@@ -44,7 +44,7 @@ public class PCTSEAUtils {
 
 			@Override
 			public int compare(SingleCell o1, SingleCell o2) {
-				return Double.compare(o2.getCorrelation(), o1.getCorrelation());
+				return Double.compare(o2.getScoreForRanking(), o1.getScoreForRanking());
 			}
 		});
 
@@ -54,10 +54,16 @@ public class PCTSEAUtils {
 			throws IOException {
 		final File outputTXTFile = getOutputTXTFile(resultsSubfolder, fileName, prefix);
 		final FileWriter fw = new FileWriter(outputTXTFile);
+
 		final Plot plot = chart.getPlot();
 		ConcurrentUtil.sleep(1L);
 		if (plot instanceof XYPlot) {
 			final XYPlot xyplot = (XYPlot) plot;
+			final String xAxis = xyplot.getDomainAxis().getLabel();
+			final String yAxis = xyplot.getRangeAxis().getLabel();
+			final String header = "-\t" + xAxis + "\t" + yAxis;
+			fw.write(header + "\n");
+
 			for (int datasetIndex = 0; datasetIndex < xyplot.getDatasetCount(); datasetIndex++) {
 				final XYDataset dataset = xyplot.getDataset(datasetIndex);
 				for (int seriesIndex = 0; seriesIndex < dataset.getSeriesCount(); seriesIndex++) {
@@ -72,6 +78,10 @@ public class PCTSEAUtils {
 			}
 		} else if (plot instanceof CategoryPlot) {
 			final CategoryPlot categoryPlot = (CategoryPlot) plot;
+			final String xAxis = categoryPlot.getDomainAxis().getLabel();
+			final String yAxis = categoryPlot.getRangeAxis().getLabel();
+			final String header = "-\t" + xAxis + "\t" + yAxis;
+			fw.write(header + "\n");
 			for (int datasetIndex = 0; datasetIndex < categoryPlot.getDatasetCount(); datasetIndex++) {
 				final CategoryDataset dataset = categoryPlot.getDataset(datasetIndex);
 				for (int rowIndex = 0; rowIndex < dataset.getRowCount(); rowIndex++) {
@@ -94,7 +104,7 @@ public class PCTSEAUtils {
 		return new File(folder.getAbsolutePath() + File.separator + fullfileName);
 	}
 
-	private static File getOutputTXTFile(File folder, String fileName, String prefix) {
+	public static File getOutputTXTFile(File folder, String fileName, String prefix) {
 		final String correctedFileName = FileUtils
 				.checkInvalidCharacterNameForFileName(prefix + "_" + fileName + ".txt");
 		return new File(folder.getAbsolutePath() + File.separator + correctedFileName);

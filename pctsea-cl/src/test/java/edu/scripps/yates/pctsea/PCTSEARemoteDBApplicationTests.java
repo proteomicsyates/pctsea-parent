@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.SingleCell;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 
@@ -31,11 +32,16 @@ import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 		// we don't want a web environment to test
 		webEnvironment = WebEnvironment.NONE, //
 		properties = { "headles=false", //
-				// to force to conect to the remote DB with tunnel
-				"spring.config.location=classpath:/application-remoteTunnel.properties" })
+		// to force to conect to the remote DB with tunnel
+//				"spring.config.location=classpath:/application-remoteTunnel.properties"//
+				// to force to conect to directly
+				"spring.config.location=classpath:/application.properties" })
 public class PCTSEARemoteDBApplicationTests {
 	@Autowired
 	SingleCellMongoRepository scRepo;
+
+	@Autowired
+	ExpressionMongoRepository emr;
 
 	@Test
 	public void Test() throws IOException {

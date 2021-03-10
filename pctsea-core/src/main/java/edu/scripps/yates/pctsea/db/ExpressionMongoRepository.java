@@ -13,6 +13,8 @@ public interface ExpressionMongoRepository extends MongoRepository<Expression, S
 //	@Query(collation = "{locale:'en',strength:2}")
 	public List<Expression> findByGene(String gene);
 
+	public Expression findFirstByGene(String gene);
+
 	public List<Expression> findByGeneLikeAndProjectTagLike(String gene, String projectTag);
 
 	public List<Expression> findByGeneAndProjectTag(String gene, String projectTag);
@@ -22,5 +24,9 @@ public interface ExpressionMongoRepository extends MongoRepository<Expression, S
 
 	@Query("{'cellType': ?0}")
 	public List<Expression> findExpresssionsByCellType(String cellType);
+
+	public long countByGeneAndProjectTag(String gene, String projectTag);
+
+	public long countByGene(String gene);
 
 }

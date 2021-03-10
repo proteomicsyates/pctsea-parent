@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 import org.jfree.chart.JFreeChart;
 
-import edu.scripps.yates.pctsea.correlation.CorrelationThreshold;
+import edu.scripps.yates.pctsea.correlation.ScoreThreshold;
 import edu.scripps.yates.pctsea.model.charts.ChartsGenerated;
 import edu.scripps.yates.pctsea.utils.PCTSEAUtils;
 import edu.scripps.yates.utilities.maths.Maths;
@@ -40,8 +40,7 @@ public class CellTypeClassification {
 	private JFreeChart correlationDistributionChart;
 	private JFreeChart chartScoreCalculation;
 	private String significancyString;
-	private Float umapClusteringX;
-	private Float umapClusteringY;
+	private float[] umapClusteringComponents;
 	private JFreeChart histogramOfCorrelatingGenesChart;
 	private int supremumX;
 	private Float secondaryEnrichmentScore;
@@ -152,13 +151,12 @@ public class CellTypeClassification {
 		singleCellsOfThisType.addAll(cellsOfCellType);
 	}
 
-	public List<GeneOccurrence> getRankingOfGenesThatContributedToTheCorrelation(
-			CorrelationThreshold correlationThreshold) {
+	public List<GeneOccurrence> getRankingOfGenesThatContributedToTheScore(ScoreThreshold scoreThreshold) {
 		if (geneOccurrences == null || geneOccurrences.isEmpty()) {
 			final Map<String, GeneOccurrence> map = new THashMap<String, GeneOccurrence>();
-			final List<SingleCell> cells = correlationThreshold.getSingleCellsPassingThreshold(singleCellsOfThisType);
+			final List<SingleCell> cells = scoreThreshold.getSingleCellsPassingThreshold(singleCellsOfThisType);
 			for (final SingleCell singleCell : cells) {
-				final Set<String> genes = singleCell.getGenesForCorrelation().stream().collect(Collectors.toSet());
+				final Set<String> genes = singleCell.getGenesUsedForScore().stream().collect(Collectors.toSet());
 				for (final String gene : genes) {
 					if (!map.containsKey(gene)) {
 						map.put(gene, new GeneOccurrence(gene));
@@ -184,9 +182,8 @@ public class CellTypeClassification {
 		return geneOccurrences;
 	}
 
-	public String getStringOfRankingOfGenesThatContributedToTheCorrelation(CorrelationThreshold correlationThreshold) {
-		final List<GeneOccurrence> geneOccurrences = getRankingOfGenesThatContributedToTheCorrelation(
-				correlationThreshold);
+	public String getStringOfRankingOfGenesThatContributedToTheScore(ScoreThreshold scoreThreshold) {
+		final List<GeneOccurrence> geneOccurrences = getRankingOfGenesThatContributedToTheScore(scoreThreshold);
 		final StringBuilder sb = new StringBuilder();
 		for (final GeneOccurrence geneOccurrence : geneOccurrences) {
 			if (!"".equals(sb.toString())) {
@@ -292,8 +289,10 @@ public class CellTypeClassification {
 
 	public List<File> saveCharts(File resultsSubFolder, String prefix, boolean generatePDFCharts) throws IOException {
 		final List<File> txtfiles = new ArrayList<File>();
+
 		txtfiles.add(saveChartToFileAndToBufferedImage(correlationDistributionChart, getName() + "_corr",
 				resultsSubFolder, prefix, generatePDFCharts));
+
 		txtfiles.add(saveChartToFileAndToBufferedImage(chartScoreCalculation, getName() + "_ews", resultsSubFolder,
 				prefix, generatePDFCharts));
 		txtfiles.add(saveChartToFileAndToBufferedImage(histogramOfCorrelatingGenesChart,
@@ -334,18 +333,16 @@ public class CellTypeClassification {
 		return significancyString != null ? significancyString : "";
 	}
 
-	public void setUmapClustering(Float x, Float y) {
+	public void setUmapClusteringComponents(float[] components) {
 
-		umapClusteringX = x;
-		umapClusteringY = y;
+		umapClusteringComponents = components;
 	}
 
-	public Float getUmapClusteringX() {
-		return umapClusteringX;
-	}
-
-	public Float getUmapClusteringY() {
-		return umapClusteringY;
+	public float getUmapClustering(int dimensionIndex) {
+		if (umapClusteringComponents != null && umapClusteringComponents.length > dimensionIndex) {
+			return umapClusteringComponents[dimensionIndex];
+		}
+		return Float.NaN;
 	}
 
 	/**
@@ -504,11 +501,4 @@ public class CellTypeClassification {
 		secondarySupremumX = secondarySupremum;
 	}
 
-	public void setUmapClusteringX(Float umapX) {
-		umapClusteringX = umapX;
-	}
-
-	public void setUmapClusteringY(Float umapY) {
-		umapClusteringY = umapY;
-	}
 }

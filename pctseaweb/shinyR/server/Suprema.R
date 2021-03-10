@@ -1,11 +1,13 @@
 createPlotWithSupremaHistogram <- function(table){
   req(table)
-  colnames(table) <- c('x', 'cell rank', '# cell types')
-  plot <- ggplot(data = table) +
-    geom_bar(stat="identity", aes(x=factor(`cell rank`), y=`# cell types`, fill = x), position = 'dodge') +
-    labs(x = "cell rank", y = "# cell types") +
+  colnames(table) <- c('suprema')
+  plot <- ggplot(data = table, aes(x=suprema, fill="red")) +
+    geom_histogram() +
+    labs(x = "suprema", y = "frequency") +
     theme_classic() +
     theme(legend.position = 'none')
+  
+ 
   ggplotly(plot) %>%
     layout(
       title = list(
@@ -58,7 +60,7 @@ createPlotWithSupremaScatter <- function(table){
 suprema_scatter_table <- reactiveVal()
 observeEvent(rv$suprema_scatter_file, {
   req(rv$suprema_scatter_file)
-  table = fread(rv$suprema_scatter_file, header = FALSE, sep = "\t", showProgress = TRUE)
+  table = fread(rv$suprema_scatter_file, header = TRUE, sep = "\t", showProgress = TRUE)
   suprema_scatter_table(table)
 })
 

@@ -6,20 +6,25 @@ import java.util.stream.Collectors;
 
 import edu.scripps.yates.pctsea.model.SingleCell;
 
-public class NoCorrelationThreshold extends CorrelationThreshold {
+public class NoThreshold implements ScoreThreshold {
 
-	public NoCorrelationThreshold() {
-		super(Double.NaN);
+	public NoThreshold() {
 
 	}
 
 	@Override
 	public List<SingleCell> getSingleCellsPassingThreshold(Collection<SingleCell> singleCells) {
+		if (singleCells instanceof List) {
+			return (List<SingleCell>) singleCells;
+		}
 		return singleCells.stream().collect(Collectors.toList());
 	}
 
 	@Override
-	public List<SingleCell> getSingleCellsPassingThresholdSortedByCorrelation(Collection<SingleCell> singleCells) {
+	public List<SingleCell> getSingleCellsPassingThresholdSortedByScore(Collection<SingleCell> singleCells) {
+		if (singleCells instanceof List) {
+			return (List<SingleCell>) singleCells;
+		}
 		return singleCells.stream().collect(Collectors.toList());
 	}
 
@@ -30,7 +35,7 @@ public class NoCorrelationThreshold extends CorrelationThreshold {
 
 	@Override
 	public String toString() {
-		return "No correlation threshold";
+		return "No threshold";
 	}
 
 	@Override
@@ -39,8 +44,13 @@ public class NoCorrelationThreshold extends CorrelationThreshold {
 	}
 
 	@Override
-	public void sortSingleCellsByCorrelation(List<SingleCell> singleCellList) {
+	public void sortSingleCellsByScore(List<SingleCell> singleCellList) {
 		return;
+	}
+
+	@Override
+	public double getThresholdValue() {
+		return Double.NaN;
 	}
 
 }

@@ -6,14 +6,17 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.net.URL;
 import java.nio.file.Files;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
@@ -29,12 +32,12 @@ import com.vaadin.flow.component.HasComponents;
 import com.vaadin.flow.component.HtmlComponent;
 import com.vaadin.flow.component.ItemLabelGenerator;
 import com.vaadin.flow.component.Tag;
-import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
@@ -43,6 +46,8 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Label;
+import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -54,6 +59,7 @@ import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.component.upload.Receiver;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.data.binder.Binder;
@@ -72,12 +78,16 @@ import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
+import edu.scripps.yates.pctsea.model.ScoringMethod;
 import edu.scripps.yates.pctsea.util.PCTSEALocalConfiguration;
 import edu.scripps.yates.pctsea.util.VaadinUtil;
 import edu.scripps.yates.pctsea.views.main.MainView;
 import edu.scripps.yates.utilities.files.FileUtils;
 import edu.scripps.yates.utilities.swing.StatusListener;
 import edu.scripps.yates.utilities.util.Pair;
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
+import gnu.trove.set.hash.THashSet;
 
 @Route(value = "analyze", layout = MainView.class)
 @PageTitle("PCTSEA web - Analyze")
@@ -89,6 +99,7 @@ public class AnalyzeView extends VerticalLayout {
 	private final ComboBox<Dataset> datasetsCombo = new ComboBox<Dataset>("Single cells dataset to compare against");
 	private final ComboBox<CellTypeBranch> cellTypeBranchCombo = new ComboBox<CellTypeBranch>(
 			"Level of cell type classification");
+	private final ComboBox<ScoringMethod> scoringMethodCombo = new ComboBox<ScoringMethod>("Scoring method");
 	private final TextField outputPrefixField = new TextField("Prefix for all output files", "experiment1");
 	private final EmailField emailField = new EmailField("Email", "your_email@domain.com");
 	private final IntegerField numPermutationsField = new IntegerField("Number of permutations", "1000");
@@ -128,14 +139,21 @@ public class AnalyzeView extends VerticalLayout {
 	class MyUpload extends Upload {
 		private static final long serialVersionUID = 1L;
 
-		public MyUpload(MemoryBuffer buffer) {
+		public MyUpload(Receiver buffer) {
 			super(buffer);
-			super.setMaxFileSize(100 * 1024 * 1024); // 100 Mb
+			setMaxFileSize(1.0 * 100 * 1024 * 1024); // 100 Mb
+
+			final Div output = new Div();
+			addFileRejectedListener(event -> {
+				final Paragraph component = new Paragraph();
+				showOutput(event.getErrorMessage(), component, output);
+			});
 		}
 
 		Registration addFileRemoveListener(ComponentEventListener<FileRemoveEvent> listener) {
 			return super.addListener(FileRemoveEvent.class, listener);
 		}
+
 	}
 
 	@DomEvent("file-remove")
@@ -179,6 +197,11 @@ public class AnalyzeView extends VerticalLayout {
 
 		});
 
+		// load cellTypeBranches
+		cellTypeBranchCombo.setItems(CellTypeBranch.values());
+		// load scoring methods
+		scoringMethodCombo.setItems(ScoringMethod.values());
+
 		binder = new Binder<>(InputParameters.class);
 		final InputParameters inputParameters = new InputParameters();
 		binder.setBean(inputParameters);
@@ -204,13 +227,14 @@ public class AnalyzeView extends VerticalLayout {
 				.withValidator(new EmailValidator("This doesn't look like a valid email address"))
 				.bind(InputParameters::getEmail, InputParameters::setEmail);
 
-		binder.forField(datasetsCombo).asRequired("Required").withValidator(dataset -> dataset != null,
-				"A dataset must be selected");
-
 		binder.forField(cellTypeBranchCombo).asRequired("Required")
 				.withValidator(cellTypeBranch -> cellTypeBranch != null,
 						"A cell type classification level must be selected.")
 				.bind(InputParameters::getCellTypeBranch, InputParameters::setCellTypeBranch);
+
+		binder.forField(scoringMethodCombo).asRequired("Required")
+				.withValidator(scoringMethod -> scoringMethod != null, "A scoring method must be selected.")
+				.bind(InputParameters::getScoringMethod, InputParameters::setScoringMethod);
 
 		binder.forField(datasetsCombo).asRequired("Required")
 				.withValidator(dataset -> dataset != null, "A dataset must be selected")
@@ -221,8 +245,6 @@ public class AnalyzeView extends VerticalLayout {
 
 		// load datasets
 		loadDatasetsInComboList();
-		// load cellTypeBranches
-		cellTypeBranchCombo.setItems(CellTypeBranch.values());
 
 		// buttons
 		clearButton.addClickListener(e -> clearForm());
@@ -298,12 +320,19 @@ public class AnalyzeView extends VerticalLayout {
 //		showSpinnerDialog();
 		final UI ui = UI.getCurrent();
 		final PCTSEA pctsea = new PCTSEA(inputParameters, emr, scmr, runLogsRepo, dmr, mbs);
-		pctsea.setStatusListener(new StatusListener() {
+		pctsea.setStatusListener(new StatusListener<Boolean>() {
+
+			@Override
+			public void onStatusUpdate(String statusMessage, Boolean inNewLine) {
+				ui.access(() -> {
+					showMessage(statusMessage, inNewLine);
+				});
+			}
 
 			@Override
 			public void onStatusUpdate(String statusMessage) {
 				ui.access(() -> {
-					showMessage(statusMessage);
+					showMessage(statusMessage, true);
 				});
 			}
 		});
@@ -333,7 +362,7 @@ public class AnalyzeView extends VerticalLayout {
 					e.printStackTrace();
 					ui.access(() -> {
 						VaadinUtil.showErrorDialog("PCTSEA has stopped because: " + e.getMessage());
-						showMessage("PCTSEA has stopped.");
+						showMessage("PCTSEA has stopped.", true);
 					});
 				} finally {
 					ui.access(() -> {
@@ -358,6 +387,11 @@ public class AnalyzeView extends VerticalLayout {
 		outputPrefixField.setEnabled(false);
 		statusArea.setVisible(true);
 		resultsPanel.setVisible(true);
+		emailField.setEnabled(false);
+		datasetsCombo.setEnabled(false);
+		scoringMethodCombo.setEnabled(false);
+		cellTypeBranchCombo.setEnabled(false);
+		generatePDFCheckbox.setEnabled(false);
 	}
 
 	private void setEnabledStatusAsReady() {
@@ -368,6 +402,11 @@ public class AnalyzeView extends VerticalLayout {
 		minGenesCellsField.setEnabled(true);
 		numPermutationsField.setEnabled(true);
 		outputPrefixField.setEnabled(true);
+		emailField.setEnabled(true);
+		datasetsCombo.setEnabled(true);
+		scoringMethodCombo.setEnabled(true);
+		cellTypeBranchCombo.setEnabled(true);
+		generatePDFCheckbox.setEnabled(true);
 	}
 
 	protected void showLinkToResults(URL url) {
@@ -384,9 +423,21 @@ public class AnalyzeView extends VerticalLayout {
 	}
 
 	private static final SimpleDateFormat timeformatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");
+	private static final String NOT_MAPPED = "not mapped!";
 
-	protected void showMessage(String statusMessage) {
-		statusArea.setValue(statusArea.getValue() + "\n" + timeformatter.format(new Date()) + ": " + statusMessage);
+	protected void showMessage(String statusMessage, boolean inNewLine) {
+		if (inNewLine) {
+			statusArea.setValue(statusArea.getValue() + "\n" + timeformatter.format(new Date()) + ": " + statusMessage);
+		} else {
+			final String[] split = statusArea.getValue().split("\n");
+
+			final StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < split.length - 1; i++) {
+				sb.append(split[i] + "\n");
+			}
+			sb.append("\n" + timeformatter.format(new Date()) + ": " + statusMessage);
+			statusArea.setValue(sb.toString());
+		}
 	}
 
 	private void initializeInputParamsToDefaults() {
@@ -458,9 +509,38 @@ public class AnalyzeView extends VerticalLayout {
 		cellTypeBranchCombo.setValue(CellTypeBranch.TYPE);
 		//
 		//
+		scoringMethodCombo.setAutoOpen(true);
+		scoringMethodCombo.setHelperText(
+				"Scoring method used to measure similarities between the input quantitative values and the single cell expressions.");
+		scoringMethodCombo.setClearButtonVisible(true);
+		scoringMethodCombo.setItemLabelGenerator(new ItemLabelGenerator<ScoringMethod>() {
+
+			@Override
+			public String apply(ScoringMethod item) {
+				return item.name();
+			}
+		});
+		scoringMethodCombo.setPlaceholder("Select level");
+		scoringMethodCombo.addValueChangeListener(event -> {
+			final ScoringMethod value = event.getValue();
+			if (value != null) {
+				if (value == ScoringMethod.MORPHEUS) {
+					final ConfirmDialog dialog = new ConfirmDialog("Experimental scoring method",
+							"The selected scoring method is still experimental", "OK", null);
+					dialog.open();
+				} else if (value != ScoringMethod.PEARSONS_CORRELATION) {
+					final ConfirmDialog dialog = new ConfirmDialog("Scoring method not supported yet",
+							"The selected scoring method is not supported yet", "OK", null);
+					dialog.open();
+					scoringMethodCombo.setValue(ScoringMethod.PEARSONS_CORRELATION);
+				}
+			}
+
+		});
+		scoringMethodCombo.setValue(ScoringMethod.PEARSONS_CORRELATION);
+		//
+		//
 		upload.setMaxFiles(1);
-		final int maxFileSizeInBytes = 100 * 1024 * 1024; // 100Mb
-		upload.setMaxFileSize(maxFileSizeInBytes);
 		upload.setMinWidth("25em");
 		upload.setDropAllowed(true);
 
@@ -498,11 +578,21 @@ public class AnalyzeView extends VerticalLayout {
 				final FileOutputStream outputStream = new FileOutputStream(inputFile);
 				IOUtils.copy(buffer.getInputStream(), outputStream);
 				outputStream.close();
-				final List<Pair> genes = validateInputFile(inputFile);
-				enableInputFileDataTab(genes);
+				final List<MappingRow> rows = validateInputFile(inputFile);
+				enableInputFileDataTab(rows);
 				outputDiv.removeAll();
-				outputDiv.add(genes.size()
-						+ " genes/proteins read successfully from input file. You can review the input data in the 'Input data' tab below:");
+				int numNotMapped = 0;
+				for (final Dataset dataset : datasetsFromDB) {
+					numNotMapped += getNumNotMapped(rows, dataset.getTag());
+
+				}
+				if (numNotMapped == 0) {
+					outputDiv.add(rows.size()
+							+ " genes/proteins read successfully from input file. You can review the input data in the 'Input data' tab below:");
+				} else {
+					outputDiv.add(rows.size()
+							+ " genes/proteins read from input file. However, some of them were not found in some of the datasets. You can review the mapping in the 'Input data' tab below:");
+				}
 				showInputDataButton.setEnabled(true);
 
 			} catch (final Exception e) {
@@ -529,29 +619,88 @@ public class AnalyzeView extends VerticalLayout {
 //		});
 	}
 
-	private void enableInputFileDataTab(List<Pair> genes) {
-		if (genes == null) {
+	private void enableInputFileDataTab(List<MappingRow> rows) {
+		if (rows == null || rows.isEmpty()) {
 			inputFileDataTab.setEnabled(false);
 		} else {
 			inputFileDataTab.setEnabled(true);
-			final Grid<Pair> grid = new Grid<Pair>();
-			grid.addColumn(pair -> pair.getFirstelement()).setHeader("Protein/Gene").setSortable(true);
-			grid.addColumn(pair -> pair.getSecondElement()).setHeader("Expression value").setSortable(true);
-			grid.setItems(genes);
-			final Text text = new Text("Data captured from uploaded input file (" + genes.size() + " proteins/genes)");
+			final Grid<MappingRow> grid = new Grid<MappingRow>();
+			grid.addColumn(row -> row.getInputProteinGene()).setHeader("Protein/Gene").setSortable(true);
+			grid.addColumn(row -> row.getInputExpression()).setHeader("Expression value").setSortable(true);
+			final TObjectIntMap<String> numNonMappedPerDataset = new TObjectIntHashMap<String>();
+			for (final Dataset dataset : datasetsFromDB) {
+				grid.addColumn(row -> row.getMappedGene(dataset.getTag()))
+						.setHeader("Mapped in DB to (" + dataset.getTag() + ")").setSortable(true);
+				grid.addColumn(row -> row.getNumberCellsByDataset(dataset.getTag()))
+						.setHeader("Single cells with expression (" + dataset.getTag() + ")").setSortable(true);
+				final int numNotMapped = getNumNotMapped(rows, dataset.getTag());
+				if (numNotMapped > 0) {
+					numNonMappedPerDataset.put(dataset.getTag(), numNotMapped);
+				}
+			}
+			grid.setItems(rows);
+
+			String text = "Data captured from uploaded input file (" + rows.size() + " proteins/genes).";
+
+			if (!numNonMappedPerDataset.isEmpty()) {
+				for (final Dataset dataset : datasetsFromDB) {
+					if (numNonMappedPerDataset.containsKey(dataset.getTag())) {
+						final int numNotMapped = numNonMappedPerDataset.get(dataset.getTag());
+						final double percentage = numNotMapped * 1.0 / rows.size();
+						text += "\nSome proteins/genes (" + numNotMapped + "/" + rows.size() + " - "
+								+ df.format(percentage)
+								+ ") from your input list were not found in the database and will be ignored when using dataset ("
+								+ dataset.getTag() + ") !!!";
+					} else {
+						text += "\nAll proteins/genes are mapped in the database for dataset (" + dataset.getTag()
+								+ ").";
+					}
+				}
+			} else {
+				text += "\nAll proteins/genes are mapped in the database.";
+			}
 			inputFileDataTabContent.removeAll();
-			inputFileDataTabContent.add(text, grid);
+			final Span span = new Span(text);
+			span.getElement().getStyle().set("white-space", "pre-wrap");
+			inputFileDataTabContent.add(span, grid);
 		}
 	}
 
-	private List<Pair> validateInputFile(File inputFile)
+	private final DecimalFormat df = new DecimalFormat("#.#%");
 
-			throws Exception {
-		final List<Pair> genes = new ArrayList<Pair>();
+	private int getNumNotMapped(List<MappingRow> rows, String dataset) {
+		int ret = 0;
+		for (final MappingRow row : rows) {
+			final long mapped = row.getNumberCellsByDataset(dataset);
+			if (mapped == 0) {
+				ret++;
+			}
+		}
+		return ret;
+	}
 
+	/**
+	 * It reads proteins or genes from input file and makes the mapping to the genes
+	 * in the database per each of the datasets available
+	 * 
+	 * @param inputFile
+	 * @return an array in which elements are:<br>
+	 *         - index 0: input protein or gene<br>
+	 *         - index 1: expression value in the input<br>
+	 *         - index 2: mapped gene<br>
+	 *         - index 3: number of single cells with some non-zero expression of
+	 *         that gene<br>
+	 *         the array can have more columns, 2 per different dataset in the
+	 *         database
+	 * 
+	 * @throws Exception
+	 */
+	private List<MappingRow> validateInputFile(File inputFile) throws Exception {
+
+		final List<MappingRow> rows = new ArrayList<MappingRow>();
+		final List<String> genes = new ArrayList<String>();
 		BufferedReader reader = null;
 		int numLine = 1;
-
 		try {
 			reader = new BufferedReader(new FileReader(inputFile));
 			String line = null;
@@ -566,17 +715,16 @@ public class AnalyzeView extends VerticalLayout {
 						if (numLine == 1) {
 							continue;
 						}
-						Pair<String, Double> pair = null;
 						final String geneName = split[0];
-
+						genes.add(geneName);
 						if (split.length < 2) {
 							throw new Exception("Second column in missing in input file (line " + numLine + ")");
 						}
 						try {
 							final Double expressionValue = Double.valueOf(split[1]);
 							if (!"".equals(geneName)) {
-								pair = new Pair<String, Double>(geneName, expressionValue);
-								genes.add(pair);
+								final MappingRow row = new MappingRow(geneName, expressionValue);
+								rows.add(row);
 							}
 						} catch (final NumberFormatException e) {
 							throw new Exception("Cannot process " + split[1] + " as a number (line " + numLine + ")");
@@ -589,10 +737,32 @@ public class AnalyzeView extends VerticalLayout {
 		} finally {
 			reader.close();
 		}
-		if (genes.isEmpty() && numLine > 0) {
+
+		if (rows.isEmpty() && numLine > 0) {
 			throw new Exception("Looks like input file is not TAB separated?");
 		}
-		return genes;
+		// now we add the mappings in columns with index 2,3 or more
+		final Set<String> datasets = new THashSet<String>();
+		datasets.addAll(datasetsFromDB.stream().map(dataset -> dataset.getTag()).collect(Collectors.toList()));
+
+		for (final String dataset : datasets) {
+			final Map<String, Pair<String, Long>> mapToDatabase = new InputDataMappingValidation().mapToDatabase(genes,
+					null, mbs, dataset);
+			// there is a row per gene
+			for (int i = 0; i < rows.size(); i++) {
+				final MappingRow mappingRow = rows.get(i);
+				final String proteinGene = mappingRow.getInputProteinGene();
+				// we try to map the input protein or gene to the database for each dataset
+
+				final Pair<String, Long> mapped = mapToDatabase.get(proteinGene);
+				if (mapped != null) {
+					mappingRow.addMapping(dataset, mapped.getFirstelement(), mapped.getSecondElement());
+				} else {
+					mappingRow.addMapping(dataset, NOT_MAPPED, 0l);
+				}
+			}
+		}
+		return rows;
 	}
 
 	private void showOutput(String text, Component content, HasComponents outputContainer) {
@@ -622,6 +792,7 @@ public class AnalyzeView extends VerticalLayout {
 //		email.setErrorMessage("Please enter a valid email address");
 		formLayout.add(datasetsCombo);
 		formLayout.add(cellTypeBranchCombo);
+		formLayout.add(scoringMethodCombo);
 		formLayout.add(minCorrelationField);
 		formLayout.add(minGenesCellsField);
 		formLayout.add(outputPrefixField);

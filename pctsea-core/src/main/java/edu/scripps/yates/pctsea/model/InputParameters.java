@@ -12,7 +12,8 @@ public class InputParameters {
 				+ minGenesCells + ", outputPrefix=" + outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations="
 				+ numPermutations + ", cellTypesClassification=" + cellTypeBranch + ", generatePDFCharts="
 				+ generatePDFCharts + ", minCellsPerCellType=" + minCellsPerCellType + ", plotNegativeEnriched="
-				+ plotNegativeEnriched + ", dataset=";
+				+ plotNegativeEnriched + ", uniprotRelease=" + uniprotRelease + ", scoringMethod=" + scoringMethod
+				+ ", dataset=";
 		if (dataset != null) {
 			string += dataset.getTag();
 		} else {
@@ -49,6 +50,7 @@ public class InputParameters {
 	private Dataset dataset;
 	private boolean writeCorrelationsFile;
 	private String uniprotRelease;
+	private ScoringMethod scoringMethod = ScoringMethod.PEARSONS_CORRELATION; // by default
 	public static final String EMAIL = "email";
 	public static final String OUT = "out";
 	public static final String PERM = "perm";
@@ -63,6 +65,7 @@ public class InputParameters {
 	public static final String DATASETS = "datasets";
 	public static final String WRITE_CORRELATIONS = "write_correlations";
 	public static final String UNIPROT_RELEASE = "uniprot_release";
+	public static final String SCORING_METHOD = "scoring_method";
 
 	public String getInputDataFile() {
 		return inputDataFile;
@@ -174,5 +177,13 @@ public class InputParameters {
 
 	public void setUniprotRelease(String uniprotRelease) {
 		this.uniprotRelease = uniprotRelease;
+	}
+
+	public ScoringMethod getScoringMethod() {
+		return scoringMethod;
+	}
+
+	public void setScoringMethod(ScoringMethod scoringMethod) {
+		this.scoringMethod = scoringMethod;
 	}
 }

@@ -231,7 +231,7 @@ public class SingleCellsMetaInformationReader {
 	}
 
 	public List<SingleCell> getSingleCellListWithCorrelationGT(double minCorrelation) {
-		final List<SingleCell> ret = singleCellList.stream().filter(sc -> sc.getCorrelation() >= minCorrelation)
+		final List<SingleCell> ret = singleCellList.stream().filter(sc -> sc.getScoreForRanking() >= minCorrelation)
 				.collect(Collectors.toList());
 		PCTSEA.logStatus(ret.size() + " (out of " + singleCellList.size() + ") single cells with correlation >= "
 				+ minCorrelation);
@@ -239,7 +239,7 @@ public class SingleCellsMetaInformationReader {
 	}
 
 	public List<SingleCell> getSingleCellListWithCorrelationLT(double maxCorrelation) {
-		final List<SingleCell> ret = singleCellList.stream().filter(sc -> sc.getCorrelation() <= maxCorrelation)
+		final List<SingleCell> ret = singleCellList.stream().filter(sc -> sc.getScoreForRanking() <= maxCorrelation)
 				.collect(Collectors.toList());
 		PCTSEA.logStatus(ret.size() + " (out of " + singleCellList.size() + ") single cells with correlation <= "
 				+ maxCorrelation);
@@ -268,7 +268,7 @@ public class SingleCellsMetaInformationReader {
 					final SingleCell singleCell = new SingleCell(cellID, cellName, correlation);
 					addSingleCell(singleCell);
 				} else {
-					singleCellsByCellID.get(singleCellIDsBySingleCellNameMap.get(cellName)).setCorrelation(correlation);
+					singleCellsByCellID.get(singleCellIDsBySingleCellNameMap.get(cellName)).setScore(correlation);
 				}
 			}
 		}

@@ -19,6 +19,7 @@ import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
+import edu.scripps.yates.pctsea.model.ScoringMethod;
 import edu.scripps.yates.utilities.swing.CommandLineProgramGuiEnclosable;
 import edu.scripps.yates.utilities.swing.DoNotInvokeRunMethod;
 import edu.scripps.yates.utilities.swing.SomeErrorInParametersOcurred;
@@ -41,6 +42,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private Dataset datasets;
 	private boolean writeCorrelationsFile;
 	private String uniprotRelease;
+	private ScoringMethod scoringMethod;
 
 	public PCTSEACommandLine(String[] args, DatasetMongoRepository dmr, ExpressionMongoRepository emr,
 			SingleCellMongoRepository scmr, PctseaRunLogRepository runLog, MongoBaseService mbs)
@@ -68,6 +70,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			pctsea.setDataset(datasets);
 			pctsea.setWriteCorrelationsFile(writeCorrelationsFile);
 			pctsea.setUniprotRelease(uniprotRelease);
+			pctsea.setScoringMethod(scoringMethod);
 			// to make log go to the textarea when calling to the status listener
 			pctsea.setStatusListener(this);
 			final PCTSEAResult result = pctsea.run();
@@ -229,6 +232,26 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			uniprotRelease = cmd.getOptionValue(InputParameters.UNIPROT_RELEASE).trim();
 		}
 
+		//
+		scoringMethod = ScoringMethod.PEARSONS_CORRELATION;
+		if (cmd.hasOption(InputParameters.SCORING_METHOD)) {
+			try {
+				scoringMethod = ScoringMethod.valueOf(cmd.getOptionValue(InputParameters.SCORING_METHOD).trim());
+				if (scoringMethod == null) {
+					throw new Exception("");
+				}
+			} catch (final Exception e) {
+				errorInParameters("Error in value for option '-" + InputParameters.SCORING_METHOD + "'. Value '"
+						+ cmd.getOptionValue(InputParameters.SCORING_METHOD).trim()
+						+ "' not recognized. Possible values are: " + ScoringMethod.getStringSeparated(","));
+			}
+		}
+		if (scoringMethod != ScoringMethod.PEARSONS_CORRELATION) {
+			if (cmd.hasOption(InputParameters.MIN_GENES_CELLS)) {
+				errorInParameters("When using a scoring method that is not " + ScoringMethod.PEARSONS_CORRELATION
+						+ ", the option '" + InputParameters.MIN_GENES_CELLS + "' should not be used.");
+			}
+		}
 	}
 
 	@Override
@@ -256,7 +279,8 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		options.add(option4);
 
 		final Option option5 = new Option(InputParameters.MIN_GENES_CELLS, true,
-				"Minimum number of proteins/genes that should have a non-zero expression value in a cell to be considered in the correlation with the experimental data. If not provided it will be 2.");
+				"Minimum number of proteins/genes that should have a non-zero expression value in a cell to be considered in the correlation with the experimental data. If not provided it will be 4. This option is only valid for Scoring Method: "
+						+ ScoringMethod.PEARSONS_CORRELATION);
 		options.add(option5);
 
 		final Option option6 = new Option(InputParameters.OUT, true, "Prefix for all output files");
@@ -310,6 +334,11 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 				"Uniprot release to use as stated at ftp://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/reldate.txt.");
 		options.add(uniprotReleaseOpton);
 
+		final Option scoringMethodOption = new Option(InputParameters.SCORING_METHOD, true,
+				"Scoring method used in the algorithm. Possible values are: " + ScoringMethod.getStringSeparated(",")
+						+ ". Value if not provided: " + ScoringMethod.PEARSONS_CORRELATION);
+		options.add(scoringMethodOption);
+
 		return options;
 	}
 
@@ -327,4 +356,5 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		}
 		return sb.toString();
 	}
+
 }
