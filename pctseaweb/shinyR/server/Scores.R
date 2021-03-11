@@ -1,6 +1,5 @@
 createPlotWithScoreCalculation <- function(table, cell_type){
   req(table, cell_type)
-  browser()
   table <- table[table$cell_type == cell_type, ]
   type <- table[table$type_or_other == 'TYPE', ]
   type <- type %>% select( 3:ncol(.) )
@@ -39,7 +38,7 @@ createPlotWithScoreCalculationForCellType <- function(table, cell_type){
     geom_line(aes(color = `cell type`))+
     theme_classic() +
     xlim(1,max(table$rank)) +
-    ylim(0,1) +
+    ylim(0,1.00001) +
     theme(legend.title = element_blank()) # this makes it configurable by plotly on the layout
   # ggtitle(paste0("Enrich. Score calculation for: '",cell_type, "'")) +
   # theme(plot.title = element_text(size=10))
