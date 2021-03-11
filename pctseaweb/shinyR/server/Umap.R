@@ -15,6 +15,11 @@ createPlotWithUmap3D <- function(table, title){
   colnames(table)[3] <- 'UMAP2'
   colnames(table)[4] <- 'UMAP3'
   colnames(table)[5] <- 'UMAP4'
+  scene = list(
+    xaxis = axis3d("UMAP1"),
+    yaxis = axis3d("UMAP2"),
+    zaxis = axis3d("UMAP3")
+  )
   table %>% plot_ly(x = ~UMAP1, y = ~UMAP2, z = ~UMAP3, text = ~`cell type`, color =  ~`cell type`) %>% add_markers(size=3) %>% hide_legend() %>%
     layout(
       xaxis = list(
@@ -26,9 +31,18 @@ createPlotWithUmap3D <- function(table, title){
       title = list(
         text = title,
         font = list(size = 10)
-      )
+      ),
+      scene = scene
       
     )
+}
+
+axis3d <- function(name){
+  list(
+    title = name,
+    titlefont = list(size = 10),
+    tickfont = list(size = 10)
+  )
 }
 createPlotWithUmap4D <- function(table, title){
   colnames(table)[1] <- 'cell type'
@@ -36,14 +50,17 @@ createPlotWithUmap4D <- function(table, title){
   colnames(table)[3] <- 'UMAP2'
   colnames(table)[4] <- 'UMAP3'
   colnames(table)[5] <- 'UMAP4'
-  table %>% plot_ly(x = ~UMAP1, y = ~UMAP2, z = ~UMAP3, text = ~`cell type`, color =  ~UMAP4) %>% add_markers(size=3) %>% hide_legend()%>%
+   
+  scene = list(
+    xaxis = axis3d("UMAP1"),
+    yaxis = axis3d("UMAP2"),
+    zaxis = axis3d("UMAP3")
+  )
+  table %>% plot_ly(x = ~UMAP1, y = ~UMAP2, z = ~UMAP3, text = ~`cell type`, color =  ~UMAP4) %>% 
+    add_markers(size=3) %>% 
+    hide_legend() %>%
     layout(
-      xaxis = list(
-        title = plot_axis_title_format
-      ),
-      yaxis = list(
-        title = plot_axis_title_format
-      ),
+      scene = scene,
       title = list(
         text = title,
         font = list(size = 10)

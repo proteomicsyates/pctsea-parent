@@ -1,7 +1,6 @@
 package edu.scripps.yates.pctsea.model;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -10,11 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.jfree.chart.JFreeChart;
-
 import edu.scripps.yates.pctsea.correlation.ScoreThreshold;
-import edu.scripps.yates.pctsea.model.charts.ChartsGenerated;
-import edu.scripps.yates.pctsea.utils.PCTSEAUtils;
 import edu.scripps.yates.utilities.maths.Maths;
 import gnu.trove.list.TFloatList;
 import gnu.trove.list.array.TFloatArrayList;
@@ -37,11 +32,11 @@ public class CellTypeClassification {
 	private final TFloatList otherCellTypesCorrelationDistribution = new TFloatArrayList();
 	private double enrichmentSignificance;
 	private float casimirsEnrichmentScore;
-	private JFreeChart correlationDistributionChart;
-	private JFreeChart chartScoreCalculation;
+//	private JFreeChart correlationDistributionChart;
+//	private JFreeChart chartScoreCalculation;
 	private String significancyString;
 	private float[] umapClusteringComponents;
-	private JFreeChart histogramOfCorrelatingGenesChart;
+//	private JFreeChart histogramOfCorrelatingGenesChart;
 	private int supremumX;
 	private Float secondaryEnrichmentScore;
 	private Integer secondarySupremumX;
@@ -274,33 +269,33 @@ public class CellTypeClassification {
 				+ ", sig:" + enrichmentSignificance + "]";
 	}
 
-	public void setCorrelationDistributionChart(JFreeChart chart) {
-		correlationDistributionChart = chart;
-	}
+//	public void setCorrelationDistributionChart(JFreeChart chart) {
+//		correlationDistributionChart = chart;
+//	}
+//
+//	public void setEnrichmentScoreCalculationLineChart(JFreeChart chartScoreCalculation) {
+//		this.chartScoreCalculation = chartScoreCalculation;
+//
+//	}
+//
+//	public JFreeChart getEnrichmentScorecalculationLineChart() {
+//		return chartScoreCalculation;
+//	}
 
-	public void setEnrichmentScoreCalculationLineChart(JFreeChart chartScoreCalculation) {
-		this.chartScoreCalculation = chartScoreCalculation;
-
-	}
-
-	public JFreeChart getEnrichmentScorecalculationLineChart() {
-		return chartScoreCalculation;
-	}
-
-	public List<File> saveCharts(File resultsSubFolder, String prefix, boolean generatePDFCharts) throws IOException {
-		final List<File> txtfiles = new ArrayList<File>();
-
-		txtfiles.add(saveChartToFileAndToBufferedImage(correlationDistributionChart, getName() + "_corr",
-				resultsSubFolder, prefix, generatePDFCharts));
-
-		txtfiles.add(saveChartToFileAndToBufferedImage(chartScoreCalculation, getName() + "_ews", resultsSubFolder,
-				prefix, generatePDFCharts));
-		txtfiles.add(saveChartToFileAndToBufferedImage(histogramOfCorrelatingGenesChart,
-				getName() + "_genes_per_cell_hist", resultsSubFolder, prefix, generatePDFCharts));
-		// remove any null
-		final List<File> ret = txtfiles.stream().filter(f -> f != null).collect(Collectors.toList());
-		return ret;
-	}
+//	public List<File> saveCharts(File resultsSubFolder, String prefix, boolean generatePDFCharts) throws IOException {
+//		final List<File> txtfiles = new ArrayList<File>();
+//
+//		txtfiles.add(saveChartToFileAndToBufferedImage(correlationDistributionChart, getName() + "_corr",
+//				resultsSubFolder, prefix, generatePDFCharts));
+//
+//		txtfiles.add(saveChartToFileAndToBufferedImage(chartScoreCalculation, getName() + "_ews", resultsSubFolder,
+//				prefix, generatePDFCharts));
+//		txtfiles.add(saveChartToFileAndToBufferedImage(histogramOfCorrelatingGenesChart,
+//				getName() + "_genes_per_cell_hist", resultsSubFolder, prefix, generatePDFCharts));
+//		// remove any null
+//		final List<File> ret = txtfiles.stream().filter(f -> f != null).collect(Collectors.toList());
+//		return ret;
+//	}
 
 	private String getSafeName(String name2) {
 		if (name2.contains(File.separator)) {
@@ -309,21 +304,21 @@ public class CellTypeClassification {
 		return name2;
 	}
 
-	private File saveChartToFileAndToBufferedImage(JFreeChart chart, String fileName, File resultsSubFolder,
-			String prefix, boolean generatePDFCharts) throws IOException {
-		if (chart == null) {
-			return null;
-		}
-
-		final File txtFile = PCTSEAUtils.writeTXTFileForChart(chart, resultsSubFolder, prefix, fileName);
-		if (generatePDFCharts) {
-			final File chartFile = PCTSEAUtils.getChartPDFFile(resultsSubFolder, fileName, prefix);
-			final int width = 500;
-			final int height = 500;
-			ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, width, height, false, chartFile);
-		}
-		return txtFile;
-	}
+//	private File saveChartToFileAndToBufferedImage(JFreeChart chart, String fileName, File resultsSubFolder,
+//			String prefix, boolean generatePDFCharts) throws IOException {
+//		if (chart == null) {
+//			return null;
+//		}
+//
+//		final File txtFile = PCTSEAUtils.writeTXTFileForChart(chart, resultsSubFolder, prefix, fileName);
+//		if (generatePDFCharts) {
+//			final File chartFile = PCTSEAUtils.getChartPDFFile(resultsSubFolder, fileName, prefix);
+//			final int width = 500;
+//			final int height = 500;
+//			ChartsGenerated.getInstance().saveScaledChartAsPNGInMemory(chart, width, height, false, chartFile);
+//		}
+//		return txtFile;
+//	}
 
 	public void setKSTestSignificancyString(String significancyString) {
 		this.significancyString = significancyString;
@@ -350,10 +345,10 @@ public class CellTypeClassification {
 	 * 
 	 * @param chart
 	 */
-	public void setHistogramOfCorrelatingGenesChart(JFreeChart chart) {
-		histogramOfCorrelatingGenesChart = chart;
-
-	}
+//	public void setHistogramOfCorrelatingGenesChart(JFreeChart chart) {
+//		histogramOfCorrelatingGenesChart = chart;
+//
+//	}
 
 	public int getSupremumX() {
 		return supremumX;

@@ -1,44 +1,16 @@
-createPlotWithCorrelations <- function(table, correlation_threshold, cell_type){
-  req(table)
-  browser()
-  # create a new column that says whether the correlation pass the threshold or not
-  positive <- "positive"
-  table[, positive] <- table$pearsons_corr > correlation_threshold
-  # remove correlations that are NaN
-  table <- table[!is.na(table$pearsons_corr),]
-  # create a rank column
-  table[, "rank"] <- c(1:nrow(table))
-  # title
-  my_title <- "Ranks of cells by Pearson's correlation"
-  # filter by cell type
-  if(!missing(cell_type)){
-    if(!sjmisc::is_empty(cell_type)){
-      table <- table[table$Cell.type == cell_type,]
-      my_title <- paste("Ranks of cells of type '",cell_type,  "' by Pearson's correlation", sep="")
-    }else{
-      return()
-    }
-  }
-  ggplot(data = table,
-         aes(
-           x = rank,
-           y = pearsons_corr,
-           group = positive,
-           fill = positive)) + # color by Comprador
-    labs(title = my_title, x = "cell #", y = "Pearson's correlation") +
-    geom_line(aes(color=positive)) +
-    theme_classic()
-}
 
-createPlotWithCorrelationsForCellType <- function(table, cell_type, score_name){
-  req(table, cell_type)
-  names(table) <- c('cell type', score_name, 'Frequency (# cells)')
+
+createPlotWithCorrelationsForCellType <- function(table, cell_type ){
+  req(table)
+  
+  score_name <- colnames(table)[1]
+  num_cells <- nrow(table)
+   
+  
   plot <- ggplot(data = table,
-         aes(
-           x = get(score_name),
-           y = `Frequency (# cells)`)) +
-    labs(x = score_name, y = "Frequency (# cells)") +
-    geom_line(aes(color = `cell type`))+
+         aes(get(score_name))) +
+    labs( x = score_name, y = "Frequency (# cells)") +
+    geom_area(stat="bin", alpha=0.7, fill="#ee9090")+
     theme_classic() +
     # xlim(-1,1) +
     theme(legend.position = 'none') # no legend
@@ -49,6 +21,10 @@ createPlotWithCorrelationsForCellType <- function(table, cell_type, score_name){
     ),
     yaxis = list(
       title = plot_axis_title_format
+    ),
+    title = list(
+      text = paste0("Distribution of ", score_name, " across ", num_cells, " cells of type '", cell_type, "'"),
+      font = list(size = 11)
     )
   )
 }
@@ -76,8 +52,7 @@ cell_type_correlations_table <- eventReactive(input$selectCellType, {
 # plot the cell_type correlation histogram plot
 observeEvent(cell_type_correlations_table(),{
   table <- cell_type_correlations_table()
-  score_name <- colnames(table)[2]
-  output$cellTypeCorrelationsPlot <- renderPlotly(table %>% createPlotWithCorrelationsForCellType(., input$selectCellType, score_name))
+  output$cellTypeCorrelationsPlot <- renderPlotly(table %>% createPlotWithCorrelationsForCellType(., input$selectCellType))
 })
 
 # read the file

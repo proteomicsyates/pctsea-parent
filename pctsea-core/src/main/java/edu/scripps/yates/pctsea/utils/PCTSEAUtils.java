@@ -50,7 +50,7 @@ public class PCTSEAUtils {
 
 	}
 
-	public static File writeTXTFileForChart(JFreeChart chart, File resultsSubfolder, String prefix, String fileName)
+	private static File writeTXTFileForChart(JFreeChart chart, File resultsSubfolder, String prefix, String fileName)
 			throws IOException {
 		final File outputTXTFile = getOutputTXTFile(resultsSubfolder, fileName, prefix);
 		final FileWriter fw = new FileWriter(outputTXTFile);
@@ -98,11 +98,11 @@ public class PCTSEAUtils {
 		return outputTXTFile;
 	}
 
-	public static File getChartPDFFile(File folder, String fileName, String prefix) {
-		String fullfileName = prefix + "_" + fileName + ".pdf";
-		fullfileName = FileUtils.checkInvalidCharacterNameForFileName(fullfileName);
-		return new File(folder.getAbsolutePath() + File.separator + fullfileName);
-	}
+//	public static File getChartPDFFile(File folder, String fileName, String prefix) {
+//		String fullfileName = prefix + "_" + fileName + ".pdf";
+//		fullfileName = FileUtils.checkInvalidCharacterNameForFileName(fullfileName);
+//		return new File(folder.getAbsolutePath() + File.separator + fullfileName);
+//	}
 
 	public static File getOutputTXTFile(File folder, String fileName, String prefix) {
 		final String correctedFileName = FileUtils

@@ -3,7 +3,7 @@ createPlotWithGlobalGenesPerCellType <- function(table, score_name){
   colnames(table) <- c('type', '# genes', '# cells')
   plot <- ggplot(data = table) +
     geom_bar(stat="identity", aes(x=factor(`# genes`), y=`# cells`, fill = type), position = 'dodge') +
-    labs(x = paste("# of genes with", score_name, "> threshold"), y = "# cells") +
+    labs(x = score_name, y = "# cells") +
     theme_classic() +
     theme(legend.title = element_blank())
   ggplotly(plot) %>%
@@ -21,6 +21,10 @@ createPlotWithGlobalGenesPerCellType <- function(table, score_name){
       ),
       yaxis = list(
         title = plot_axis_title_format
+      ),
+      title = list(
+        text = paste0("# cells that express each number of genes (or more)"),
+        font = list(size = 11)
       )
     )
 }

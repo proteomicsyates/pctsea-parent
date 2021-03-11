@@ -58,6 +58,10 @@ createPlotWithScoreCalculationForCellType <- function(table, cell_type){
       ),
       yaxis = list(
         title = plot_axis_title_format
+      ),
+      title = list(
+        text = paste0("Calculation of Enrichment score for cell of type '", cell_type,"'"),
+        font = list(size = 11)
       )
     )
 }

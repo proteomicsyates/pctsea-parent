@@ -36,7 +36,7 @@ options(shiny.maxRequestSize = 120*1024^2,
 # Define UI for application that draws a histogram
 ui <- fluidPage(title = "PCTSEA",
                 fluidRow(
-                  column(12, h2("pCtSEA results explorer"))
+                  column(12, uiOutput(outputId = "titleUI"))
                 ),
                 # sidebarLayout(
                 #   sidebarPanel(width = 2,
@@ -57,6 +57,11 @@ ui <- fluidPage(title = "PCTSEA",
 
                                               br(),
                                               uiOutput(outputId = "importControlUI"),
+                                     ),
+                                     tabPanel("Input parameters", icon = icon("ellipsis-v"),
+                                              br(),
+                                              h4("Input parameters:"),
+                                              verbatimTextOutput(outputId = "inputParametersText")
                                      ),
                                      tabPanel("Enrichment Table", icon = icon("table"),
                                               br(),
@@ -262,7 +267,8 @@ server <- function(input, output, session) {
     if (!is.null(query$results)) {
       inputFileName <- paste0(query$results,'.zip')
       tmp <- tools::file_path_sans_ext(basename(inputFileName))
-      rv$run_name <- str_extract(tmp, '[^_]+$') # extract every after the last '_' until the end
+      rv$run_name <- sub("[^_]+_[^_]+_(.+)", "\\1", tmp) # extract every after the second '_' until the end
+      # str_extract(tmp, '[^_]+$') 
 
       # input file should be in data folder
       zipfilepath = paste('data/', inputFileName, sep = "")
@@ -288,7 +294,11 @@ server <- function(input, output, session) {
         })
         return()
       }
-
+      # title
+      output$titleUI <- renderUI({
+          h3("pCtSEA results explorer for run:", tags$b(rv$run_name))
+      })
+      
       # side panel
       output$importSideControlUI <- renderUI({
         tagList(
@@ -423,7 +433,8 @@ server <- function(input, output, session) {
                        umap_hypG_file = NULL,
                        umap_KStest_file = NULL,
                        umap_sig001_file = NULL,
-                       umap_sig005_file = NULL
+                       umap_sig005_file = NULL,
+                       parameters_file = NULL
   )
   source("./server/Table.R", local=TRUE)
   source("./server/Correlations.R", local=TRUE)
@@ -502,6 +513,32 @@ server <- function(input, output, session) {
   # })
 
 
+  # select the parameters file
+  observeEvent(rv$unziped_files,{
+    folder <- rv$unziped_files
+    # folder <-list.dirs(folder, recursive = FALSE)[1] # go one folder up
+    files <- list.files(folder, pattern = ".*parameters.txt")
+    if(length(files) > 0){
+      file <- paste(folder, .Platform$file.sep, files[1], sep = "")
+      rv$parameters_file <- file
+    }
+  })
+  
+  observeEvent(rv$parameters_file,{
+    output$inputParametersText <- renderText({
+      file <- rv$parameters_file
+      all_content <- readLines(file)
+      splitText <- stringi::stri_split(str = all_content, regex = '\\n')
+      ret <- ""
+      for(str in splitText){
+        ret <- paste0(ret, "\n", str)
+      }
+      # browser()
+      ret
+      # replacedText <- lapply(splitText, p)
+      # replacedText
+    })
+  })
   output$inputDataError <- renderText(rv$errorMessage)
 
 

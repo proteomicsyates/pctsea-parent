@@ -1,31 +1,19 @@
 package edu.scripps.yates.pctsea.utils.parallel;
 
-import java.awt.Color;
-import java.text.DecimalFormat;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.math3.stat.inference.KolmogorovSmirnovTest;
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.JFreeChart;
-import org.jfree.chart.plot.CategoryPlot;
-import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.plot.SeriesRenderingOrder;
-import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.category.BarRenderer;
-import org.jfree.chart.renderer.category.StandardBarPainter;
-import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
-import org.jfree.chart.title.TextTitle;
-import org.jfree.data.category.DefaultCategoryDataset;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
+import org.springframework.boot.logging.LogLevel;
 
+import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.CellTypeClassification;
 import edu.scripps.yates.pctsea.model.SingleCell;
-import edu.scripps.yates.pctsea.model.charts.IntegerCategoryItemLabelGenerator;
 import edu.scripps.yates.pctsea.utils.PCTSEAUtils;
-import edu.scripps.yates.utilities.maths.Histogram;
 import edu.scripps.yates.utilities.pi.ParIterator;
 import gnu.trove.list.TDoubleList;
 import gnu.trove.list.TIntList;
@@ -37,44 +25,59 @@ import gnu.trove.map.hash.TIntIntHashMap;
 public class EnrichmentWeigthedScoreParallel extends Thread {
 
 	private final ParIterator<CellTypeClassification> iterator;
-	private final int numCore;
 	private final List<SingleCell> singleCellList = new ArrayList<SingleCell>();
 	private final KolmogorovSmirnovTest test = new KolmogorovSmirnovTest();
 	private final CellTypeBranch cellTypeBranch;
 	private final boolean permutatedData;
-	private final int minCellsPerCellTypeForPDF;
 	private final boolean plotNegativeEnrichedCellTypes;
 	private final String scoreName;
+	private final File resultsSubfolderForCellTypes;
+	private final String prefix;
 
 	public EnrichmentWeigthedScoreParallel(ParIterator<CellTypeClassification> iterator, int numCore,
 			List<SingleCell> singleCellList, CellTypeBranch cellTypeBranch, boolean permutatedData,
-			int minCellsPerCellTypeForPDF, boolean plotNegativeEnrichedCellTypes, String scoreName) {
+			boolean plotNegativeEnrichedCellTypes, String scoreName, File resultsSubfolderForCellTypes, String prefix) {
 		this.iterator = iterator;
-		this.numCore = numCore;
 		this.singleCellList.addAll(singleCellList);
 		// sort by correlation from higher to lower
 		PCTSEAUtils.sortByDescendingCorrelation(this.singleCellList);
 		this.cellTypeBranch = cellTypeBranch;
 		this.permutatedData = permutatedData;
-		this.minCellsPerCellTypeForPDF = minCellsPerCellTypeForPDF;
 		this.plotNegativeEnrichedCellTypes = plotNegativeEnrichedCellTypes;
 		this.scoreName = scoreName;
+		this.resultsSubfolderForCellTypes = resultsSubfolderForCellTypes;
+		this.prefix = prefix;
+	}
+
+	private class XYPoint {
+		private final int x;
+		private final float y;
+
+		XYPoint(int x, float y) {
+			this.x = x;
+			this.y = y;
+		}
+
+		int getX() {
+			return x;
+		}
+
+		float getY() {
+			return y;
+		}
 	}
 
 	@Override
 	public void run() {
-		final DecimalFormat format = new DecimalFormat("#.###");
-//		System.out.println("Calculating weigthed enrichment score and KS statistics (core " + numCore + ")...");
-		final int n = singleCellList.size();
 		final TIntIntMap histogramOfNumGenes = new TIntIntHashMap();
 		while (iterator.hasNext()) {
 			// in case of creating a chart:
-			XYSeries scoreSeriesType = null;
-			XYSeries scoreSeriesOtherType = null;
-			XYSeries supremumLineSeries = null;
-			XYSeries secondarySupremumLineSeries = null;
-			TDoubleList corrFrequencyType = null;
-			TDoubleList corrFrequencyOthers = null;
+			List<XYPoint> scoreSeriesType = null;
+			List<XYPoint> scoreSeriesOtherType = null;
+			List<XYPoint> supremumLineSeries = null;
+			List<XYPoint> secondarySupremumLineSeries = null;
+			TDoubleList scoresFromCellType = null;
+			TDoubleList scoresForOtherCellTypes = null;
 
 			final TDoubleList fx = new TDoubleArrayList();
 			final TDoubleList fy = new TDoubleArrayList();
@@ -82,13 +85,14 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			final CellTypeClassification cellType = iterator.next();
 			// create chart if not permutated Data, just for real score
 			if (!permutatedData) {
-
+				scoreSeriesType = new ArrayList<XYPoint>();
+				scoreSeriesOtherType = new ArrayList<XYPoint>();
+				supremumLineSeries = new ArrayList<XYPoint>();
+				secondarySupremumLineSeries = new ArrayList<XYPoint>();
 				// defining two series for score chart
-				scoreSeriesType = new XYSeries(cellType.getName());
-				scoreSeriesOtherType = new XYSeries("others");
-				supremumLineSeries = new XYSeries("supremum");
-				corrFrequencyType = new TDoubleArrayList();
-				corrFrequencyOthers = new TDoubleArrayList();
+
+				scoresFromCellType = new TDoubleArrayList();
+				scoresForOtherCellTypes = new TDoubleArrayList();
 			}
 
 			final String cellTypeName = cellType.getName();
@@ -140,8 +144,8 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 					cellType.addToCellTypeCorrelationDistribution(
 							Double.valueOf(singleCell.getScoreForRanking()).floatValue());
 					b = previousB;
-					if (corrFrequencyType != null && !Double.isNaN(singleCell.getScoreForRanking())) {
-						corrFrequencyType.add(singleCell.getScoreForRanking());
+					if (scoresFromCellType != null && !Double.isNaN(singleCell.getScoreForRanking())) {
+						scoresFromCellType.add(singleCell.getScoreForRanking());
 					}
 					final int numGenes = singleCell.getGenesUsedForScore().size();
 					if (!histogramOfNumGenes.containsKey(numGenes)) {
@@ -157,13 +161,13 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 					b = numeratorB / denominatorB;
 					cellType.addOtherCellTypesCorrelationDistribution(
 							Double.valueOf(singleCell.getScoreForRanking()).floatValue());
-					if (corrFrequencyOthers != null && !Double.isNaN(singleCell.getScoreForRanking())) {
-						corrFrequencyOthers.add(singleCell.getScoreForRanking());
+					if (scoresForOtherCellTypes != null && !Double.isNaN(singleCell.getScoreForRanking())) {
+						scoresForOtherCellTypes.add(singleCell.getScoreForRanking());
 					}
 				}
 				if (!permutatedData) {
-					scoreSeriesType.add(i + 1, a);
-					scoreSeriesOtherType.add(i + 1, b);
+					scoreSeriesType.add(new XYPoint(i + 1, a));
+					scoreSeriesOtherType.add(new XYPoint(i + 1, b));
 				}
 				final float difference = a - b;
 				differences.add(difference);
@@ -172,8 +176,8 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 					supremumX = i + 1;
 					if (!permutatedData) {
 						supremumLineSeries.clear();
-						supremumLineSeries.add(i + 1, a);
-						supremumLineSeries.add(i + 1, b);
+						supremumLineSeries.add(new XYPoint(i + 1, a));
+						supremumLineSeries.add(new XYPoint(i + 1, b));
 					}
 				}
 				previousA = a;
@@ -199,8 +203,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 					cellType.setEnrichment(supremum, dStatistic, supremumX, 1d * supremumX / singleCellList.size());
 					cellType.setKSTestPvalue(ksPvalue);
 
-					final String ksSignificancyString = "";
-//					final String[] significancies = { "*", "**", "***" };
+					// final String[] significancies = { "*", "**", "***" };
 //					final double[] alphas = { 0.05, 0.01, 0.001 };
 //					for (int i = 0; i < alphas.length; i++) {
 //						final double alpha = alphas[i];
@@ -248,13 +251,9 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 									secondarySupremum = difference;
 									secondarySupremumX = i + 1;
 
-									if (secondarySupremumLineSeries == null) {
-										secondarySupremumLineSeries = new XYSeries("secondary supremum");
-									}
 									secondarySupremumLineSeries.clear();
-									secondarySupremumLineSeries.add(i + 1, a);
-									secondarySupremumLineSeries.add(i + 1, b);
-
+									secondarySupremumLineSeries.add(new XYPoint(i + 1, a));
+									secondarySupremumLineSeries.add(new XYPoint(i + 1, b));
 								}
 							}
 							previousA = a;
@@ -263,7 +262,6 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 						//
 						if (secondarySupremumX != 0) {
 							cellType.setSecondaryEnrichment(secondarySupremum, secondarySupremumX);
-
 						}
 					}
 
@@ -277,44 +275,109 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 					cellType.addRandomEnrichment(Float.NaN, Float.NaN);
 				}
 			}
-			// do not generate plot for cell types with a minimum number of cells
-			if (cellsOfType.size() < minCellsPerCellTypeForPDF) {
-				continue;
-			}
+
 			// only output charts of positive correlations or that have secondary positive
 			// enrichment scores
 			if (!plotNegativeEnrichedCellTypes && cellType.getEnrichmentScore() < 0f) {
 				continue;
 			}
-			if (!permutatedData && minCellsPerCellTypeForPDF <= cellsOfType.size()) {
+			if (!permutatedData) {
 
-				final String title = "Enrichment Score calculation for cell type: '" + cellTypeName + "'";
+				try {
+					writeScoreCalculationFile(cellTypeName, singleCellList.size(), scoreSeriesType,
+							scoreSeriesOtherType, supremumLineSeries, secondarySupremumLineSeries);
 
-				String subtitle = "(ews: " + format.format(cellType.getEnrichmentScore()) + ", supX: "
-						+ cellType.getSupremumX();
-				if (cellType.getSecondaryEnrichmentScore() != null) {
-					subtitle += ", 2nd ews: " + format.format(cellType.getSecondaryEnrichmentScore());
-					subtitle += ", 2nd sup size: " + format.format(cellType.getSecondaryEnrichmentScore());
-					subtitle += ", 2nd supX: " + cellType.getSecondarySupremumX();
+					// and two series for score chart
+					writeScoreDistributionFile(cellTypeName, scoresFromCellType);
+//				final JFreeChart chart = createScoreDistributionChart(cellTypeName, scoresFromCellType, scoreName);
+//				cellType.setCorrelationDistributionChart(chart);
+
+					writeNumGenesHistogramFile(cellTypeName, histogramOfNumGenes);
+					// chart with the histogram of number of genes per cell in the cell type
+//				final JFreeChart chart2 = createHistogramOfCorrelatingGenesChart(cellTypeName, histogramOfNumGenes);
+//				cellType.setHistogramOfCorrelatingGenesChart(chart2);
+				} catch (final IOException e) {
+					e.printStackTrace();
+					PCTSEA.logStatus(
+							"Some error occurred while writting files for " + cellTypeName + ": " + e.getMessage(),
+							LogLevel.ERROR);
 				}
-				subtitle += ", sizes: " + cellType.getCellTypeCorrelationDistribution().size() + " vs "
-						+ cellType.getOtherCellTypesCorrelationDistribution().size() + ")";
-				final JFreeChart chartScoreCalculation = createScoreCalculationChart(title, singleCellList.size(),
-						scoreSeriesType, scoreSeriesOtherType, supremumLineSeries, secondarySupremumLineSeries);
-				chartScoreCalculation.addSubtitle(new TextTitle(subtitle));
-				cellType.setEnrichmentScoreCalculationLineChart(chartScoreCalculation);
-
-				// and two series for correlation chart
-				final JFreeChart chart = createCorrelationDistributionChart(cellTypeName, corrFrequencyType,
-						corrFrequencyOthers, scoreName);
-				cellType.setCorrelationDistributionChart(chart);
-
-				// chart with the histogram of number of genes per cell in the cell type
-				final JFreeChart chart2 = createHistogramOfCorrelatingGenesChart(cellTypeName, histogramOfNumGenes);
-				cellType.setHistogramOfCorrelatingGenesChart(chart2);
 			}
 
 		}
+	}
+
+	private void writeScoreCalculationFile(String cellTypeName, int size, List<XYPoint> scoreSeriesType,
+			List<XYPoint> scoreSeriesOtherType, List<XYPoint> supremumLineSeries,
+			List<XYPoint> secondarySupremumLineSeries) throws IOException {
+		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes, cellTypeName + "_ews",
+				prefix);
+		final FileWriter fw = new FileWriter(outputTXTFile);
+		fw.write("-\tcell #\tCumulative Probability [Fn(X)]\n");
+		for (int i = 0; i < scoreSeriesType.size(); i++) {
+			final XYPoint dataItem = scoreSeriesType.get(i);
+			final int x = dataItem.getX();
+			final float y = dataItem.getY();
+			fw.write(cellTypeName + "\t" + x + "\t" + y + "\n");
+		}
+		for (int i = 0; i < scoreSeriesOtherType.size(); i++) {
+			final XYPoint dataItem = scoreSeriesOtherType.get(i);
+			final int x = dataItem.getX();
+			final float y = dataItem.getY();
+			fw.write("others\t" + x + "\t" + y + "\n");
+		}
+		for (int i = 0; i < supremumLineSeries.size(); i++) {
+			final XYPoint dataItem = supremumLineSeries.get(i);
+			final int x = dataItem.getX();
+			final float y = dataItem.getY();
+			fw.write("supremum\t" + x + "\t" + y + "\n");
+		}
+		if (secondarySupremumLineSeries != null) {
+			for (int i = 0; i < secondarySupremumLineSeries.size(); i++) {
+				final XYPoint dataItem = secondarySupremumLineSeries.get(i);
+				final int x = dataItem.getX();
+				final float y = dataItem.getY();
+				fw.write("secondary supremum\t" + x + "\t" + y + "\n");
+			}
+		}
+		fw.close();
+	}
+
+	private void writeNumGenesHistogramFile(String cellTypeName, TIntIntMap histogramOfNumGenes) throws IOException {
+		final TIntIntMap histogramOfNumGenesAccumulative = new TIntIntHashMap();
+		final TIntList keys = new TIntArrayList(histogramOfNumGenes.keys());
+		keys.sort();
+		for (int i = 0; i < keys.size(); i++) {
+			int accumulativeNumGenes = 0;
+			for (int j = i; j < keys.size(); j++) {
+				accumulativeNumGenes += histogramOfNumGenes.get(keys.get(j));
+			}
+			histogramOfNumGenesAccumulative.put(keys.get(i), accumulativeNumGenes);
+		}
+		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes,
+				cellTypeName + "_genes_per_cell_hist", prefix);
+		final FileWriter fw = new FileWriter(outputTXTFile);
+		fw.write("-\t# of genes with " + scoreName + " > threshold\t# cells\n");
+		for (final int numGenes : histogramOfNumGenes.keys()) {
+			final int frequency = histogramOfNumGenes.get(numGenes);
+			fw.write("# genes\t" + numGenes + "\t" + frequency + "\n");
+		}
+		for (final int numGenes : histogramOfNumGenesAccumulative.keys()) {
+			final int frequency = histogramOfNumGenesAccumulative.get(numGenes);
+			fw.write("# genes or more\t" + numGenes + "\t" + frequency + "\n");
+		}
+		fw.close();
+	}
+
+	private void writeScoreDistributionFile(String cellTypeName, TDoubleList scoresFromCellType) throws IOException {
+		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes, cellTypeName + "_corr",
+				prefix);
+		final FileWriter fw = new FileWriter(outputTXTFile);
+		fw.write(scoreName + "\n");
+		for (final double score : scoresFromCellType.toArray()) {
+			fw.write(Double.valueOf(score) + "\n");
+		}
+		fw.close();
 	}
 
 	/**
@@ -370,115 +433,6 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		}
 
 		return secondaryEnrichmentIndex;
-	}
-
-	private JFreeChart createHistogramOfCorrelatingGenesChart(String cellTypeName, TIntIntMap histogramOfNumGenes) {
-		final DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-
-		final TIntList keys = new TIntArrayList(histogramOfNumGenes.keys());
-		keys.sort();
-		int totalCells = 0;
-		for (final int numGenes : keys.toArray()) {
-			final int frequency = histogramOfNumGenes.get(numGenes);
-			totalCells += frequency;
-			dataset.addValue(frequency, "# genes", String.valueOf(numGenes));
-		}
-		for (int i = 0; i < keys.size(); i++) {
-			int accumulativeNumGenes = 0;
-			for (int j = i; j < keys.size(); j++) {
-				accumulativeNumGenes += histogramOfNumGenes.get(keys.get(j));
-
-			}
-			dataset.addValue(accumulativeNumGenes, "# genes or more", String.valueOf(keys.get(i)));
-		}
-		String title = "Distribution of # of genes correlating in cell type '" + cellTypeName + "'";
-
-		title += " (" + totalCells + ")";
-		final JFreeChart chart = ChartFactory.createBarChart(title, "# of genes correlating", "# cells", dataset,
-				PlotOrientation.VERTICAL, true, false, false);
-		final CategoryPlot plot = (CategoryPlot) chart.getPlot();
-		plot.setBackgroundPaint(Color.white);
-		final BarRenderer renderer = (BarRenderer) plot.getRenderer();
-		renderer.setDefaultItemLabelGenerator(new IntegerCategoryItemLabelGenerator());
-		renderer.setDefaultItemLabelsVisible(true);
-		renderer.setDefaultItemLabelFont(renderer.getDefaultItemLabelFont().deriveFont(8f));
-		renderer.setItemMargin(0.1);
-		renderer.setBarPainter(new StandardBarPainter());
-		return chart;
-	}
-
-	private JFreeChart createScoreCalculationChart(String chartTitle, int size, XYSeries scoreSeriesType,
-			XYSeries scoreSeriesOtherType, XYSeries supremumLineSeries, XYSeries secondarySupremumLineSeries) {
-		final XYSeriesCollection dataset = new XYSeriesCollection();
-		dataset.addSeries(scoreSeriesType);
-		dataset.addSeries(scoreSeriesOtherType);
-		dataset.addSeries(supremumLineSeries);
-		if (secondarySupremumLineSeries != null) {
-			dataset.addSeries(secondarySupremumLineSeries);
-		}
-
-		final JFreeChart chart = ChartFactory.createXYLineChart(chartTitle, "cell #", "Cumulative Probability [Fn(X)]",
-				dataset);
-		final XYPlot plot = (XYPlot) chart.getPlot();
-		plot.getDomainAxis().setLowerBound(1.0);
-		plot.setBackgroundPaint(Color.lightGray);
-		plot.setSeriesRenderingOrder(SeriesRenderingOrder.REVERSE);
-		final XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) plot.getRenderer();
-		renderer.setSeriesPaint(2, Color.black);
-		if (secondarySupremumLineSeries != null) {
-			renderer.setSeriesPaint(3, Color.MAGENTA);
-		}
-		return chart;
-	}
-
-	private JFreeChart createCorrelationDistributionChart(String cellTypeName, TDoubleList correlationsType,
-			TDoubleList correlationsOthers, String scoreName) {
-		// create chart
-		final XYSeriesCollection histogramDataset = new XYSeriesCollection();
-
-		final XYSeries seriesType = new XYSeries(cellTypeName);
-		histogramDataset.addSeries(seriesType);
-		final int numBins = Math.min(
-				Histogram.getSturgisRuleForHistogramBins(Math.max(correlationsType.size(), correlationsOthers.size())),
-				10);
-
-		final double max = 1.0;
-		final double min = -1.0;
-		double[][] binStats = Histogram.calcHistogram(correlationsType.toArray(), min, max, numBins);
-		for (int i = 0; i < binStats[0].length; i++) {
-			final double bin = binStats[2][i];
-			final double lowerBound = binStats[0][i];
-			final double upperBound = binStats[1][i];
-			final double x = (upperBound - lowerBound) / 2.0 + lowerBound;
-			seriesType.add(x, bin);
-		}
-		final XYSeries seriesOhersType = new XYSeries("Others");
-		// TODO
-		// no others as requested by Casimir
-//		histogramDataset.addSeries(seriesOhersType);
-		binStats = Histogram.calcHistogram(correlationsOthers.toArray(), min, max, numBins);
-		for (int i = 0; i < binStats[0].length; i++) {
-			final double bin = binStats[2][i];
-			final double lowerBound = binStats[0][i];
-			final double upperBound = binStats[1][i];
-			final double x = (upperBound - lowerBound) / 2.0 + lowerBound;
-			seriesOhersType.add(x, bin);
-		}
-
-		final String plotTitle = "'" + cellTypeName + "' (sizes: " + correlationsType.size() + " vs "
-				+ correlationsOthers.size() + ")";
-		final String xaxis = scoreName;
-		final String yaxis = "Frequency (# of cells)";
-		final PlotOrientation orientation = PlotOrientation.VERTICAL;
-		final boolean show = true;
-		final boolean toolTips = false;
-		final boolean urls = false;
-
-		final JFreeChart chart = ChartFactory.createXYLineChart(plotTitle, xaxis, yaxis, histogramDataset, orientation,
-				show, toolTips, urls);
-		chart.getPlot().setBackgroundPaint(Color.lightGray);
-		return chart;
-
 	}
 
 }

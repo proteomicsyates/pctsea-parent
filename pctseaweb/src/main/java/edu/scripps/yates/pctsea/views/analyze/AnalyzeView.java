@@ -35,7 +35,6 @@ import com.vaadin.flow.component.Tag;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dependency.CssImport;
@@ -103,7 +102,7 @@ public class AnalyzeView extends VerticalLayout {
 	private final TextField outputPrefixField = new TextField("Prefix for all output files", "experiment1");
 	private final EmailField emailField = new EmailField("Email", "your_email@domain.com");
 	private final IntegerField numPermutationsField = new IntegerField("Number of permutations", "1000");
-	private final Checkbox generatePDFCheckbox = new Checkbox("Generate PDF files with charts", false);
+//	private final Checkbox generatePDFCheckbox = new Checkbox("Generate PDF files with charts", false);
 	MemoryBuffer buffer = new MemoryBuffer();
 	private final MyUpload upload = new MyUpload(buffer);
 	private final Div outputDiv = new Div();
@@ -135,6 +134,8 @@ public class AnalyzeView extends VerticalLayout {
 	private HorizontalLayout resultsPanel;
 	private ExecutorService executor;
 	private List<Dataset> datasetsFromDB;
+	private VerticalLayout inputParametersTabContent;
+	private boolean wasInNewLine;
 
 	class MyUpload extends Upload {
 		private static final long serialVersionUID = 1L;
@@ -179,8 +180,9 @@ public class AnalyzeView extends VerticalLayout {
 		tabsToPages = new HashMap<Tab, Component>();
 		final Tab inputParametersTab = new Tab("Input parameters");
 		inputParametersTab.addThemeVariants(TabVariant.LUMO_ICON_ON_TOP);
-		final VerticalLayout inputParametersTabContent = new VerticalLayout(createFormLayout(), createButtonLayout());
+		inputParametersTabContent = new VerticalLayout(createFormLayout(), createButtonLayout());
 		tabsToPages.put(inputParametersTab, inputParametersTabContent);
+
 		inputFileDataTab = new Tab("Input data");
 		inputFileDataTab.addThemeVariants(TabVariant.LUMO_ICON_ON_TOP);
 		inputFileDataTab.setEnabled(false);
@@ -240,8 +242,8 @@ public class AnalyzeView extends VerticalLayout {
 				.withValidator(dataset -> dataset != null, "A dataset must be selected")
 				.bind(InputParameters::getDataset, InputParameters::setDataset);
 
-		binder.forField(generatePDFCheckbox).bind(InputParameters::isGeneratePDFCharts,
-				InputParameters::setGeneratePDFCharts);
+//		binder.forField(generatePDFCheckbox).bind(InputParameters::isGeneratePDFCharts,
+//				InputParameters::setGeneratePDFCharts);
 
 		// load datasets
 		loadDatasetsInComboList();
@@ -342,6 +344,8 @@ public class AnalyzeView extends VerticalLayout {
 		pctsea.setFromEmail(fromEmail);
 
 		setEnabledStatusAsRunning();
+		// hide input parameters
+		inputParametersTabContent.setVisible(false);
 		statusArea.setValue("Starting run...");
 
 		// launch this in background
@@ -367,6 +371,8 @@ public class AnalyzeView extends VerticalLayout {
 				} finally {
 					ui.access(() -> {
 						setEnabledStatusAsReady();
+						// show again input parameters
+						inputParametersTabContent.setVisible(true);
 					});
 				}
 
@@ -391,7 +397,7 @@ public class AnalyzeView extends VerticalLayout {
 		datasetsCombo.setEnabled(false);
 		scoringMethodCombo.setEnabled(false);
 		cellTypeBranchCombo.setEnabled(false);
-		generatePDFCheckbox.setEnabled(false);
+//		generatePDFCheckbox.setEnabled(false);
 	}
 
 	private void setEnabledStatusAsReady() {
@@ -406,7 +412,7 @@ public class AnalyzeView extends VerticalLayout {
 		datasetsCombo.setEnabled(true);
 		scoringMethodCombo.setEnabled(true);
 		cellTypeBranchCombo.setEnabled(true);
-		generatePDFCheckbox.setEnabled(true);
+//		generatePDFCheckbox.setEnabled(true);
 	}
 
 	protected void showLinkToResults(URL url) {
@@ -426,7 +432,7 @@ public class AnalyzeView extends VerticalLayout {
 	private static final String NOT_MAPPED = "not mapped!";
 
 	protected void showMessage(String statusMessage, boolean inNewLine) {
-		if (inNewLine) {
+		if (inNewLine || wasInNewLine) {
 			statusArea.setValue(statusArea.getValue() + "\n" + timeformatter.format(new Date()) + ": " + statusMessage);
 		} else {
 			final String[] split = statusArea.getValue().split("\n");
@@ -435,9 +441,10 @@ public class AnalyzeView extends VerticalLayout {
 			for (int i = 0; i < split.length - 1; i++) {
 				sb.append(split[i] + "\n");
 			}
-			sb.append("\n" + timeformatter.format(new Date()) + ": " + statusMessage);
+			sb.append(timeformatter.format(new Date()) + ": " + statusMessage);
 			statusArea.setValue(sb.toString());
 		}
+		wasInNewLine = inNewLine;
 	}
 
 	private void initializeInputParamsToDefaults() {
@@ -797,8 +804,6 @@ public class AnalyzeView extends VerticalLayout {
 		formLayout.add(minGenesCellsField);
 		formLayout.add(outputPrefixField);
 		formLayout.add(numPermutationsField);
-
-		formLayout.add(generatePDFCheckbox);
 		formLayout.add(emailField);
 		return formLayout;
 	}

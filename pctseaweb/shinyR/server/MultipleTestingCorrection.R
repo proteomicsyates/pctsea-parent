@@ -25,7 +25,7 @@ createPlotMultipleTestingCorrection <- function(table){
         title = plot_axis_title_format
       ),
       title = list(
-        text = 'FDR calculation',
+        text = 'Distributions of Observed vs Random enrichment scores for FDR calculation',
         font = list(size = 11)
       )
     )

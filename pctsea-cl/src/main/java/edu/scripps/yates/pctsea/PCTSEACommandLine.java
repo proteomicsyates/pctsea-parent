@@ -36,8 +36,6 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private boolean loadRandomDistributionsIfExist;
 	private int maxIterations;
 	private CellTypeBranch cellTypeBranch;
-	private boolean generateCharts;
-	private int minCellsPerCellTypeForPDF;
 	private boolean plotNegativeEnrichedCellTypes;
 	private Dataset datasets;
 	private boolean writeCorrelationsFile;
@@ -64,8 +62,6 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			pctsea.setLoadRandomDistributionsIfExist(loadRandomDistributionsIfExist);
 			pctsea.setMaxIterations(maxIterations);
 			pctsea.setCellTypesBranch(cellTypeBranch);
-			pctsea.setGenerateCharts(generateCharts);
-			pctsea.setMinCellsPerCellTypeForPDF(minCellsPerCellTypeForPDF);
 			pctsea.setPlotNegativeEnrichedCellTypes(plotNegativeEnrichedCellTypes);
 			pctsea.setDataset(datasets);
 			pctsea.setWriteCorrelationsFile(writeCorrelationsFile);
@@ -189,26 +185,6 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			}
 		}
 
-		generateCharts = false;
-		if (cmd.hasOption(InputParameters.CHARTS)) {
-			generateCharts = true;
-		}
-
-		minCellsPerCellTypeForPDF = 0;
-		if (cmd.hasOption(InputParameters.MIN_CELLS_PER_CELL_TYPE)) {
-			try {
-				minCellsPerCellTypeForPDF = Integer
-						.valueOf(cmd.getOptionValue(InputParameters.MIN_CELLS_PER_CELL_TYPE));
-				if (minCellsPerCellTypeForPDF < 0) {
-					throw new NumberFormatException();
-				}
-			} catch (final NumberFormatException e) {
-				log.error(e);
-				errorInParameters("Error in value for option '-" + InputParameters.MIN_CELLS_PER_CELL_TYPE
-						+ "'. It must be a positive integer");
-			}
-		}
-
 		plotNegativeEnrichedCellTypes = false;
 		if (cmd.hasOption(InputParameters.PLOT_NEGATIVE_ENRICHED)) {
 			plotNegativeEnrichedCellTypes = true;
@@ -302,16 +278,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 						+ CellTypeBranch.getStringSeparated(",") + ". If not provided, " + CellTypeBranch.TYPE.name()
 						+ " will be considered.");
 		options.add(optionCellTypeBranch);
-		//
-		final Option optionGenerateCharts = new Option(InputParameters.CHARTS, false,
-				"Generate a PDF file with the charts images with the enrichment calculations and the correlations distributions. If not selected, the following options will be ignored.");
 
-		options.add(optionGenerateCharts);
-
-		//
-		final Option optionMinCellTypeVariance = new Option(InputParameters.MIN_CELLS_PER_CELL_TYPE, true,
-				"Minimum number of cells per cell type that pass the correlation threshold to be included in the output PDF report.");
-		options.add(optionMinCellTypeVariance);
 		//
 		final Option optionOnlyPlotPositiveEnrichedCellTypes = new Option(InputParameters.PLOT_NEGATIVE_ENRICHED, false,
 				"If present, plots associated with cell types with negative enrichment scores will be included in the output PDF report.");

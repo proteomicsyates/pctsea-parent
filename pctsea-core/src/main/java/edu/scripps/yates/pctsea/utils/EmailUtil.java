@@ -30,8 +30,8 @@ public class EmailUtil {
 
 		// parameters
 		body.append("Parameters: \n ");
+
 		body.append(InputParameters.EEF + ": " + FilenameUtils.getName(inputParameters.getInputDataFile()) + " \n ");
-		body.append(InputParameters.MIN_CELLS_PER_CELL_TYPE + ": " + inputParameters.getMinCellsPerCellType() + " \n ");
 		body.append(InputParameters.MIN_CORRELATION + ": " + inputParameters.getMinCorrelation() + "\n");
 		body.append(InputParameters.MIN_GENES_CELLS + ": " + inputParameters.getMinGenesCells() + "\n");
 		body.append(InputParameters.DATASETS + ": " + inputParameters.getDataset().getTag() + " ("
@@ -42,9 +42,9 @@ public class EmailUtil {
 		body.append(InputParameters.PERM + ": " + inputParameters.getNumPermutations() + "\n");
 		body.append(InputParameters.PLOT_NEGATIVE_ENRICHED + ": " + inputParameters.isPlotNegativeEnriched() + "\n");
 		body.append(InputParameters.LOAD_RANDOM + ": " + inputParameters.isLoadRandom() + "\n");
-		body.append(InputParameters.CHARTS + ": " + inputParameters.isGeneratePDFCharts() + "\n");
 		body.append(InputParameters.WRITE_CORRELATIONS + ": " + inputParameters.isWriteCorrelationsFile() + "\n");
 		body.append(InputParameters.UNIPROT_RELEASE + ": " + inputParameters.getUniprotRelease() + "\n");
+		body.append(InputParameters.SCORING_METHOD + ": " + inputParameters.getScoringMethod().getScoreName() + "\n");
 		body.append("\n\n");
 		// results
 		body.append("You can access to your results at this location in the machine you run it: "

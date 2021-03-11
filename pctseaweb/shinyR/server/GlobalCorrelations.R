@@ -1,16 +1,15 @@
 
 
-createPlotWithGlobalCorrelationsNEW <- function(table, score_name){
+createPlotWithGlobalCorrelationsNEW <- function(table){
   req(table)
-  names(table) <- c('ax', score_name, 'Frequency (# cells)')
+  score_name <- colnames(table)[1]
+  num_cells <- nrow(table)
+  # names(table) <- c('ax', score_name, 'Frequency (# cells)')
   plot <- ggplot(data = table,
-                 aes(
-                   x = get(score_name),
-                   y = `Frequency (# cells)`)) +
+                 aes(get(score_name))) +
     labs(x = score_name, y = "Frequency (# cells)") +
-    geom_line(aes(color = ax))+
+    geom_area(stat="bin", alpha=0.7, fill="#ee9090")+
     theme_classic() +
-    # xlim(-1,1) +
     theme(legend.position = 'none') # no legend
   ggplotly(plot) %>%
     layout(
@@ -19,19 +18,24 @@ createPlotWithGlobalCorrelationsNEW <- function(table, score_name){
       ),
       yaxis = list(
         title = plot_axis_title_format
+      ),
+      title = list(
+        text = paste0("Distribution of ", score_name, " across ", num_cells, " cells"),
+        font = list(size = 11)
       )
     )
 
 }
 createPlotWithGlobalRankCorrelationsNEW <- function(table, score_name){
   req(table)
-  names(table) <- c('x', 'Rank', score_name)
+  num_cells <- nrow(table)
+  # rank class score
   plot <- ggplot(data = table,
                  aes(
-                   x = Rank,
+                   x = rank,
                    y = get(score_name))) +
     labs(x = "ranked cells", y = score_name) +
-    geom_line(aes(color = x))+
+    geom_line(aes(color = class))+
     theme_classic() +
     theme(legend.title = element_blank())
   # ggtitle(paste0("Corr. distrib. for: '",cell_type, "'")) +
@@ -49,6 +53,10 @@ createPlotWithGlobalRankCorrelationsNEW <- function(table, score_name){
       ),
       yaxis = list(
         title = plot_axis_title_format
+      ),
+      title = list(
+        text = paste0("Ranked ", score_name, " across ", num_cells, " cells"),
+        font = list(size = 11)
       )
     )
 }
@@ -70,8 +78,7 @@ observeEvent(rv$global_correlations_rank_file, {
 # plot the global correlation histogram plot
 observeEvent(global_correlations_table(),{
   table <- global_correlations_table()
-  score_name <- colnames(table)[2]
-  output$globalCorrelationsPlot <- renderPlotly(table %>% createPlotWithGlobalCorrelationsNEW(., score_name))
+  output$globalCorrelationsPlot <- renderPlotly(table %>% createPlotWithGlobalCorrelationsNEW(.))
 })
 
 

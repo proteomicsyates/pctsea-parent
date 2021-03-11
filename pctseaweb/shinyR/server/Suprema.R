@@ -1,9 +1,10 @@
 createPlotWithSupremaHistogram <- function(table){
   req(table)
-  colnames(table) <- c('suprema')
-  plot <- ggplot(data = table, aes(x=suprema, fill="red")) +
+
+  colnames(table) <- c('cell type', 'supremum X')
+  plot <- ggplot(data = table, aes(x=`supremum X`, fill="red")) +
     geom_histogram() +
-    labs(x = "suprema", y = "frequency") +
+    labs(x = "supremum X", y = "frequency") +
     theme_classic() +
     theme(legend.position = 'none')
   
@@ -11,7 +12,7 @@ createPlotWithSupremaHistogram <- function(table){
   ggplotly(plot) %>%
     layout(
       title = list(
-        text = 'Distribution of positive suprema positions',
+        text = 'Distribution of positive suprema positions across cell types',
         font = list(size = 12)
       ),
       xaxis = list(
@@ -30,7 +31,7 @@ createPlotWithSupremaHistogram <- function(table){
 suprema_hist_table <- reactiveVal()
 observeEvent(rv$suprema_histogram_file, {
   req(rv$suprema_histogram_file)
-  table = fread(rv$suprema_histogram_file, header = FALSE, sep = "\t", showProgress = TRUE)
+  table = fread(rv$suprema_histogram_file, header = TRUE, sep = "\t", showProgress = TRUE)
   suprema_hist_table(table)
 })
 observeEvent(suprema_hist_table(),{
@@ -53,6 +54,10 @@ createPlotWithSupremaScatter <- function(table){
       ),
       yaxis = list(
         title = plot_axis_title_format
+      ),
+      title = list(
+        text = "Suprema values vs suprema positions per cell type",
+        font = list(size = 11)
       )
     )
 }

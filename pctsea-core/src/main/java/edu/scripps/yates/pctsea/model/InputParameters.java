@@ -10,8 +10,7 @@ public class InputParameters {
 		String string = "InputParameters [writeCorrelationsFile=" + writeCorrelationsFile + ", email=" + email
 				+ ", inputDataFile=" + inputDataFile + ", minCorrelation=" + minCorrelation + ", minGenesCells="
 				+ minGenesCells + ", outputPrefix=" + outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations="
-				+ numPermutations + ", cellTypesClassification=" + cellTypeBranch + ", generatePDFCharts="
-				+ generatePDFCharts + ", minCellsPerCellType=" + minCellsPerCellType + ", plotNegativeEnriched="
+				+ numPermutations + ", cellTypesClassification=" + cellTypeBranch + ", plotNegativeEnriched="
 				+ plotNegativeEnriched + ", uniprotRelease=" + uniprotRelease + ", scoringMethod=" + scoringMethod
 				+ ", dataset=";
 		if (dataset != null) {
@@ -44,8 +43,6 @@ public class InputParameters {
 	private boolean loadRandom;
 	private int numPermutations;
 	private CellTypeBranch cellTypeBranch;
-	private boolean generatePDFCharts;
-	private int minCellsPerCellType;
 	private boolean plotNegativeEnriched;
 	private Dataset dataset;
 	private boolean writeCorrelationsFile;
@@ -55,13 +52,11 @@ public class InputParameters {
 	public static final String OUT = "out";
 	public static final String PERM = "perm";
 	public static final String EEF = "eef";
-	public static final String CHARTS = "charts";
 	public static final String MIN_CORRELATION = "min_correlation";
 	public static final String MIN_GENES_CELLS = "min_genes_cells";
 	public static final String CELL_TYPES_CLASSIFICATION = "cell_types_classification";
 	public static final String LOAD_RANDOM = "load_random";
 	public static final String PLOT_NEGATIVE_ENRICHED = "plot_negative_enriched";
-	public static final String MIN_CELLS_PER_CELL_TYPE = "min_cells_per_cell_type";
 	public static final String DATASETS = "datasets";
 	public static final String WRITE_CORRELATIONS = "write_correlations";
 	public static final String UNIPROT_RELEASE = "uniprot_release";
@@ -121,22 +116,6 @@ public class InputParameters {
 
 	public void setCellTypeBranch(CellTypeBranch cellTypeBranch) {
 		this.cellTypeBranch = cellTypeBranch;
-	}
-
-	public boolean isGeneratePDFCharts() {
-		return generatePDFCharts;
-	}
-
-	public void setGeneratePDFCharts(boolean generateCharts) {
-		generatePDFCharts = generateCharts;
-	}
-
-	public int getMinCellsPerCellType() {
-		return minCellsPerCellType;
-	}
-
-	public void setMinCellsPerCellType(int minCellsPerCellType) {
-		this.minCellsPerCellType = minCellsPerCellType;
 	}
 
 	public boolean isPlotNegativeEnriched() {
