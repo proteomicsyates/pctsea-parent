@@ -103,3 +103,14 @@ ggplotly(plot) %>%
       title = plot_axis_title_format
     )
   )
+
+library(plotly)
+setwd("D:/Salva/git_projects/pctsea-parent/pctseaweb/shinyR/data/2021-03-10_18-26-27_mouse_GRIA_IP_Morpheus/cell_types_charts")
+cell_type <- "tubule"
+table = fread(file = paste0("mouse_GRIA_IP_Morpheus_",cell_type,"_ews.txt"), header = TRUE, sep = "\t")
+names(table) <- c('cell type', 'rank', 'cumulative probability')
+type <- filter(table, `cell type` == cell_type)
+other <- filter(table, `cell type` == 'others')
+plot <- plot_ly(table, x = ~rank, y=~`cumulative probability`, type = 'scatter', mode = 'lines', linetype = ~`cell type`) %>%
+  layout()
+plot

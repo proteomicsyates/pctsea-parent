@@ -25,9 +25,13 @@ createPlotWithScoreCalculation <- function(table, cell_type){
 }
 createPlotWithScoreCalculationForCellType <- function(table, cell_type){
   req(table, cell_type)
+  cat(file=stderr(), paste("Creating plot with",nrow(table),"rows\n"))
+
   names(table) <- c('cell type', 'rank', 'cumulative probability')
   type <- table[table$`cell type` == cell_type, ]
   other <- table[table$`cell type` == 'others', ]
+
+
 
   plot <- ggplot(data = table,
                  aes(
@@ -42,7 +46,9 @@ createPlotWithScoreCalculationForCellType <- function(table, cell_type){
     theme(legend.title = element_blank()) # this makes it configurable by plotly on the layout
   # ggtitle(paste0("Enrich. Score calculation for: '",cell_type, "'")) +
   # theme(plot.title = element_text(size=10))
-  ggplotly(plot) %>%
+  cat(file=stderr(), paste("Plot created as ggplot\n"))
+
+  plot <- ggplotly(plot) %>%
     layout(
       legend = list(
         orientation = "v",
@@ -63,6 +69,8 @@ createPlotWithScoreCalculationForCellType <- function(table, cell_type){
         font = list(size = 11)
       )
     )
+  cat(file=stderr(), paste("Plot created as ggplotly\n"))
+  plot
 }
 
 
@@ -79,14 +87,64 @@ cell_type_scores_table <- eventReactive(input$selectCellType, {
     setProgress(value = 0)
     table = fread(file, header = TRUE, sep = "\t", showProgress = TRUE)
     setProgress(value = 1)
-    table
+
   }, message = paste0("Reading score calculations from ", input$selectedCellType),
   detail = "Please wait..."
   )
+  cat(file=stderr(), paste("Score file table read successfully with",nrow(table),"rows\n"))
+  table
 })
 
 # plot the scores plot
 observeEvent(cell_type_scores_table(),{
-  output$cellTypeScoreCalculationPlot <- renderPlotly(cell_type_scores_table() %>% createPlotWithScoreCalculationForCellType(., input$selectCellType))
-}
+  output$cellTypeScoreCalculationPlot <- renderPlotly({
+    table <- cell_type_scores_table()
+    cell_type <- input$selectCellType
+    req(table, cell_type)
+    cat(file=stderr(), paste("Creating plot with",nrow(table),"rows\n"))
+
+    names(table) <- c('cell type', 'rank', 'cumulative probability')
+    # type <- table[table$`cell type` == cell_type, ]
+    # other <- table[table$`cell type` == 'others', ]
+
+
+    # plot <- ggplot(data = table,
+    #                aes(
+    #                  x = rank,
+    #                  y = `cumulative probability`,
+    #                  group = `cell type`)) +
+    #   labs(x = "cell #", y = "Cumulative Probability") +
+    #   geom_line(aes(color = `cell type`))+
+    #   theme_classic() +
+    #   xlim(1,max(table$rank)) +
+    #   ylim(0,1.00001) +
+    #   theme(legend.title = element_blank()) # this makes it configurable by plotly on the layout
+    # ggtitle(paste0("Enrich. Score calculation for: '",cell_type, "'")) +
+    # theme(plot.title = element_text(size=10))
+    cat(file=stderr(), paste("Plot created as ggplot\n"))
+
+    plot_ly(table, x = ~rank, y=~`cumulative probability`, type = 'scatter', mode = 'lines', linetype = ~`cell type`) %>%
+      layout(
+        legend = list(
+          orientation = "v",
+          x = 0.4,
+          y = 0.1,
+          title = list(side = "top"),
+          font = list(size = 9),
+          tracegroupgap = 3
+        ),
+        xaxis = list(
+          title = plot_axis_title_format
+        ),
+        yaxis = list(
+          title = plot_axis_title_format
+        ),
+        title = list(
+          text = paste0("Calculation of Enrichment score for cell of type '", cell_type,"'"),
+          font = list(size = 11)
+        )
+      )
+
+    })
+  }
 )

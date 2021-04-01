@@ -6,7 +6,14 @@
 #
 #    http://shiny.rstudio.com/
 #
-
+list.of.packages <- c("shiny","dplyr", "stringr", "ggplot2",
+                      "sjmisc", "tidyverse", "data.table",
+                      "promises", "future", "tools", "stringi",
+                      "filesstrings", "DT", "plotly")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)){
+  # install.packages(new.packages)
+}
 library(shiny)
 library(dplyr)
 library(stringr)
@@ -268,7 +275,7 @@ server <- function(input, output, session) {
       inputFileName <- paste0(query$results,'.zip')
       tmp <- tools::file_path_sans_ext(basename(inputFileName))
       rv$run_name <- sub("[^_]+_[^_]+_(.+)", "\\1", tmp) # extract every after the second '_' until the end
-      # str_extract(tmp, '[^_]+$') 
+      # str_extract(tmp, '[^_]+$')
 
       # input file should be in data folder
       zipfilepath = paste('data/', inputFileName, sep = "")
@@ -296,9 +303,9 @@ server <- function(input, output, session) {
       }
       # title
       output$titleUI <- renderUI({
-          h3("pCtSEA results explorer for run:", tags$b(rv$run_name))
+        h3("pCtSEA results explorer for run:", tags$b(rv$run_name))
       })
-      
+
       # side panel
       output$importSideControlUI <- renderUI({
         tagList(
@@ -337,7 +344,7 @@ server <- function(input, output, session) {
       # unzip if not already unziped
       data_folder <- dirname(zipfilepath)
       folderTo <- paste(data_folder, "/", tools::file_path_sans_ext(basename(zipfilepath)), sep = "")
-       if (!file.exists(folderTo)){
+      if (!file.exists(folderTo)){
         withProgress({
           setProgress(message = "Unzipping results...", value = 0)
           unzip(zipfilepath, exdir = data_folder)
@@ -523,7 +530,7 @@ server <- function(input, output, session) {
       rv$parameters_file <- file
     }
   })
-  
+
   observeEvent(rv$parameters_file,{
     output$inputParametersText <- renderText({
       file <- rv$parameters_file
