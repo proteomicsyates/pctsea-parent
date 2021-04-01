@@ -1953,11 +1953,14 @@ public class PCTSEA {
 					singleCell.calculateCorrelation(interactorExpressions, takeZerosForCorrelation,
 							minNumberExpressedGenesInCell, getExpressionsUsedForScore);
 					break;
-				case MORPHEUS:
-					singleCell.calculateMorpheusLikeScore(interactorExpressions, takeZerosForCorrelation,
+				case SIMPLE_SCORE:
+					singleCell.calculateSimpleScore(interactorExpressions, takeZerosForCorrelation,
 							getExpressionsUsedForScore);
 					break;
-
+				case DOT_PRODUCT:
+					singleCell.calculateDotProductScore(interactorExpressions, takeZerosForCorrelation,
+							getExpressionsUsedForScore);
+					break;
 				default:
 					throw new IllegalArgumentException(
 							"Method " + scoringMethod.getScoreName() + " still not supported.");

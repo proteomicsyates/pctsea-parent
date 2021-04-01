@@ -517,8 +517,7 @@ public class AnalyzeView extends VerticalLayout {
 		//
 		//
 		scoringMethodCombo.setAutoOpen(true);
-		scoringMethodCombo.setHelperText(
-				"Scoring method used to measure similarities between the input quantitative values and the single cell expressions.");
+		scoringMethodCombo.setHelperText(ScoringMethod.scoringMethodHelperText);
 		scoringMethodCombo.setClearButtonVisible(true);
 		scoringMethodCombo.setItemLabelGenerator(new ItemLabelGenerator<ScoringMethod>() {
 
@@ -531,16 +530,26 @@ public class AnalyzeView extends VerticalLayout {
 		scoringMethodCombo.addValueChangeListener(event -> {
 			final ScoringMethod value = event.getValue();
 			if (value != null) {
-				if (value == ScoringMethod.MORPHEUS) {
-					final ConfirmDialog dialog = new ConfirmDialog("Experimental scoring method",
-							"The selected scoring method is still experimental", "OK", null);
-					dialog.open();
-				} else if (value != ScoringMethod.PEARSONS_CORRELATION) {
+				if (!value.isSupported()) {
 					final ConfirmDialog dialog = new ConfirmDialog("Scoring method not supported yet",
 							"The selected scoring method is not supported yet", "OK", null);
 					dialog.open();
 					scoringMethodCombo.setValue(ScoringMethod.PEARSONS_CORRELATION);
+
+				} else if (value.isExperimental()) {
+					final ConfirmDialog dialog = new ConfirmDialog("Experimental scoring method",
+							"The selected scoring method is still experimental", "OK", null);
+					dialog.open();
 				}
+
+				// show description if has one
+				if (value.getDescription() != null) {
+					scoringMethodCombo.setHelperText(value.getDescription());
+				} else {
+					scoringMethodCombo.setHelperText(ScoringMethod.scoringMethodHelperText);
+				}
+			} else {
+				scoringMethodCombo.setHelperText(ScoringMethod.scoringMethodHelperText);
 			}
 
 		});

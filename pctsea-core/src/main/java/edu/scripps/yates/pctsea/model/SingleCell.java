@@ -321,7 +321,7 @@ public class SingleCell {
 		} else {
 			final double correlation2 = correlationCalculator.correlation(interactorsExpressionsToCorrelate.toArray(),
 					genesExpressionsToCorrelate.toArray());
-			if (!Double.isNaN(score)) {
+			if (!Double.isNaN(correlation2)) {
 //				System.out.println("Correlations in cell " + getId() + " before was " + correlation + " and now is "
 //						+ correlation2);
 			}
@@ -338,7 +338,7 @@ public class SingleCell {
 	 * 
 	 * @return
 	 */
-	public double calculateMorpheusLikeScore(InteractorsExpressionsRetriever interactorExpressions,
+	public double calculateSimpleScore(InteractorsExpressionsRetriever interactorExpressions,
 			boolean takeZerosInCorrelation, boolean getExpressionsUsedForCorrelation) {
 //		// in case of having a percentage
 //		if (minNumInteractorsForCorrelation <= 1.0) {
@@ -408,6 +408,90 @@ public class SingleCell {
 //						+ correlation2);
 		}
 		final double score = singleCellNonZero + correlation2;
+		setScore(score);
+
+		return score;
+	}
+
+	/**
+	 * 
+	 * @param interactorExpressions
+	 * @param takeZerosInCorrelation
+	 * @param getExpressionsUsedForCorrelation
+	 * 
+	 * @return
+	 */
+	public double calculateDotProductScore(InteractorsExpressionsRetriever interactorExpressions,
+			boolean takeZerosInCorrelation, boolean getExpressionsUsedForCorrelation) {
+//		// in case of having a percentage
+//		if (minNumInteractorsForCorrelation <= 1.0) {
+//			final int numInteractors = interactorExpressions.getInteractorsGeneIDs().size();
+//			minNumInteractorsForCorrelation = numInteractors * minNumInteractorsForCorrelation;
+//		}
+
+		final TIntList geneIDs = interactorExpressions.getInteractorsGeneIDs();
+
+		final TDoubleArrayList nonZeroInteractorsExpressionsToUse = new TDoubleArrayList();
+		final TDoubleArrayList nonZeroGenesExpressionsToUse = new TDoubleArrayList();
+		TDoubleList interactorsExpressionsToUse = new TDoubleArrayList();
+		TDoubleList genesExpressionsToUSe = new TDoubleArrayList();
+		final StringBuilder description = new StringBuilder();
+		genesUsedForScore = new ArrayList<String>();
+
+		for (final int geneID : geneIDs.toArray()) {
+
+			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID);
+//			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID)interactorExpressions.getExpressionsOfGene(geneID)
+//					.getSingleCellExpression(this.getId());
+			final float interactorExpression = interactorExpressions.getInteractionExpressionInOurExperiment(geneID);
+			// get only pairs of values when both values are > 0.0
+			if (takeZerosInCorrelation || (geneExpressionInSingleCell > 0.0f && interactorExpression > 0.0f)) {
+
+				interactorsExpressionsToUse.add(interactorExpression);
+				genesExpressionsToUSe.add(geneExpressionInSingleCell);
+			}
+			if (geneExpressionInSingleCell > 0.0f) {
+				genesUsedForScore.add(InteractorsExpressionsRetriever.getInstance().getGeneName(geneID));
+				nonZeroGenesExpressionsToUse.add(geneExpressionInSingleCell);
+				nonZeroInteractorsExpressionsToUse.add(interactorExpression);
+			}
+			if (geneExpressionInSingleCell != 0.0f) {// this is also true when value is NaN
+
+			}
+		}
+		for (final String gene : genesUsedForScore) {
+			if (!"".equals(description.toString())) {
+				description.append(",");
+			}
+			description.append(gene);
+		}
+
+		if (getExpressionsUsedForCorrelation) {
+			expressionsUsedForScore = getExpressionsUsedForScore(nonZeroGenesExpressionsToUse,
+					nonZeroInteractorsExpressionsToUse);
+		} else {
+			expressionsUsedForScore = "";
+		}
+
+		scoreDescription = description.toString();
+
+		// check variance of gene expressions to correlate
+		geneExpressionVariance = Maths.var(nonZeroGenesExpressionsToUse.toArray());
+
+		double dotProduct = 0.0;
+		try {
+			// first we normalize each vector
+			interactorsExpressionsToUse = Maths.normalize(interactorsExpressionsToUse);
+			genesExpressionsToUSe = Maths.normalize(genesExpressionsToUSe);
+			dotProduct = Maths.dotProduct(interactorsExpressionsToUse, genesExpressionsToUSe);
+		} catch (final Exception e) {
+			// we dont care, in that case correlation is zero
+		}
+		if (!Double.isNaN(score)) {
+//				System.out.println("Correlations in cell " + getId() + " before was " + correlation + " and now is "
+//						+ correlation2);
+		}
+		final double score = dotProduct;
 		setScore(score);
 
 		return score;
