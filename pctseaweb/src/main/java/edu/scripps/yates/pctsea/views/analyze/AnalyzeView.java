@@ -612,6 +612,7 @@ public class AnalyzeView extends VerticalLayout {
 				showInputDataButton.setEnabled(true);
 
 			} catch (final Exception e) {
+				e.printStackTrace();
 				VaadinUtil.showErrorDialog("Error validating input file: " + e.getMessage());
 				inputFile = null;
 			}
