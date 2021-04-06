@@ -4,61 +4,84 @@ createPlotWithGlobalCorrelationsNEW <- function(table){
   req(table)
   score_name <- colnames(table)[1]
   num_cells <- nrow(table)
-  # names(table) <- c('ax', score_name, 'Frequency (# cells)')
-  plot <- ggplot(data = table,
-                 aes(get(score_name))) +
-    labs(x = score_name, y = "Frequency (# cells)") +
-    geom_area(stat="bin", alpha=0.7, fill="#ee9090")+
-    theme_classic() +
-    theme(legend.position = 'none') # no legend
-  ggplotly(plot) %>%
+
+
+  plot <- plot_ly(table, x =~get(score_name), type = 'histogram') %>%
     layout(
-      xaxis = list(
-        title = plot_axis_title_format
-      ),
-      yaxis = list(
-        title = plot_axis_title_format
-      ),
+      xaxis = list(titlefont = list(size = 12), title = score_name),
+      yaxis = list(titlefont = list(size = 12), title = "Frequency (# cells)"),
       title = list(
         text = paste0("Distribution of ", score_name, " across ", num_cells, " cells"),
         font = list(size = 11)
       )
     )
+  #
+  # names(table) <- c('ax', score_name, 'Frequency (# cells)')
+  # plot <- ggplot(data = table,
+  #                aes(get(score_name))) +
+  #   labs(x = score_name, y = "Frequency (# cells)") +
+  #   geom_area(stat="bin", alpha=0.7, fill="#ee9090")+
+  #   theme_classic() +
+  #   theme(legend.position = 'none') # no legend
+  # ggplotly(plot) %>%
+  #   layout(
+  #     xaxis = list(
+  #       title = plot_axis_title_format
+  #     ),
+  #     yaxis = list(
+  #       title = plot_axis_title_format
+  #     ),
+  #     title = list(
+  #       text = paste0("Distribution of ", score_name, " across ", num_cells, " cells"),
+  #       font = list(size = 11)
+  #     )
+  #   )
 
 }
 createPlotWithGlobalRankCorrelationsNEW <- function(table, score_name){
   req(table)
   num_cells <- nrow(table)
-  # rank class score
-  plot <- ggplot(data = table,
-                 aes(
-                   x = rank,
-                   y = get(score_name))) +
-    labs(x = "ranked cells", y = score_name) +
-    geom_line(aes(color = class))+
-    theme_classic() +
-    theme(legend.title = element_blank())
-  # ggtitle(paste0("Corr. distrib. for: '",cell_type, "'")) +
-  # theme(plot.title = element_text(size=10))
-  ggplotly(plot) %>%
+  names(table) <- c("rank","class","score")
+  plot <- plot_ly(table, x =~rank, y=~score, type = 'scatter', mode='lines') %>%
     layout(
-      legend = list(
-        orientation = "v",
-        x = 0.5,
-        y = 0.6,
-        title = NULL
-      ),
-      xaxis = list(
-        title = plot_axis_title_format
-      ),
-      yaxis = list(
-        title = plot_axis_title_format
-      ),
+      yaxis = list(title = score_name),
+      xaxis = list(title = "Ranked cells"),
       title = list(
         text = paste0("Ranked ", score_name, " across ", num_cells, " cells"),
         font = list(size = 11)
       )
     )
+
+  # rank class score
+  # plot <- ggplot(data = table,
+  #                aes(
+  #                  x = rank,
+  #                  y = get(score_name))) +
+  #   labs(x = "ranked cells", y = score_name) +
+  #   geom_line(aes(color = class))+
+  #   theme_classic() +
+  #   theme(legend.title = element_blank())
+  # # ggtitle(paste0("Corr. distrib. for: '",cell_type, "'")) +
+  # # theme(plot.title = element_text(size=10))
+  # ggplotly(plot) %>%
+  #   layout(
+  #     legend = list(
+  #       orientation = "v",
+  #       x = 0.5,
+  #       y = 0.6,
+  #       title = NULL
+  #     ),
+  #     xaxis = list(
+  #       title = plot_axis_title_format
+  #     ),
+  #     yaxis = list(
+  #       title = plot_axis_title_format
+  #     ),
+  #     title = list(
+  #       text = paste0("Ranked ", score_name, " across ", num_cells, " cells"),
+  #       font = list(size = 11)
+  #     )
+  #   )
 }
 
 global_correlations_table <- reactiveVal()

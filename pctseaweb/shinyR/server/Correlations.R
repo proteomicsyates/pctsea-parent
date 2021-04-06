@@ -2,31 +2,19 @@
 
 createPlotWithCorrelationsForCellType <- function(table, cell_type ){
   req(table)
-  
+
   score_name <- colnames(table)[1]
   num_cells <- nrow(table)
-   
-  
-  plot <- ggplot(data = table,
-         aes(get(score_name))) +
-    labs( x = score_name, y = "Frequency (# cells)") +
-    geom_area(stat="bin", alpha=0.7, fill="#ee9090")+
-    theme_classic() +
-    # xlim(-1,1) +
-    theme(legend.position = 'none') # no legend
-
-  ggplotly(plot) %>% layout(
-    xaxis = list(
-      title = plot_axis_title_format
-    ),
-    yaxis = list(
-      title = plot_axis_title_format
-    ),
-    title = list(
-      text = paste0("Distribution of ", score_name, " across ", num_cells, " cells of type '", cell_type, "'"),
-      font = list(size = 11)
+  plot <- plot_ly(table, x =~get(score_name), type = 'histogram') %>%
+    layout(
+      xaxis = list(titlefont = list(size = 12), title = score_name),
+      yaxis = list(titlefont = list(size = 12), title = "Frequency (# cells)"),
+      title = list(
+        text = paste0("Distribution of ", score_name, " across ", num_cells, " cells of type '", cell_type, "'"),
+        font = list(size = 11)
+      )
     )
-  )
+
 }
 
 # select the correlations file

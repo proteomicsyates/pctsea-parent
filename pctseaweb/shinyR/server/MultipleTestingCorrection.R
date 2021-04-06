@@ -1,34 +1,24 @@
 createPlotMultipleTestingCorrection <- function(table){
   req(table)
-  colnames(table) <- c('Distribution', 'Enrichment score')
-  plot <- ggplot(data=table, aes(x=`Enrichment score`, fill=Distribution, color=Distribution)) +
-    geom_density(alpha=0.3) +
-    theme_classic()+
-    theme(plot.title = element_text(size=10)) +
-    theme(legend.title = element_blank())
- 
-  ggplotly(plot) %>%
+  colnames(table) <- c('Distribution', 'Enrichment_score')
+  tmp <- table[table$Distribution=='Observed',]
+  tmp2 <- hist(tmp$Enrichment_score)
+  max_y <- max(tmp2$counts)
+  plot <- plot_ly(table, alpha = 0.95, x =~Enrichment_score, type = 'histogram', split=~Distribution)%>%#, histnorm = "probability" ) %>%
     layout(
-      legend = list(
-        orientation = "h",
-        x = 0.3,
-        y = 1.08,
-        title = NULL
-      ),
       xaxis = list(
         showticklabels = TRUE,
-        title = plot_axis_title_format,
+        title = "Enrichment score",
         tickfont = list(size = 7),
         tickangle = '45'
-        ),
-      yaxis = list(
-        title = plot_axis_title_format
       ),
+      yaxis = list(titlefont = list(size = 12), range = c(0, max_y), title = "Frequency"),
       title = list(
         text = 'Distributions of Observed vs Random enrichment scores for FDR calculation',
         font = list(size = 11)
       )
     )
+
 }
 
 multiple_testing_correction_table <- reactiveVal()

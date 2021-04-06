@@ -114,3 +114,52 @@ other <- filter(table, `cell type` == 'others')
 plot <- plot_ly(table, x = ~rank, y=~`cumulative probability`, type = 'scatter', mode = 'lines', linetype = ~`cell type`) %>%
   layout()
 plot
+
+
+setwd("D:/Salva/git_projects/pctsea-parent/pctseaweb/shinyR/data/2021-03-10_18-26-27_mouse_GRIA_IP_Morpheus/cell_types_charts")
+cell_type <- "tubule"
+table = fread(file = paste0("mouse_GRIA_IP_Morpheus_",cell_type,"_corr.txt"), header = TRUE, sep = "\t")
+names(table)<- 'x'
+ plot <- plot_ly(table, x =~x, type = 'histogram') %>%
+  layout()
+plot
+
+
+setwd("D:/Salva/git_projects/pctsea-parent/pctseaweb/shinyR/data/2021-03-10_18-26-27_mouse_GRIA_IP_Morpheus/cell_types_charts")
+cell_type <- "tubule"
+table = fread(file = paste0("mouse_GRIA_IP_Morpheus_",cell_type,"_genes_per_cell_hist.txt"), header = TRUE, sep = "\t")
+colnames(table) <- c('type', 'genes', 'cells')
+
+plot <- plot_ly(table, x =~genes, y=~cells, type = 'bar', split=~type ) %>%
+  layout()
+plot
+
+
+setwd("D:/Salva/git_projects/pctsea-parent/pctseaweb/shinyR/data/2021-03-10_18-26-27_mouse_GRIA_IP_Morpheus/global_charts")
+table = fread(file = paste0("mouse_GRIA_IP_Morpheus_ews_obs_null_hist.txt"), header = FALSE, sep = "\t", na.strings = "null")
+colnames(table) <- c('Distribution', 'Enrichment_score')
+tmp <- table[table$Distribution=='Observed',]
+tmp2 <- hist(tmp$Enrichment_score)
+max_y <- max(tmp2$counts)
+plot <- plot_ly(table, alpha = 0.7, x =~Enrichment_score, type = 'histogram', split=~Distribution) %>%#, histnorm = "probability" ) %>%
+  layout(
+    yaxis = list(titlefont = list(size = 12), range = c(0, max_y))
+  )
+plot
+
+setwd("D:/Salva/git_projects/pctsea-parent/pctseaweb/shinyR/data/2021-03-10_18-26-27_mouse_GRIA_IP_Morpheus/global_charts")
+table = fread(file = paste0("mouse_GRIA_IP_Morpheus_suprema_hist.txt"), header = TRUE, sep = "\t")
+colnames(table) <- c('cell type', 'supremum_X')
+plot <- plot_ly(table, alpha = 0.7, x =~supremum_X, type = 'histogram') %>%#, histnorm = "probability" ) %>%
+  layout(
+
+  )
+plot
+
+setwd("D:/Salva/git_projects/pctsea-parent/pctseaweb/shinyR/data/2021-03-10_18-26-27_mouse_GRIA_IP_Morpheus/global_charts")
+table = fread(file = paste0("mouse_GRIA_IP_Morpheus_corr_rank_dist.txt"), header = TRUE, sep = "\t")
+num_cells <- nrow(table)
+names(table) <- c("rank","class","score")
+plot <- plot_ly(table, x =~rank, y=~score, type = 'scatter', mode='lines') %>%
+  layout()
+plot
