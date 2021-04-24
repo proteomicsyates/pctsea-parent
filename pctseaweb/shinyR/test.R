@@ -44,7 +44,7 @@ ggplot(data = table,
   geom_line(aes(color = `cell type`))+
   theme_classic() +
   xlim(-1,1)
-  # ylim(0,1)
+# ylim(0,1)
 
 
 
@@ -120,7 +120,7 @@ setwd("D:/Salva/git_projects/pctsea-parent/pctseaweb/shinyR/data/2021-03-10_18-2
 cell_type <- "tubule"
 table = fread(file = paste0("mouse_GRIA_IP_Morpheus_",cell_type,"_corr.txt"), header = TRUE, sep = "\t")
 names(table)<- 'x'
- plot <- plot_ly(table, x =~x, type = 'histogram') %>%
+plot <- plot_ly(table, x =~x, type = 'histogram') %>%
   layout()
 plot
 
@@ -162,4 +162,104 @@ num_cells <- nrow(table)
 names(table) <- c("rank","class","score")
 plot <- plot_ly(table, x =~rank, y=~score, type = 'scatter', mode='lines') %>%
   layout()
+plot
+
+# clusters
+library(morpheus)
+setwd("C:/Users/salvador/eclipse-workspace/pctsea-parent/pctseaweb/shinyR/data/2021-04-09_17-14-40_SIMPLE_SCORE_NEGSUP_SUBTYPE")
+table = fread(file = paste0("SIMPLE_SCORE_NEGSUP_SUBTYPE_correlation_genes.txt"), header = TRUE, sep = "\t")
+
+enrichment_file <- "C:/Users/salvador/eclipse-workspace/pctsea-parent/pctseaweb/shinyR/data/2021-04-09_17-14-40_SIMPLE_SCORE_NEGSUP_SUBTYPE/SIMPLE_SCORE_NEGSUP_SUBTYPE_cell_types_enrichment.txt"
+skip <- getLinesToSkip(enrichment_file)
+table2 <- fread(file = enrichment_file, header = TRUE, skip = skip,  sep = "\t", fill = TRUE, na.strings = "NaN") # IMPORTANT: 33 is the number of rows to skip until finding the actual table on the file
+significant_cell_types <- table2[`KS_p-value_BH_corrected`<0.05 & ews>0,]$cell_type
+
+cell_types <- unique(table$cell_type)
+genes <- unique(table$gene)
+
+data <- data.frame(matrix(ncol=length(significant_cell_types)))
+colnames(data) <- significant_cell_types
+for(i in seq(1:nrow(table))){
+  i<-1
+  row <- as.character(as.vector(table[i,]))
+  cell_type<-row[1]
+  gene <- row[2]
+  data[gene, cell_type] <- 1
+  if (i==1){ # remove first row that is empty in the first iteration
+    data <- data[-1,]
+  }
+}
+
+data[is.na(data)]<-0
+# cluster cell types:
+rowv = NULL
+colv = NULL
+
+dendrogram = "both"
+rowv = TRUE
+colv = TRUE
+# colorScheme <- list(scalingMode = "relative")
+y <-
+  plot <- morpheus(data,
+                   Rowv = rowv,
+                   Colv = colv,
+                   dendrogram = dendrogram,
+                   # na.rm = TRUE,
+                   # columnAnnotations = y,
+                   # columnGroupBy=list(list(field='TumorOrigin')),
+                   # by default color scale is map to the minimum and maximum of each row independently
+                   # colorScheme=colorScheme,
+                   # columns=list(list(field='TumorOrigin',display=list('text_and_color')))
+
+  )#+ scale_fill_gradient( trans = 'log' )
+plot
+
+
+# clusters with heatmaply
+library(heatmaply)
+setwd("C:/Users/salvador/eclipse-workspace/pctsea-parent/pctseaweb/shinyR/data/2021-04-09_17-14-40_SIMPLE_SCORE_NEGSUP_SUBTYPE")
+table = fread(file = paste0("SIMPLE_SCORE_NEGSUP_SUBTYPE_correlation_genes.txt"), header = TRUE, sep = "\t")
+
+enrichment_file <- "C:/Users/salvador/eclipse-workspace/pctsea-parent/pctseaweb/shinyR/data/2021-04-09_17-14-40_SIMPLE_SCORE_NEGSUP_SUBTYPE/SIMPLE_SCORE_NEGSUP_SUBTYPE_cell_types_enrichment.txt"
+skip <- getLinesToSkip(enrichment_file)
+table2 <- fread(file = enrichment_file, header = TRUE, skip = skip,  sep = "\t", fill = TRUE, na.strings = "NaN") # IMPORTANT: 33 is the number of rows to skip until finding the actual table on the file
+significant_cell_types <- table2[`KS_p-value_BH_corrected`<0.05 & ews>0,]$cell_type
+
+cell_types <- unique(table$cell_type)
+genes <- unique(table$gene)
+
+data <- data.frame(matrix(ncol=length(significant_cell_types)))
+colnames(data) <- significant_cell_types
+for(i in seq(1:nrow(table))){
+  row <- as.character(as.vector(table[i,]))
+  cell_type<-row[1]
+  gene <- row[2]
+  data[gene, cell_type] <- 1
+  if (i==1){ # remove first row that is empty in the first iteration
+    data <- data[-1,]
+  }
+}
+
+data[is.na(data)]<-0
+# cluster cell types:
+rowv = NULL
+colv = NULL
+
+dendrogram = "both"
+rowv = TRUE
+colv = TRUE
+heatmaply(mtcars)
+  plot <- heatmaply(data)
+#,
+                   Rowv = rowv,
+                   Colv = colv,
+                   dendrogram = dendrogram,
+                   # na.rm = TRUE,
+                   # columnAnnotations = y,
+                   # columnGroupBy=list(list(field='TumorOrigin')),
+                   # by default color scale is map to the minimum and maximum of each row independently
+                   # colorScheme=colorScheme,
+                   # columns=list(list(field='TumorOrigin',display=list('text_and_color')))
+
+  )#+ scale_fill_gradient( trans = 'log' )
 plot

@@ -22,7 +22,6 @@ public class SingleCell {
 	private final static Logger log = Logger.getLogger(SingleCell.class);
 	private static Map<String, String> map = new THashMap<String, String>();
 	private final static THashMap<String, Set<String>> cellNamesByOriginalCellType = new THashMap<String, Set<String>>();
-	private final static THashMap<String, Set<String>> cellNamesByMappedCellType = new THashMap<String, Set<String>>();
 	private final String name;
 	private double score;// correlation with our experimental data
 	private String cluster;
@@ -141,22 +140,30 @@ public class SingleCell {
 		return cellType;
 	}
 
-	public void setCellType(String cellType) {
+	/**
+	 * 
+	 * @param cellType
+	 * @param setAsOriginalCellType if true, it is considered an originalCellType
+	 *                              coming from the database which can be very
+	 *                              redundant and will be mapped to a
+	 *                              branchedCellType <br>
+	 *                              If false, the cell type will be considered
+	 *                              already a mapped branch
+	 */
+	public void setCellType(String cellType, boolean setAsOriginalCellType) {
 		if (cellType == null) {
 			return;
 		}
-		if (!cellNamesByOriginalCellType.containsKey(cellType)) {
-			cellNamesByOriginalCellType.put(cellType, new THashSet<String>());
-		}
-		cellNamesByOriginalCellType.get(cellType).add(getName());
 		originalCellType = parseCellTypeTypos(cellType);
-		originalCellType = cellType;
-		if (!cellNamesByMappedCellType.containsKey(originalCellType)) {
-			cellNamesByMappedCellType.put(originalCellType, new THashSet<String>());
+		if (!cellNamesByOriginalCellType.containsKey(originalCellType)) {
+			cellNamesByOriginalCellType.put(originalCellType, new THashSet<String>());
 		}
-		cellNamesByMappedCellType.get(originalCellType).add(getName());
-		branchedCellType = CellTypes.getCellTypeByOriginalType(cellType);
-
+		cellNamesByOriginalCellType.get(originalCellType).add(getName());
+		if (setAsOriginalCellType) {
+			branchedCellType = CellTypes.getCellTypeByOriginalType(cellType);
+		} else {
+			branchedCellType = new CellTypeBranched(cellType, cellType, null, null);
+		}
 	}
 
 	public String getAge() {
@@ -198,6 +205,9 @@ public class SingleCell {
 	public SingleCell(int singleCellID, String name, double correlation) {
 		id = singleCellID;
 		this.name = name;
+		if (name.equals("AdultAdipose_1.CCAGACCCTAGAGAGATC")) {
+			log.info(name);
+		}
 		score = correlation;
 	}
 

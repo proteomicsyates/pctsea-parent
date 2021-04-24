@@ -20,6 +20,7 @@ import edu.scripps.yates.pctsea.db.Expression;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.PctseaRunLog;
+import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.Gene;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
@@ -56,6 +57,7 @@ public class InteractorsExpressionsRetriever {
 	private final String uniprotRelease;
 	private final PctseaRunLog runLog;
 	private static InteractorsExpressionsRetriever instance;
+	private final CellTypeBranch cellTypeBranch;
 
 	/**
 	 * 
@@ -65,11 +67,12 @@ public class InteractorsExpressionsRetriever {
 	 * @param uniprotRelease
 	 * @param runLog                          to log the number of genes found from
 	 *                                        input list in the database
+	 * @param cellTypeBranch
 	 * @throws IOException
 	 */
 	public InteractorsExpressionsRetriever(ExpressionMongoRepository expresssionsMongoRepository,
 			MongoBaseService mongoBaseService, File experimentalExpressionsFile, Dataset dataset, String uniprotRelease,
-			PctseaRunLog runLog) throws IOException {
+			PctseaRunLog runLog, CellTypeBranch cellTypeBranch) throws IOException {
 //		if (SingleCellsMetaInformationReader.singleCellIDsBySingleCellNameMap.isEmpty()) {
 //			throw new IllegalArgumentException(
 //					"We need to read the single cell metainformation before reading expressions");
@@ -82,6 +85,7 @@ public class InteractorsExpressionsRetriever {
 		this.mongoBaseService = mongoBaseService;
 		this.expresssionsMongoRepository = expresssionsMongoRepository;
 		this.uniprotRelease = uniprotRelease;
+		this.cellTypeBranch = cellTypeBranch;
 		genes = readExperimentalExpressionsFile(experimentalExpressionsFile);
 		instance = this;
 	}
@@ -133,18 +137,22 @@ public class InteractorsExpressionsRetriever {
 				final Gene gene = new Gene(geneID, geneName);
 				genesById.put(geneID, gene);
 				geneIDs.add(geneID);
-
 				for (final Expression expression : expressions) {
 
 					final float interactorExpressionInSingleCell = expression.getExpression();
 					final String singleCellName = expression.getCellName();
-					singleCellNames.add(singleCellName);
 					final int singleCellID = SingleCellsMetaInformationReader
 							.getSingleCellIDBySingleCellName(singleCellName);
-
+					if (singleCellID == -1) {
+						// this happens if the cell was ignored when retrieved from the DB because it
+						// didn't have a type
+						continue;
+					}
+					singleCellNames.add(singleCellName);
 					final SingleCell cell = SingleCellsMetaInformationReader.getSingleCellByCellID(singleCellID);
 					cell.addGeneExpressionValue(geneID, interactorExpressionInSingleCell);
-					gene.addExpressionValueInSingleCell(singleCellID, interactorExpressionInSingleCell);
+					final String cellTypeName = cell.getCellType(this.cellTypeBranch);
+					gene.addExpressionValueInSingleCell(singleCellID, interactorExpressionInSingleCell, cellTypeName);
 				}
 				if (!expressions.isEmpty()) {
 					inputProteinGeneFound = true;

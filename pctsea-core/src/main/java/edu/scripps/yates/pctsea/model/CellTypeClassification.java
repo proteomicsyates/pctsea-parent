@@ -52,6 +52,7 @@ public class CellTypeClassification {
 	private int sizeB;
 	private double ksTestCorrectedPValue;
 	private ArrayList<GeneOccurrence> geneOccurrences;
+	private int numGenesSignificant;
 
 	public long getNumCellsOfTypePassingCorrelationThreshold() {
 		return numCellsOfTypePassingCorrelationThreshold;
@@ -471,6 +472,9 @@ public class CellTypeClassification {
 	}
 
 	public void setName(String name) {
+		if (name.trim().equals("astrocyte")) {
+			System.out.println(name);
+		}
 		this.name = name.trim();
 		try {
 			Double.valueOf(this.name);
@@ -496,4 +500,18 @@ public class CellTypeClassification {
 		secondarySupremumX = secondarySupremum;
 	}
 
+	/**
+	 * Sets the number of genes that are significant in the cell type by applying a
+	 * hyper-geometric test over the number of cells of this type that express that
+	 * gene
+	 * 
+	 * @param numGenesSignificant
+	 */
+	public void setNumGenesSignificant(int numGenesSignificant) {
+		this.numGenesSignificant = numGenesSignificant;
+	}
+
+	public int getNumGenesSignificant() {
+		return numGenesSignificant;
+	}
 }

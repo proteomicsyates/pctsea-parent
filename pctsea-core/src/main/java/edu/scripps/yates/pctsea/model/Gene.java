@@ -9,8 +9,11 @@ import org.apache.log4j.Logger;
 import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
 import gnu.trove.list.TFloatList;
+import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TFloatArrayList;
+import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntFloatMap;
+import gnu.trove.map.hash.THashMap;
 import gnu.trove.map.hash.TIntFloatHashMap;
 
 /**
@@ -23,15 +26,15 @@ public class Gene {
 	private final static Logger log = Logger.getLogger(Gene.class);
 	private final String geneName;
 	private final TIntFloatMap expressionsBySingleCellID = new TIntFloatHashMap();
-	private static int staticGeneID = 0;
+	private final THashMap<String, TIntList> cellIDsByCellType = new THashMap<String, TIntList>();
 	private List<Integer> singleCellsIDs;
 	private TFloatList expressions;
 	private List<Integer> indexes;
 	private final int geneID;
 
-	public Gene(String geneName) {
-		this(++staticGeneID, geneName);
-	}
+//	public Gene(String geneName) {
+//		this(++staticGeneID, geneName);
+//	}
 
 	public Gene(int geneID, String geneName) {
 		this.geneID = geneID;
@@ -39,7 +42,7 @@ public class Gene {
 
 	}
 
-	public void addExpressionValueInSingleCell(int singleCellID, float expressionValue) {
+	public void addExpressionValueInSingleCell(int singleCellID, float expressionValue, String cellTypeName) {
 		if (expressionsBySingleCellID.containsKey(singleCellID)) {
 			if (Float.compare(expressionsBySingleCellID.get(singleCellID), expressionValue) != 0) {
 				// keep the highest
@@ -55,10 +58,28 @@ public class Gene {
 			}
 		}
 		this.expressionsBySingleCellID.put(singleCellID, expressionValue);
+		if (!cellIDsByCellType.containsKey(cellTypeName)) {
+			cellIDsByCellType.put(cellTypeName, new TIntArrayList());
+		}
+		cellIDsByCellType.get(cellTypeName).add(singleCellID);
 	}
 
 	public String getGeneName() {
 		return geneName;
+	}
+
+	public int getNumSingleCellsInWhichIsExpressed(String cellTypeName) {
+		if (this.cellIDsByCellType.containsKey(cellTypeName)) {
+			return this.cellIDsByCellType.get(cellTypeName).size();
+		}
+		return 0;
+	}
+
+	public int[] getSingleCellsIDsInWhichIsExpressed(String cellTypeName) {
+		if (this.cellIDsByCellType.containsKey(cellTypeName)) {
+			return this.cellIDsByCellType.get(cellTypeName).toArray();
+		}
+		return new int[0];
 	}
 
 	public boolean permuteGeneExpressionInCells(List<SingleCell> singleCells) {

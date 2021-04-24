@@ -27,6 +27,7 @@ import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
 import edu.scripps.yates.utilities.progresscounter.ProgressPrintingType;
 import gnu.trove.map.hash.THashMap;
+import gnu.trove.set.hash.THashSet;
 
 @Service
 public class MongoBaseService {
@@ -51,6 +52,19 @@ public class MongoBaseService {
 		return mongoTemplate;
 	}
 
+	public List<String> getGenesByCellType(String cellType, Set<String> datasets) {
+		final Criteria criteria = Criteria.where("cellType").is(cellType);
+		if (datasets != null && !datasets.isEmpty()) {
+			criteria.and("projectTag").in(datasets);
+		}
+		final Query query = new Query();
+		query.fields().exclude("cellType").exclude("cellName").exclude("expression");
+		query.addCriteria(criteria);
+
+		final List<String> genes = mongoTemplate.findDistinct(query, "gene", Expression.class, String.class);
+		return genes;
+	}
+
 	public Map<String, List<Expression>> getExpressionByGenesByInCriteria(Set<String> genes, Set<String> datasets) {
 
 		final Criteria criteria = new Criteria("gene").in(genes);
@@ -58,7 +72,7 @@ public class MongoBaseService {
 		query.fields().exclude("cellType").exclude("cell");
 		query.addCriteria(criteria);
 		if (datasets != null && !datasets.isEmpty()) {
-			criteria.and("datasetTag").in(datasets);
+			criteria.and("projectTag").in(datasets);
 		}
 		final List<Expression> expressions = mongoTemplate.find(query, Expression.class);
 		final Map<String, List<Expression>> ret = new THashMap<String, List<Expression>>();
@@ -291,5 +305,11 @@ public class MongoBaseService {
 			PCTSEA.logStatus("BulkWriteOperation Exception ::  " + ex, LogLevel.ERROR);
 			return null;
 		}
+	}
+
+	public List<String> getGenesByCellType(String cellType, String projectTag) {
+		final Set<String> projectTags = new THashSet<String>();
+		projectTags.add(projectTag);
+		return getGenesByCellType(cellType, projectTags);
 	}
 }

@@ -68,6 +68,7 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 
 import edu.scripps.yates.pctsea.PCTSEA;
+import edu.scripps.yates.pctsea.db.CellTypeAndGeneMongoRepository;
 import edu.scripps.yates.pctsea.db.Dataset;
 import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
@@ -93,7 +94,7 @@ import gnu.trove.set.hash.THashSet;
 @CssImport("./styles/views/analyze/analyze-view.css")
 public class AnalyzeView extends VerticalLayout {
 
-	private final NumberField minCorrelationField = new NumberField("Minimum Pearson's correlation");
+	private final NumberField minScoreField = new NumberField("Minimum Pearson's correlation");
 	private final IntegerField minGenesCellsField = new IntegerField("Minimum number of proteins");
 	private final ComboBox<Dataset> datasetsCombo = new ComboBox<Dataset>("Single cells dataset to compare against");
 	private final ComboBox<CellTypeBranch> cellTypeBranchCombo = new ComboBox<CellTypeBranch>(
@@ -113,7 +114,7 @@ public class AnalyzeView extends VerticalLayout {
 	private Binder<InputParameters> binder;
 	private File inputFile;
 	private final int defaultMinGenes = 4;
-	private final double defaultMinCorrelation = 0.1;
+
 	private final int defaultPermutations = 1000;
 	private Button showInputDataButton;
 	private VerticalLayout inputFileDataTabContent;
@@ -130,6 +131,8 @@ public class AnalyzeView extends VerticalLayout {
 	private MongoBaseService mbs;
 	@Autowired
 	private DatasetMongoRepository dmr;
+	@Autowired
+	private CellTypeAndGeneMongoRepository ctgmr;
 
 	private HorizontalLayout resultsPanel;
 	private ExecutorService executor;
@@ -221,10 +224,10 @@ public class AnalyzeView extends VerticalLayout {
 		binder.forField(numPermutationsField).asRequired("Required")
 				.withValidator(num -> num >= 10, "Minimum number of permutations: 10")
 				.bind(InputParameters::getNumPermutations, InputParameters::setNumPermutations);
-		binder.forField(minCorrelationField).asRequired("Required")
+		binder.forField(minScoreField).asRequired("Required")
 				.withValidator(num -> num >= 0.0, "Minimum correlation is 0.0")
 				.withValidator(num -> num <= 1.0, "Maximum correlation is 1.0")
-				.bind(InputParameters::getMinCorrelation, InputParameters::setMinCorrelation);
+				.bind(InputParameters::getMinScore, InputParameters::setMinScore);
 		binder.forField(emailField).asRequired("Required")
 				.withValidator(new EmailValidator("This doesn't look like a valid email address"))
 				.bind(InputParameters::getEmail, InputParameters::setEmail);
@@ -311,7 +314,7 @@ public class AnalyzeView extends VerticalLayout {
 		inputParameters.setLoadRandom(false);
 		inputParameters.setPlotNegativeEnriched(false);
 		inputParameters.setInputDataFile(inputFile.getAbsolutePath());
-		inputParameters.setWriteCorrelationsFile(false);
+		inputParameters.setWriteScoresFile(false);
 
 		startPCTSEAAnalysis(inputParameters);
 		Notification.show("Run starting. See below its progress..");
@@ -321,7 +324,7 @@ public class AnalyzeView extends VerticalLayout {
 	private void startPCTSEAAnalysis(InputParameters inputParameters) {
 //		showSpinnerDialog();
 		final UI ui = UI.getCurrent();
-		final PCTSEA pctsea = new PCTSEA(inputParameters, emr, scmr, runLogsRepo, dmr, mbs);
+		final PCTSEA pctsea = new PCTSEA(inputParameters, emr, scmr, runLogsRepo, dmr, ctgmr, mbs);
 		pctsea.setStatusListener(new StatusListener<Boolean>() {
 
 			@Override
@@ -387,7 +390,7 @@ public class AnalyzeView extends VerticalLayout {
 		submitButton.setEnabled(false);
 		cancelButton.setEnabled(true);
 		clearButton.setEnabled(false);
-		minCorrelationField.setEnabled(false);
+		minScoreField.setEnabled(false);
 		minGenesCellsField.setEnabled(false);
 		numPermutationsField.setEnabled(false);
 		outputPrefixField.setEnabled(false);
@@ -404,7 +407,7 @@ public class AnalyzeView extends VerticalLayout {
 		submitButton.setEnabled(true);
 		cancelButton.setEnabled(false);
 		clearButton.setEnabled(true);
-		minCorrelationField.setEnabled(true);
+		minScoreField.setEnabled(true);
 		minGenesCellsField.setEnabled(true);
 		numPermutationsField.setEnabled(true);
 		outputPrefixField.setEnabled(true);
@@ -451,16 +454,16 @@ public class AnalyzeView extends VerticalLayout {
 		//
 		outputPrefixField.setHelperText("All output files will be named with that prefix on them");
 		//
-		minCorrelationField.setHelperText("Values from 0.0 to 1.0");
-		minCorrelationField.setValue(defaultMinCorrelation);
-		minCorrelationField.setMax(1.0);
-		minCorrelationField.setMin(0.0);
+		minScoreField.setHelperText("Values from 0.0 to 1.0");
+		minScoreField.setValue(0.1);
+		minScoreField.setMax(1.0);
+		minScoreField.setMin(0.0);
 		//
 		minGenesCellsField.setValue(defaultMinGenes);
 		minGenesCellsField
 				.setHelperText("Minimum number of proteins that should have a non-zero expression value in a cell. "
-						+ "Minimum value: 2");
-		minGenesCellsField.setMin(2);
+						+ "Minimum value: 5");
+		minGenesCellsField.setMin(5);
 		//
 		numPermutationsField.setValue(defaultPermutations);
 		numPermutationsField.setMin(10);
@@ -513,7 +516,7 @@ public class AnalyzeView extends VerticalLayout {
 			}
 
 		});
-		cellTypeBranchCombo.setValue(CellTypeBranch.TYPE);
+		cellTypeBranchCombo.setValue(CellTypeBranch.ORIGINAL);
 		//
 		//
 		scoringMethodCombo.setAutoOpen(true);
@@ -547,6 +550,17 @@ public class AnalyzeView extends VerticalLayout {
 					scoringMethodCombo.setHelperText(value.getDescription());
 				} else {
 					scoringMethodCombo.setHelperText(ScoringMethod.scoringMethodHelperText);
+				}
+
+				// change min score field range depending on the scoring method
+				if (value == ScoringMethod.PEARSONS_CORRELATION) {
+					minScoreField.setHelperText("Values from 0.0 to 1.0");
+					minScoreField.setValue(0.1);
+					minScoreField.setMax(1.0);
+				} else {
+					minScoreField.setHelperText("Positive values");
+					minScoreField.setValue(Double.valueOf(defaultMinGenes));
+					minScoreField.setMax(Double.MAX_VALUE);
 				}
 			} else {
 				scoringMethodCombo.setHelperText(ScoringMethod.scoringMethodHelperText);
@@ -792,8 +806,11 @@ public class AnalyzeView extends VerticalLayout {
 	private void clearForm() {
 		final InputParameters bean = new InputParameters();
 		bean.setMinGenesCells(defaultMinGenes);
-		bean.setMinCorrelation(defaultMinCorrelation);
+		bean.setMinScore(0.1);
 		bean.setNumPermutations(defaultPermutations);
+		bean.setCellTypeBranch(CellTypeBranch.ORIGINAL);
+		bean.setInputDataType(null);
+		bean.setScoringMethod(null);
 		bean.setEmail(null);
 		binder.setBean(bean);
 		inputFileDataTab.setEnabled(false);
@@ -810,7 +827,7 @@ public class AnalyzeView extends VerticalLayout {
 		formLayout.add(datasetsCombo);
 		formLayout.add(cellTypeBranchCombo);
 		formLayout.add(scoringMethodCombo);
-		formLayout.add(minCorrelationField);
+		formLayout.add(minScoreField);
 		formLayout.add(minGenesCellsField);
 		formLayout.add(outputPrefixField);
 		formLayout.add(numPermutationsField);

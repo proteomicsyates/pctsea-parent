@@ -10,6 +10,9 @@ import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
 import edu.scripps.yates.pctsea.correlation.CorrelationThreshold;
+import edu.scripps.yates.pctsea.correlation.NoThreshold;
+import edu.scripps.yates.pctsea.correlation.ScoreThreshold;
+import edu.scripps.yates.pctsea.db.CellTypeAndGeneMongoRepository;
 import edu.scripps.yates.pctsea.db.Dataset;
 import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
@@ -17,6 +20,7 @@ import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
+import edu.scripps.yates.pctsea.model.InputDataType;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.pctsea.model.ScoringMethod;
@@ -31,7 +35,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private String prefix;
 	private String email;
 	private File experimentExpressionFile;
-	private CorrelationThreshold correlationThreshold;
+	private ScoreThreshold scoreThreshold;
 	private int minNumberExpressedGenesInCell;
 	private boolean loadRandomDistributionsIfExist;
 	private int maxIterations;
@@ -41,12 +45,13 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private boolean writeCorrelationsFile;
 	private String uniprotRelease;
 	private ScoringMethod scoringMethod;
+	private InputDataType inputDataType;
 
 	public PCTSEACommandLine(String[] args, DatasetMongoRepository dmr, ExpressionMongoRepository emr,
-			SingleCellMongoRepository scmr, PctseaRunLogRepository runLog, MongoBaseService mbs)
-			throws ParseException, DoNotInvokeRunMethod, SomeErrorInParametersOcurred {
+			SingleCellMongoRepository scmr, PctseaRunLogRepository runLog, CellTypeAndGeneMongoRepository ctgmr,
+			MongoBaseService mbs) throws ParseException, DoNotInvokeRunMethod, SomeErrorInParametersOcurred {
 		super(args);
-		pctsea = new PCTSEA(emr, scmr, runLog, dmr, mbs);
+		pctsea = new PCTSEA(emr, scmr, runLog, dmr, ctgmr, mbs);
 
 	}
 
@@ -57,7 +62,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			pctsea.setPrefix(prefix);
 			pctsea.setEmail(email);
 			pctsea.setExperimentExpressionFile(experimentExpressionFile);
-			pctsea.setCorrelationThreshold(correlationThreshold);
+			pctsea.setScoreThreshold(scoreThreshold);
 			pctsea.setMinNumberExpressedGenesInCell(minNumberExpressedGenesInCell);
 			pctsea.setLoadRandomDistributionsIfExist(loadRandomDistributionsIfExist);
 			pctsea.setMaxIterations(maxIterations);
@@ -67,6 +72,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			pctsea.setWriteCorrelationsFile(writeCorrelationsFile);
 			pctsea.setUniprotRelease(uniprotRelease);
 			pctsea.setScoringMethod(scoringMethod);
+			pctsea.setInputDataType(inputDataType);
 			// to make log go to the textarea when calling to the status listener
 			pctsea.setStatusListener(this);
 			final PCTSEAResult result = pctsea.run();
@@ -116,19 +122,20 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			errorInParameters("experimental_expression_file is missing");
 		}
 
-		correlationThreshold = new CorrelationThreshold(0.1);
-		if (cmd.hasOption(InputParameters.MIN_CORRELATION)) {
+		scoreThreshold = new CorrelationThreshold(0.1);
+		if (cmd.hasOption(InputParameters.MIN_SCORE)) {
 			try {
-				correlationThreshold = new CorrelationThreshold(
-						Double.valueOf(cmd.getOptionValue(InputParameters.MIN_CORRELATION)));
-				if (correlationThreshold.getThresholdValue() > 1.0 || correlationThreshold.getThresholdValue() < -1.0) {
-					throw new IllegalArgumentException();
+				scoreThreshold = new CorrelationThreshold(
+						Double.valueOf(cmd.getOptionValue(InputParameters.MIN_SCORE)));
+
+				if (scoreThreshold.getThresholdValue() == 0.0) {
+					scoreThreshold = new NoThreshold();
 				}
 			} catch (final Exception e) {
 				e.printStackTrace();
-				errorInParameters("option min_genes_cells '-" + InputParameters.MIN_CORRELATION + "' ('"
-						+ cmd.getOptionValue(InputParameters.MIN_CORRELATION)
-						+ "') is not valid. Valid values are real numbers between -1 and 1");
+				errorInParameters(
+						"option '" + InputParameters.MIN_SCORE + "' ('" + cmd.getOptionValue(InputParameters.MIN_SCORE)
+								+ "') is not valid. Valid values are real numbers");
 			}
 
 		}
@@ -145,7 +152,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 
 			} catch (final Exception e) {
 				e.printStackTrace();
-				errorInParameters("option '=" + InputParameters.MIN_GENES_CELLS + "' ('"
+				errorInParameters("option '" + InputParameters.MIN_GENES_CELLS + "' ('"
 						+ cmd.getOptionValue(InputParameters.MIN_GENES_CELLS)
 						+ "') is not valid. Valid values are positive integers.");
 			}
@@ -200,7 +207,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		}
 		// write correlations file
 		writeCorrelationsFile = false;
-		if (cmd.hasOption(InputParameters.WRITE_CORRELATIONS)) {
+		if (cmd.hasOption(InputParameters.WRITE_SCORES)) {
 			writeCorrelationsFile = true;
 		}
 		uniprotRelease = null;
@@ -213,9 +220,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		if (cmd.hasOption(InputParameters.SCORING_METHOD)) {
 			try {
 				scoringMethod = ScoringMethod.valueOf(cmd.getOptionValue(InputParameters.SCORING_METHOD).trim());
-				if (scoringMethod == null) {
-					throw new Exception("");
-				}
+
 			} catch (final Exception e) {
 				errorInParameters("Error in value for option '-" + InputParameters.SCORING_METHOD + "'. Value '"
 						+ cmd.getOptionValue(InputParameters.SCORING_METHOD).trim()
@@ -223,9 +228,24 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			}
 		}
 		if (scoringMethod != ScoringMethod.PEARSONS_CORRELATION) {
-			if (cmd.hasOption(InputParameters.MIN_GENES_CELLS)) {
-				errorInParameters("When using a scoring method that is not " + ScoringMethod.PEARSONS_CORRELATION
-						+ ", the option '" + InputParameters.MIN_GENES_CELLS + "' should not be used.");
+			if (scoringMethod == ScoringMethod.QUICK_SCORE) {
+				scoreThreshold = new NoThreshold();
+			}
+		} else {
+			if (scoreThreshold.getThresholdValue() > 1.0 || scoreThreshold.getThresholdValue() < -1.0) {
+				errorInParameters(
+						"option '" + InputParameters.MIN_SCORE + "' ('" + cmd.getOptionValue(InputParameters.MIN_SCORE)
+								+ "') is not valid. Valid values are real numbers between -1 and 1");
+			}
+		}
+		//
+		if (cmd.hasOption(InputParameters.INPUT_DATA_TYPE)) {
+			try {
+				this.inputDataType = InputDataType.valueOf(cmd.getOptionValue(InputParameters.INPUT_DATA_TYPE).trim());
+			} catch (final Exception e) {
+				errorInParameters("Error in value for option '-" + InputParameters.INPUT_DATA_TYPE + "'. Value '"
+						+ cmd.getOptionValue(InputParameters.INPUT_DATA_TYPE).trim()
+						+ "' not recognized. Possible values are: " + InputDataType.getStringSeparated(","));
 			}
 		}
 	}
@@ -250,7 +270,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 //		option3.setRequired(true);
 //		options.add(option3);
 
-		final Option option4 = new Option(InputParameters.MIN_CORRELATION, true,
+		final Option option4 = new Option(InputParameters.MIN_SCORE, true,
 				"Minimum Pearson's correlation to be considered in the cell type enrichment cell. If not provided, it will be 0.1 by default. If negative only the cells with negative correlations below that value will be considered.");
 		options.add(option4);
 
@@ -293,8 +313,8 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		datasets.setRequired(true);
 		options.add(datasets);
 
-		final Option writeCorrelationsFileOpton = new Option(InputParameters.WRITE_CORRELATIONS, false,
-				"Whether to write or not a file with the correlation values between all single cells and the input data. Default value if not provided: False.");
+		final Option writeCorrelationsFileOpton = new Option(InputParameters.WRITE_SCORES, false,
+				"Whether to write or not a file with the scores associated to each single cell used to rank them for the KS-statistics. Default value if not provided: False.");
 		options.add(writeCorrelationsFileOpton);
 
 		final Option uniprotReleaseOpton = new Option(InputParameters.UNIPROT_RELEASE, true,
@@ -305,6 +325,11 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 				"Scoring method used in the algorithm. Possible values are: " + ScoringMethod.getStringSeparated(",")
 						+ ". Value if not provided: " + ScoringMethod.PEARSONS_CORRELATION);
 		options.add(scoringMethodOption);
+
+		final Option inputDataTypeOption = new Option(InputParameters.INPUT_DATA_TYPE, true,
+				"Type of input protein/gene list. Possible values are: " + InputDataType.getStringSeparated(","));
+		inputDataTypeOption.setRequired(true);
+		options.add(inputDataTypeOption);
 
 		return options;
 	}

@@ -7,10 +7,10 @@ public class CellTypeBranched {
 	private String characteristic = null;
 
 	public CellTypeBranched(String originalCellType, String type, String subtype, String characteristic) {
-		this.originalCellType = originalCellType;
-		this.type = type;
-		this.subtype = subtype;
-		this.characteristic = characteristic;
+		setOriginalCellType(originalCellType);
+		setType(type);
+		setSubtype(subtype);
+		setCharacteristic(characteristic);
 	}
 
 	public String getOriginalCellType() {
@@ -53,14 +53,27 @@ public class CellTypeBranched {
 
 	public String getCellTypeBranch(CellTypeBranch branch) {
 		switch (branch) {
+		case ORIGINAL:
+			return this.originalCellType;
 		case CHARACTERISTIC:
 			return this.characteristic;
 		case TYPE:
 			return this.type;
 		case TYPE_SUBTYPE:
-			return this.type + "-" + subtype;
+			String ret = this.type;
+			if (subtype != null) {
+				ret += "-" + subtype;
+			}
+			return ret;
 		case TYPE_SUBTYPE_CHARACTERISTIC:
-			return this.type + "-" + this.subtype + "-" + this.characteristic;
+			String ret2 = this.type;
+			if (subtype != null) {
+				ret2 += "-" + subtype;
+			}
+			if (characteristic != null) {
+				ret2 += "-" + characteristic;
+			}
+			return ret2;
 
 		default:
 			throw new IllegalArgumentException(branch + " not supported?");

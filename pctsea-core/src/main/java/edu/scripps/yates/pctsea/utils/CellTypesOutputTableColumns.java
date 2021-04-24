@@ -28,6 +28,7 @@ public enum CellTypesOutputTableColumns {
 	KS_PVALUE("KS_p-value"), //
 	KS_PVALUE_BH_CORRECTED("KS_p-value_BH_corrected"), //
 	KS_SIGNIFICANT_LEVEL("KS_significance_level"), //
+	NUM_GENES_SIGNIFICANT("Num_Genes_Significant"), //
 	UMAP_1("Umap_1"), //
 	UMAP_2("Umap_2"), //
 	UMAP_3("Umap_3"), //
@@ -100,6 +101,8 @@ public enum CellTypesOutputTableColumns {
 			return String.valueOf(cellType.getKSTestCorrectedPvalue());
 		case KS_SIGNIFICANT_LEVEL:
 			return String.valueOf(cellType.getSignificancyString());
+		case NUM_GENES_SIGNIFICANT:
+			return String.valueOf(cellType.getNumGenesSignificant());
 		case UMAP_1:
 			return parseNullableNumber(cellType.getUmapClustering(0));
 		case UMAP_2:

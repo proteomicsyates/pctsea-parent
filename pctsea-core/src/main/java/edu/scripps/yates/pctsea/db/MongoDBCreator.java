@@ -39,9 +39,15 @@ public class MongoDBCreator {
 			template.createCollection(PctseaRunLog.class);
 			PCTSEA.logStatus("Document collection for " + PctseaRunLog.class + " already exists");
 		}
+		if (!template.collectionExists(CellTypeAndGene.class)) {
+			PCTSEA.logStatus("Creating document collection for " + CellTypeAndGene.class);
+			template.createCollection(CellTypeAndGene.class);
+			PCTSEA.logStatus("Document collection for " + CellTypeAndGene.class + " already exists");
+		}
 //		ensureExpressionGeneIndex();
 //		ensureExpressionProjectIndex();
 		ensureExpressionGeneAndProjectTagCompoundIndex();
+		ensureCellTypeAndGeneAndProjectTagCompoundIndex();
 		ensureExpressionCellTypeIndex();
 		ensureExpressionCellNameIndex();
 		if (!template.collectionExists(SingleCell.class)) {
@@ -72,6 +78,15 @@ public class MongoDBCreator {
 				new Document().append("gene", 1).append("projectTag", 1))
 						.named("expression_gene_projectTag_compound_index");
 		template.indexOps(Expression.class).ensureIndex(index);
+
+	}
+
+	private void ensureCellTypeAndGeneAndProjectTagCompoundIndex() {
+		logIndexCreation("cellType gene-cellType-datasetTag", CellTypeAndGene.class);
+		final IndexDefinition index = new CompoundIndexDefinition(
+				new Document().append("gene", 1).append("datasetTag", 1).append("cellType", 1))
+						.named("cellTypeAndGene_gene_cellType_datasetTag_compound_index");
+		template.indexOps(CellTypeAndGene.class).ensureIndex(index);
 
 	}
 

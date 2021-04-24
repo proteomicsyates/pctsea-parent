@@ -1,6 +1,8 @@
 package edu.scripps.yates.pctsea.model;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -27,7 +29,7 @@ public class CellTypes {
 	static {
 		cellTypes = org.proteored.miapeapi.cv.CellTypes.getInstance(null).getPossibleValues().stream()
 				.map(cvTerm -> cvTerm.getPreferredName().toLowerCase()).collect(Collectors.toSet());
-		PCTSEA.logStatus(cellTypes.size() + " cell types in the ontology");
+//		PCTSEA.logStatus(cellTypes.size() + " cell types in the ontology");
 
 	}
 
@@ -124,6 +126,10 @@ public class CellTypes {
 
 				if (split.length > 3) {
 					type = split[3].trim();
+					// I replace spaces by _
+					if (type.contains(" ")) {
+						type = type.replace(" ", "_");
+					}
 					if (!"".equals(type)) {
 						types.add(type);
 					}
@@ -140,6 +146,7 @@ public class CellTypes {
 						characteristics.add(characteristic);
 					}
 				}
+
 				final CellTypeBranched cellTypeBranched = new CellTypeBranched(originalCellType, type, subtype,
 						characteristic);
 				if (!cellTypeByOriginalCellType.containsKey(originalCellType)) {
@@ -179,11 +186,35 @@ public class CellTypes {
 		}
 	}
 
+	static Set<String> notFound = new THashSet<String>();
+
 	public static CellTypeBranched getCellTypeByOriginalType(String originalType) {
 		if (originalCellTypes.isEmpty()) {
 			loadHierarchicalCellType();
 		}
-		return cellTypeByOriginalCellType.get(originalType);
+		if (originalType == null) {
+			log.info(originalType);
+		} else {
+			originalType = originalType.trim();
+		}
+		final CellTypeBranched cellTypeBranched = cellTypeByOriginalCellType.get(originalType);
+		if (cellTypeBranched == null) {
+			try {
+				if (!notFound.contains(originalType)) {
+					final FileWriter fw = new FileWriter(new File(
+							"C:\\Users\\salvador\\eclipse-workspace\\pctsea-parent\\pctsea-core\\src\\main\\resources\\cell_types_not_found_in_table.txt"),
+							true);
+					fw.write(originalType + "\n");
+					fw.close();
+					notFound.add(originalType);
+					log.debug(originalType);
+				}
+			} catch (final IOException e) {
+				e.printStackTrace();
+			}
+
+		}
+		return cellTypeBranched;
 	}
 
 	public static Set<CellTypeBranched> getCellTypesByCharacteristics(String characteristics) {

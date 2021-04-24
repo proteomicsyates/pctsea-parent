@@ -15,9 +15,12 @@ import edu.scripps.yates.pctsea.model.CellTypeClassification;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.pctsea.utils.PCTSEAUtils;
 import edu.scripps.yates.utilities.pi.ParIterator;
+import edu.scripps.yates.utilities.util.Pair;
 import gnu.trove.list.TDoubleList;
+import gnu.trove.list.TFloatList;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TDoubleArrayList;
+import gnu.trove.list.array.TFloatArrayList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -33,10 +36,12 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	private final String scoreName;
 	private final File resultsSubfolderForCellTypes;
 	private final String prefix;
+	private final boolean compensateWithNegativeSupremum;
 
 	public EnrichmentWeigthedScoreParallel(ParIterator<CellTypeClassification> iterator, int numCore,
 			List<SingleCell> singleCellList, CellTypeBranch cellTypeBranch, boolean permutatedData,
-			boolean plotNegativeEnrichedCellTypes, String scoreName, File resultsSubfolderForCellTypes, String prefix) {
+			boolean plotNegativeEnrichedCellTypes, String scoreName, File resultsSubfolderForCellTypes, String prefix,
+			boolean compensateWithNegativeSupremum) {
 		this.iterator = iterator;
 		this.singleCellList.addAll(singleCellList);
 		// sort by correlation from higher to lower
@@ -47,6 +52,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		this.scoreName = scoreName;
 		this.resultsSubfolderForCellTypes = resultsSubfolderForCellTypes;
 		this.prefix = prefix;
+		this.compensateWithNegativeSupremum = compensateWithNegativeSupremum;
 	}
 
 	private class XYPoint {
@@ -93,12 +99,16 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 
 				scoresFromCellType = new TDoubleArrayList();
 				scoresForOtherCellTypes = new TDoubleArrayList();
+			} else {
+//				System.out.println("asdf");
 			}
 
 			final String cellTypeName = cellType.getName();
 			float denominatorA = 0.0f;
 			float denominatorB = 0.0f;
-			final TDoubleList differences = new TDoubleArrayList();
+			final TFloatList differences = new TFloatArrayList();
+			final TFloatList as = new TFloatArrayList();
+			final TFloatList bs = new TFloatArrayList();
 
 //			final float denominatorB = 1.0f * (n - nk);
 			final List<SingleCell> cellsOfType = new ArrayList<SingleCell>();
@@ -122,6 +132,8 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			}
 
 			float supremum = 0.0f;
+			final float negativeSupremum = 0.0f;
+
 			float previousA = 0.0f;
 			float previousB = 0.0f;
 			float numeratorA = 0.0f;
@@ -166,6 +178,8 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 					}
 				}
 				if (!permutatedData) {
+					as.add(a);
+					bs.add(b);
 					scoreSeriesType.add(new XYPoint(i + 1, a));
 					scoreSeriesOtherType.add(new XYPoint(i + 1, b));
 				}
@@ -180,6 +194,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 						supremumLineSeries.add(new XYPoint(i + 1, b));
 					}
 				}
+
 				previousA = a;
 				previousB = b;
 			}
@@ -200,7 +215,19 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 				if (!permutatedData) {
 					cellType.setSizeA(sizea);
 					cellType.setSizeB(sizeb);
-					cellType.setEnrichment(supremum, dStatistic, supremumX, 1d * supremumX / singleCellList.size());
+					final double normalizedSupremumX = 1d * supremumX / singleCellList.size();
+					if (!compensateWithNegativeSupremum) {
+						cellType.setEnrichment(supremum, dStatistic, supremumX, normalizedSupremumX);
+					} else {
+						final Pair<Integer, Float> priorNegativeSupremum = lookForPriorNegativeSupremum(supremumX,
+								differences);
+						if (priorNegativeSupremum != null) {
+							supremum = supremum - Math.abs(priorNegativeSupremum.getSecondElement());
+
+						}
+						cellType.setEnrichment(supremum, dStatistic, supremumX, normalizedSupremumX);
+
+					}
 					cellType.setKSTestPvalue(ksPvalue);
 
 					// final String[] significancies = { "*", "**", "***" };
@@ -220,6 +247,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 					final int secondaryEnrichmentIndex = lookForSecondaryEnrichmentIndex(supremumX, differences);
 
 					if (secondaryEnrichmentIndex != 0) {
+
 						// then we see if from 0 to that index, we have another positive supremum
 						float secondarySupremum = 0.0f;
 						previousA = 0.0f;
@@ -227,6 +255,27 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 						numeratorA = 0.0f;
 						numeratorB = 0.0f;
 						int secondarySupremumX = 0;
+
+						// another more efficient way is to use differences that are already calculated.
+						for (int i = 0; i <= secondaryEnrichmentIndex; i++) {
+							final float difference = differences.get(i);
+							if (difference > 0 && difference > secondarySupremum) {
+								secondarySupremum = difference;
+								secondarySupremumX = i + 1;
+								final float a = as.get(i);
+								final float b = bs.get(i);
+								secondarySupremumLineSeries.clear();
+								secondarySupremumLineSeries.add(new XYPoint(i + 1, a));
+								secondarySupremumLineSeries.add(new XYPoint(i + 1, b));
+							}
+						}
+//						System.out.println("sec sup: " + secondarySupremum + "\tsec supX: " + secondarySupremumX);
+						secondarySupremum = 0.0f;
+						previousA = 0.0f;
+						previousB = 0.0f;
+						numeratorA = 0.0f;
+						numeratorB = 0.0f;
+						secondarySupremumX = 0;
 						for (int i = 0; i <= secondaryEnrichmentIndex; i++) {
 							final SingleCell singleCell = singleCellList.get(i);
 
@@ -414,7 +463,36 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		return test.approximateP(dStatistic, a, b);
 	}
 
-	private int lookForSecondaryEnrichmentIndex(int supremumX, TDoubleList differences) {
+	/**
+	 * Looks for the negative supremum (max difference) prior to the supremumX
+	 * 
+	 * @param supremumX
+	 * @param differences
+	 * @return
+	 */
+	private Pair<Integer, Float> lookForPriorNegativeSupremum(int supremumX, TFloatList differences) {
+		Pair<Integer, Float> ret = null;
+
+		float negativeSupremum = 0;
+		int negativeSupremumX = -1;
+		for (int i = 0; i < supremumX; i++) {
+			final float difference = differences.get(i);
+			if (difference < 0) {
+				if (Math.abs(difference) > negativeSupremum) {
+					negativeSupremum = difference;
+					negativeSupremumX = i + 1;
+				}
+			}
+		}
+		if (negativeSupremumX != -1) {
+			ret = new Pair(negativeSupremumX, negativeSupremum);
+		}
+
+		return ret;
+
+	}
+
+	private int lookForSecondaryEnrichmentIndex(int supremumX, TFloatList differences) {
 
 		int secondaryEnrichmentIndex = 0;
 		double previousDifference = 0;

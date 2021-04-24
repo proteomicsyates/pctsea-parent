@@ -254,6 +254,9 @@ public class HumanSingleCellsDatasetCreation {
 
 	private String getSingleCellBiomaterial(String singleCell) {
 		final int cellID = SingleCellsMetaInformationReader.getSingleCellIDBySingleCellName(singleCell);
+		if (cellID == -1) {
+			return null;
+		}
 		final edu.scripps.yates.pctsea.model.SingleCell cell = SingleCellsMetaInformationReader
 				.getSingleCellByCellID(cellID);
 		if (cell != null) {
@@ -264,6 +267,9 @@ public class HumanSingleCellsDatasetCreation {
 
 	private String getSingleCellType(String singleCell) {
 		final int cellID = SingleCellsMetaInformationReader.getSingleCellIDBySingleCellName(singleCell);
+		if (cellID == -1) {
+			return null;
+		}
 		final edu.scripps.yates.pctsea.model.SingleCell cell = SingleCellsMetaInformationReader
 				.getSingleCellByCellID(cellID);
 		if (cell != null) {

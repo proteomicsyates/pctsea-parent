@@ -10,5 +10,7 @@ public interface SingleCellMongoRepository extends MongoRepository<SingleCell, S
 
 	List<SingleCell> findByType(String type);
 
+	long countByType(String type);
+
 	List<SingleCell> findByDatasetTag(String datasetTag);
 }

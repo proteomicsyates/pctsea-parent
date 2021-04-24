@@ -102,13 +102,17 @@ public class CorrelationThreshold implements ScoreThreshold {
 				// sort by correlation from higher to lower
 
 				if (correlationThresholdValue > 0.0) {
-					final double corr1 = Double.isNaN(o1.getScoreForRanking()) ? -Double.MAX_VALUE : o1.getScoreForRanking();
-					final double corr2 = Double.isNaN(o2.getScoreForRanking()) ? -Double.MAX_VALUE : o2.getScoreForRanking();
+					final double corr1 = Double.isNaN(o1.getScoreForRanking()) ? -Double.MAX_VALUE
+							: o1.getScoreForRanking();
+					final double corr2 = Double.isNaN(o2.getScoreForRanking()) ? -Double.MAX_VALUE
+							: o2.getScoreForRanking();
 					return Double.compare(corr2, corr1);
 				} else {
 					// sort by correlation from lower to higher
-					final double corr1 = Double.isNaN(o1.getScoreForRanking()) ? Double.MAX_VALUE : o1.getScoreForRanking();
-					final double corr2 = Double.isNaN(o2.getScoreForRanking()) ? Double.MAX_VALUE : o2.getScoreForRanking();
+					final double corr1 = Double.isNaN(o1.getScoreForRanking()) ? Double.MAX_VALUE
+							: o1.getScoreForRanking();
+					final double corr2 = Double.isNaN(o2.getScoreForRanking()) ? Double.MAX_VALUE
+							: o2.getScoreForRanking();
 					return Double.compare(corr1, corr2);
 				}
 			}

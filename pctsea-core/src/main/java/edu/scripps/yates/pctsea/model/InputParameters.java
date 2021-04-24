@@ -7,12 +7,12 @@ import edu.scripps.yates.pctsea.db.Dataset;
 public class InputParameters {
 	@Override
 	public String toString() {
-		String string = "InputParameters [writeCorrelationsFile=" + writeCorrelationsFile + ", email=" + email
-				+ ", inputDataFile=" + inputDataFile + ", minCorrelation=" + minCorrelation + ", minGenesCells="
-				+ minGenesCells + ", outputPrefix=" + outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations="
-				+ numPermutations + ", cellTypesClassification=" + cellTypeBranch + ", plotNegativeEnriched="
-				+ plotNegativeEnriched + ", uniprotRelease=" + uniprotRelease + ", scoringMethod=" + scoringMethod
-				+ ", dataset=";
+		String string = "InputParameters [writeScoresFile=" + writeScoresFile + ", email=" + email + ", inputDataFile="
+				+ inputDataFile + ", minScore=" + minScore + ", minGenesCells=" + minGenesCells + ", outputPrefix="
+				+ outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations=" + numPermutations
+				+ ", cellTypesClassification=" + cellTypeBranch + ", plotNegativeEnriched=" + plotNegativeEnriched
+				+ ", uniprotRelease=" + uniprotRelease + ", scoringMethod=" + scoringMethod + ", inputDataType="
+				+ inputDataType + ", dataset=";
 		if (dataset != null) {
 			string += dataset.getTag();
 		} else {
@@ -36,7 +36,7 @@ public class InputParameters {
 
 	private String email;
 	private String inputDataFile;
-	private double minCorrelation;
+	private double minScore;
 	private int minGenesCells;
 	@NotNull
 	private String outputPrefix;
@@ -45,22 +45,24 @@ public class InputParameters {
 	private CellTypeBranch cellTypeBranch;
 	private boolean plotNegativeEnriched;
 	private Dataset dataset;
-	private boolean writeCorrelationsFile;
+	private boolean writeScoresFile;
 	private String uniprotRelease;
 	private ScoringMethod scoringMethod = ScoringMethod.PEARSONS_CORRELATION; // by default
+	private InputDataType inputDataType;
 	public static final String EMAIL = "email";
 	public static final String OUT = "out";
 	public static final String PERM = "perm";
 	public static final String EEF = "eef";
-	public static final String MIN_CORRELATION = "min_correlation";
+	public static final String MIN_SCORE = "min_score";
 	public static final String MIN_GENES_CELLS = "min_genes_cells";
 	public static final String CELL_TYPES_CLASSIFICATION = "cell_types_classification";
 	public static final String LOAD_RANDOM = "load_random";
 	public static final String PLOT_NEGATIVE_ENRICHED = "plot_negative_enriched";
 	public static final String DATASETS = "datasets";
-	public static final String WRITE_CORRELATIONS = "write_correlations";
+	public static final String WRITE_SCORES = "write_scores";
 	public static final String UNIPROT_RELEASE = "uniprot_release";
 	public static final String SCORING_METHOD = "scoring_method";
+	public static final String INPUT_DATA_TYPE = "input_data_type";
 
 	public String getInputDataFile() {
 		return inputDataFile;
@@ -70,12 +72,12 @@ public class InputParameters {
 		this.inputDataFile = inputDataFile;
 	}
 
-	public double getMinCorrelation() {
-		return minCorrelation;
+	public double getMinScore() {
+		return minScore;
 	}
 
-	public void setMinCorrelation(double minCorrelation) {
-		this.minCorrelation = minCorrelation;
+	public void setMinScore(double minScore) {
+		this.minScore = minScore;
 	}
 
 	public int getMinGenesCells() {
@@ -142,12 +144,12 @@ public class InputParameters {
 		this.dataset = dataset;
 	}
 
-	public boolean isWriteCorrelationsFile() {
-		return writeCorrelationsFile;
+	public boolean isWriteScoresFile() {
+		return writeScoresFile;
 	}
 
-	public void setWriteCorrelationsFile(boolean writeCorrelationsFile) {
-		this.writeCorrelationsFile = writeCorrelationsFile;
+	public void setWriteScoresFile(boolean writeScoresFile) {
+		this.writeScoresFile = writeScoresFile;
 	}
 
 	public String getUniprotRelease() {
@@ -164,5 +166,13 @@ public class InputParameters {
 
 	public void setScoringMethod(ScoringMethod scoringMethod) {
 		this.scoringMethod = scoringMethod;
+	}
+
+	public InputDataType getInputDataType() {
+		return inputDataType;
+	}
+
+	public void setInputDataType(InputDataType inputDataType) {
+		this.inputDataType = inputDataType;
 	}
 }

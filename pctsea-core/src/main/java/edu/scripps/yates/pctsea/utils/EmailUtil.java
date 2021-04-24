@@ -32,7 +32,7 @@ public class EmailUtil {
 		body.append("Parameters: \n ");
 
 		body.append(InputParameters.EEF + ": " + FilenameUtils.getName(inputParameters.getInputDataFile()) + " \n ");
-		body.append(InputParameters.MIN_CORRELATION + ": " + inputParameters.getMinCorrelation() + "\n");
+		body.append(InputParameters.MIN_SCORE + ": " + inputParameters.getMinScore() + "\n");
 		body.append(InputParameters.MIN_GENES_CELLS + ": " + inputParameters.getMinGenesCells() + "\n");
 		body.append(InputParameters.DATASETS + ": " + inputParameters.getDataset().getTag() + " ("
 				+ inputParameters.getDataset().getName() + " - " + inputParameters.getDataset().getReference() + ")"
@@ -42,7 +42,7 @@ public class EmailUtil {
 		body.append(InputParameters.PERM + ": " + inputParameters.getNumPermutations() + "\n");
 		body.append(InputParameters.PLOT_NEGATIVE_ENRICHED + ": " + inputParameters.isPlotNegativeEnriched() + "\n");
 		body.append(InputParameters.LOAD_RANDOM + ": " + inputParameters.isLoadRandom() + "\n");
-		body.append(InputParameters.WRITE_CORRELATIONS + ": " + inputParameters.isWriteCorrelationsFile() + "\n");
+		body.append(InputParameters.WRITE_SCORES + ": " + inputParameters.isWriteScoresFile() + "\n");
 		body.append(InputParameters.UNIPROT_RELEASE + ": " + inputParameters.getUniprotRelease() + "\n");
 		body.append(InputParameters.SCORING_METHOD + ": " + inputParameters.getScoringMethod().getScoreName() + "\n");
 		body.append("\n\n");

@@ -1,11 +1,11 @@
 package edu.scripps.yates.pctsea.model;
 
 public enum CellTypeBranch {
-	TYPE, TYPE_SUBTYPE, TYPE_SUBTYPE_CHARACTERISTIC, CHARACTERISTIC;
+	TYPE, TYPE_SUBTYPE, TYPE_SUBTYPE_CHARACTERISTIC, CHARACTERISTIC, ORIGINAL;
 
 	public static String getStringSeparated(String separator) {
-		return "'" + TYPE + "'" + separator + "'" + TYPE_SUBTYPE + "'" + separator + "'" + TYPE_SUBTYPE_CHARACTERISTIC
-				+ "'" + separator + "'" + CHARACTERISTIC + "'";
+		return "'" + ORIGINAL + "'" + separator + "'" + TYPE + "'" + separator + "'" + TYPE_SUBTYPE + "'" + separator
+				+ "'" + TYPE_SUBTYPE_CHARACTERISTIC + "'" + separator + "'" + CHARACTERISTIC + "'";
 	}
 
 	public static CellTypeBranch fromSource(String source) {

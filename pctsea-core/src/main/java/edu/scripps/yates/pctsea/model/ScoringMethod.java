@@ -10,6 +10,10 @@ public enum ScoringMethod {
 	SIMPLE_SCORE("simpleScore",
 			"simpleScore is the sum of the matching genes and the difference in normalized intensities", true, true),
 	DOT_PRODUCT("dot-product", true, true), LIBRARY("library-Xcorr", false, true),
+	QUICK_SCORE("quick_score",
+			"For each cell type it is the product of a factor for each gene expressed which is the "
+					+ "number of cells in which the gene is detected divided by the number of cells of that type",
+			true, true),
 	MACHINE_LEARNING("ML-score", false, true);
 
 	private final String scoreName;
