@@ -1164,7 +1164,7 @@ public class PCTSEA {
 			counter.increment();
 			final String printIfNecessary = counter.printIfNecessary();
 			if (!"".equals(printIfNecessary)) {
-				ConcurrentUtil.sleep(1L);
+				ConcurrentUtil.sleep(2L);
 			}
 
 //			if (singleCelldb.getType() == null) {
