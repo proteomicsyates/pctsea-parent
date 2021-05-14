@@ -1167,19 +1167,19 @@ public class PCTSEA {
 				ConcurrentUtil.sleep(1L);
 			}
 
-			if (singleCelldb.getType() == null) {
-				// ignore single cell because it is not categorized
-				try {
-					final FileWriter fw = new FileWriter(new File(
-							"C:\\Users\\salvador\\eclipse-workspace\\pctsea-parent\\pctsea-core\\src\\main\\resources\\cells_with_no_type.txt"),
-							true);
-					fw.write(singleCelldb.getId() + "\t" + singleCelldb.getName() + "\n");
-					fw.close();
-				} catch (final IOException e) {
-					e.printStackTrace();
-				}
-				continue;
-			}
+//			if (singleCelldb.getType() == null) {
+//				// ignore single cell because it is not categorized
+//				try {
+//					final FileWriter fw = new FileWriter(new File(
+//							"C:\\Users\\salvador\\eclipse-workspace\\pctsea-parent\\pctsea-core\\src\\main\\resources\\cells_with_no_type.txt"),
+//							true);
+//					fw.write(singleCelldb.getId() + "\t" + singleCelldb.getName() + "\n");
+//					fw.close();
+//				} catch (final IOException e) {
+//					e.printStackTrace();
+//				}
+//				continue;
+//			}
 			cellID++;
 			final SingleCell sc = new SingleCell(cellID, singleCelldb.getName(), Double.NaN);
 			sc.setCellType(singleCelldb.getType(), true);
