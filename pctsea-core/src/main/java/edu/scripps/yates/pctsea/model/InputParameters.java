@@ -1,17 +1,31 @@
 package edu.scripps.yates.pctsea.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.validation.constraints.NotNull;
 
 import edu.scripps.yates.pctsea.db.Dataset;
+import edu.scripps.yates.pctsea.scoring.NoThreshold;
+import edu.scripps.yates.pctsea.scoring.ScoreThreshold;
 
 public class InputParameters {
 	@Override
 	public String toString() {
+		final StringBuilder scoringSchemasString = new StringBuilder();
+		for (final ScoringSchema scoringSchema : scoringSchemas) {
+			if (!"".equals(scoringSchemasString.toString())) {
+				scoringSchemasString.append("|");
+			}
+			scoringSchemasString.append(scoringSchema.getScoringMethod() + "-minScore="
+					+ scoringSchema.getScoringThreshold().getThresholdValue());
+		}
+
 		String string = "InputParameters [writeScoresFile=" + writeScoresFile + ", email=" + email + ", inputDataFile="
-				+ inputDataFile + ", minScore=" + minScore + ", minGenesCells=" + minGenesCells + ", outputPrefix="
-				+ outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations=" + numPermutations
-				+ ", cellTypesClassification=" + cellTypeBranch + ", plotNegativeEnriched=" + plotNegativeEnriched
-				+ ", uniprotRelease=" + uniprotRelease + ", scoringMethod=" + scoringMethod + ", inputDataType="
+				+ inputDataFile + ", minGenesCells=" + minGenesCells + ", outputPrefix=" + outputPrefix
+				+ ", loadRandom=" + loadRandom + ", numPermutations=" + numPermutations + ", cellTypesClassification="
+				+ cellTypeBranch + ", plotNegativeEnriched=" + plotNegativeEnriched + ", uniprotRelease="
+				+ uniprotRelease + ", scoringSchemas=" + scoringSchemasString.toString() + ", inputDataType="
 				+ inputDataType + ", dataset=";
 		if (dataset != null) {
 			string += dataset.getTag();
@@ -36,7 +50,6 @@ public class InputParameters {
 
 	private String email;
 	private String inputDataFile;
-	private double minScore;
 	private int minGenesCells;
 	@NotNull
 	private String outputPrefix;
@@ -47,7 +60,7 @@ public class InputParameters {
 	private Dataset dataset;
 	private boolean writeScoresFile;
 	private String uniprotRelease;
-	private ScoringMethod scoringMethod = ScoringMethod.PEARSONS_CORRELATION; // by default
+	private List<ScoringSchema> scoringSchemas = new ArrayList<ScoringSchema>();
 	private InputDataType inputDataType;
 	public static final String EMAIL = "email";
 	public static final String OUT = "out";
@@ -72,20 +85,20 @@ public class InputParameters {
 		this.inputDataFile = inputDataFile;
 	}
 
-	public double getMinScore() {
-		return minScore;
+	public void addScoringSchema(ScoringMethod scoringMethod, double minScore, int minNumberExpressedGenesInCell) {
+		ScoreThreshold threshold = null;
+		if (scoringMethod == ScoringMethod.QUICK_SCORE) {
+			threshold = new NoThreshold();
+		} else {
+			threshold = new ScoreThreshold(minScore);
+		}
+
+		final ScoringSchema schema = new ScoringSchema(scoringMethod, threshold, minNumberExpressedGenesInCell);
+		this.scoringSchemas.add(schema);
 	}
 
-	public void setMinScore(double minScore) {
-		this.minScore = minScore;
-	}
-
-	public int getMinGenesCells() {
-		return minGenesCells;
-	}
-
-	public void setMinGenesCells(int minGenesCells) {
-		this.minGenesCells = minGenesCells;
+	public void addScoringSchema(ScoringSchema scoringSchema) {
+		this.scoringSchemas.add(scoringSchema);
 	}
 
 	public String getOutputPrefix() {
@@ -160,12 +173,8 @@ public class InputParameters {
 		this.uniprotRelease = uniprotRelease;
 	}
 
-	public ScoringMethod getScoringMethod() {
-		return scoringMethod;
-	}
-
-	public void setScoringMethod(ScoringMethod scoringMethod) {
-		this.scoringMethod = scoringMethod;
+	public List<ScoringSchema> getScoringSchemas() {
+		return scoringSchemas;
 	}
 
 	public InputDataType getInputDataType() {
@@ -175,4 +184,10 @@ public class InputParameters {
 	public void setInputDataType(InputDataType inputDataType) {
 		this.inputDataType = inputDataType;
 	}
+
+	public void setScoringSchemas(List<ScoringSchema> scoringSchemas2) {
+		this.scoringSchemas = scoringSchemas2;
+
+	}
+
 }

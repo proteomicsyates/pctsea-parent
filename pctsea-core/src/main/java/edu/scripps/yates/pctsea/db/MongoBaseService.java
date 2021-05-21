@@ -1,6 +1,7 @@
 package edu.scripps.yates.pctsea.db;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.BulkOperations.BulkMode;
+import org.springframework.data.mongodb.core.DocumentCallbackHandler;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.convert.MongoConverter;
 import org.springframework.data.mongodb.core.query.BasicQuery;
@@ -180,6 +182,24 @@ public class MongoBaseService {
 		return 0l;
 	}
 
+	public List<Expression> getExpressionByGenes(Collection<String> genes, Dataset dataset) {
+		final List<Expression> ret = new ArrayList<Expression>();
+
+		if (dataset != null) {
+			final Query query = Query.query(
+					Criteria.where("gene").in(genes).andOperator(Criteria.where("projectTag").is(dataset.getTag())));
+			final List<Expression> expressions = mongoTemplate.find(query, Expression.class);
+			ret.addAll(expressions);
+
+		} else {
+			final Query query = Query.query(Criteria.where("gene").in(genes));
+			final List<Expression> expressions = mongoTemplate.find(query, Expression.class);
+			ret.addAll(expressions);
+		}
+
+		return ret;
+	}
+
 	public List<Expression> getExpressionByGene(String gene, Dataset dataset) {
 		final List<Expression> ret = new ArrayList<Expression>();
 
@@ -312,4 +332,22 @@ public class MongoBaseService {
 		projectTags.add(projectTag);
 		return getGenesByCellType(cellType, projectTags);
 	}
+
+	public void getExpressionByGenes(Collection<String> genes, Dataset dataset,
+			DocumentCallbackHandler documentProcessor) {
+		final List<Expression> ret = new ArrayList<Expression>();
+
+		if (dataset != null) {
+			final Query query = Query.query(
+					Criteria.where("gene").in(genes).andOperator(Criteria.where("projectTag").is(dataset.getTag())));
+			mongoTemplate.executeQuery(query, "expression", documentProcessor);
+
+		} else {
+			final Query query = Query.query(Criteria.where("gene").in(genes));
+			final List<Expression> expressions = mongoTemplate.find(query, Expression.class);
+			ret.addAll(expressions);
+		}
+
+	}
+
 }

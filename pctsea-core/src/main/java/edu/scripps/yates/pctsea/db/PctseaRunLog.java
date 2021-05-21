@@ -1,5 +1,6 @@
 package edu.scripps.yates.pctsea.db;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -16,7 +17,7 @@ public class PctseaRunLog {
 	private int numInputGenes;
 	private InputParameters inputParameters;
 	private List<String> inputGenesNotFound;
-	private int numCellsPassingScoreThreshold;
+	private List<Integer> numCellsPassingScoreThreshold;
 
 	public PctseaRunLog() {
 
@@ -86,11 +87,14 @@ public class PctseaRunLog {
 		return inputGenesNotFound;
 	}
 
-	public int getNumCellsPassingScoreThreshold() {
+	public List<Integer> getNumCellsPassingScoreThreshold() {
 		return numCellsPassingScoreThreshold;
 	}
 
 	public void setNumCellsPassingScoreThreshold(int numCellsPassingScoreThreshold) {
-		this.numCellsPassingScoreThreshold = numCellsPassingScoreThreshold;
+		if (this.numCellsPassingScoreThreshold == null) {
+			this.numCellsPassingScoreThreshold = new ArrayList<Integer>();
+		}
+		this.numCellsPassingScoreThreshold.add(numCellsPassingScoreThreshold);
 	}
 }

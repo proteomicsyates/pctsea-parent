@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.math3.util.CombinatoricsUtils;
 import org.apache.log4j.Logger;
 
-import edu.scripps.yates.pctsea.PCTSEA;
 import gnu.trove.map.hash.THashMap;
 import gnu.trove.set.hash.THashSet;
 
@@ -193,7 +192,7 @@ public class CellTypes {
 			loadHierarchicalCellType();
 		}
 		if (originalType == null) {
-			log.info(originalType);
+			return null;
 		} else {
 			originalType = originalType.trim();
 		}
@@ -207,7 +206,7 @@ public class CellTypes {
 					fw.write(originalType + "\n");
 					fw.close();
 					notFound.add(originalType);
-					log.debug(originalType);
+//					log.debug(originalType);
 				}
 			} catch (final IOException e) {
 				e.printStackTrace();

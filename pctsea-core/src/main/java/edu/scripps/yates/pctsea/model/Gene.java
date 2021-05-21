@@ -30,13 +30,13 @@ public class Gene {
 	private List<Integer> singleCellsIDs;
 	private TFloatList expressions;
 	private List<Integer> indexes;
-	private final int geneID;
+	private final short geneID;
 
 //	public Gene(String geneName) {
 //		this(++staticGeneID, geneName);
 //	}
 
-	public Gene(int geneID, String geneName) {
+	public Gene(short geneID, String geneName) {
 		this.geneID = geneID;
 		this.geneName = geneName;
 

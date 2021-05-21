@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import edu.scripps.yates.pctsea.correlation.ScoreThreshold;
+import edu.scripps.yates.pctsea.scoring.ScoreThreshold;
 import edu.scripps.yates.utilities.maths.Maths;
 import gnu.trove.list.TFloatList;
 import gnu.trove.list.array.TFloatArrayList;

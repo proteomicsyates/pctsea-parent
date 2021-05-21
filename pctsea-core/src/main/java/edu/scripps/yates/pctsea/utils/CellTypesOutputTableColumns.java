@@ -1,8 +1,10 @@
 package edu.scripps.yates.pctsea.utils;
 
+import java.util.List;
+
 import edu.scripps.yates.pctsea.PCTSEA;
-import edu.scripps.yates.pctsea.correlation.ScoreThreshold;
 import edu.scripps.yates.pctsea.model.CellTypeClassification;
+import edu.scripps.yates.pctsea.model.ScoringSchema;
 
 public enum CellTypesOutputTableColumns {
 	CELLTYPE("cell_type"), //
@@ -57,7 +59,7 @@ public enum CellTypesOutputTableColumns {
 	}
 
 	public String getValue(CellTypeClassification cellType, int numSingleCells,
-			long numSingleCellsWithPositiveCorrelation, ScoreThreshold scoreThreshold) {
+			String numSingleCellsWithPositiveCorrelationInEachRound, List<ScoringSchema> scoringSchemas) {
 		switch (this) {
 		case CELLTYPE:
 			return cellType.getName();
@@ -68,7 +70,7 @@ public enum CellTypesOutputTableColumns {
 		case NUM_CELLS_OF_TYPE_CORR:
 			return String.valueOf(cellType.getNumCellsOfTypePassingCorrelationThreshold());
 		case NUM_CELLS_CORR:
-			return String.valueOf(numSingleCellsWithPositiveCorrelation);
+			return String.valueOf(numSingleCellsWithPositiveCorrelationInEachRound);
 		case HYPERG_PVALUE:
 			return String.valueOf(cellType.getHypergeometricPValue());
 		case LOG2_RATIO:
@@ -112,7 +114,15 @@ public enum CellTypesOutputTableColumns {
 		case UMAP_4:
 			return parseNullableNumber(cellType.getUmapClustering(3));
 		case GENES:
-			return cellType.getStringOfRankingOfGenesThatContributedToTheScore(scoreThreshold);
+			final StringBuilder sb = new StringBuilder();
+			for (final ScoringSchema scoringSchema : scoringSchemas) {
+				if ("".equals(sb.toString())) {
+					sb.append("\t");
+				}
+				sb.append(cellType
+						.getStringOfRankingOfGenesThatContributedToTheScore(scoringSchema.getScoringThreshold()));
+			}
+			return sb.toString();
 		default:
 			throw new IllegalArgumentException("Value for column " + this + " is not supported yet!");
 		}

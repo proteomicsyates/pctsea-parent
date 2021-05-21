@@ -47,6 +47,7 @@ import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Label;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.listbox.MultiSelectListBox;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -55,7 +56,6 @@ import com.vaadin.flow.component.tabs.TabVariant;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.IntegerField;
-import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.Receiver;
@@ -79,6 +79,8 @@ import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.pctsea.model.ScoringMethod;
+import edu.scripps.yates.pctsea.model.ScoringSchema;
+import edu.scripps.yates.pctsea.scoring.ScoreThreshold;
 import edu.scripps.yates.pctsea.util.PCTSEALocalConfiguration;
 import edu.scripps.yates.pctsea.util.VaadinUtil;
 import edu.scripps.yates.pctsea.views.main.MainView;
@@ -94,12 +96,12 @@ import gnu.trove.set.hash.THashSet;
 @CssImport("./styles/views/analyze/analyze-view.css")
 public class AnalyzeView extends VerticalLayout {
 
-	private final NumberField minScoreField = new NumberField("Minimum Pearson's correlation");
-	private final IntegerField minGenesCellsField = new IntegerField("Minimum number of proteins");
+	private final TextField minScoreField = new TextField("Score threshold(s)", "0.1");
+	private final TextField minGenesCellsField = new TextField("Minimum number of proteins per cell", "5");
 	private final ComboBox<Dataset> datasetsCombo = new ComboBox<Dataset>("Single cells dataset to compare against");
 	private final ComboBox<CellTypeBranch> cellTypeBranchCombo = new ComboBox<CellTypeBranch>(
 			"Level of cell type classification");
-	private final ComboBox<ScoringMethod> scoringMethodCombo = new ComboBox<ScoringMethod>("Scoring method");
+	private final MultiSelectListBox<ScoringMethod> scoringMethodCombo = new MultiSelectListBox<ScoringMethod>();
 	private final TextField outputPrefixField = new TextField("Prefix for all output files", "experiment1");
 	private final EmailField emailField = new EmailField("Email", "your_email@domain.com");
 	private final IntegerField numPermutationsField = new IntegerField("Number of permutations", "1000");
@@ -219,15 +221,11 @@ public class AnalyzeView extends VerticalLayout {
 					return true;
 				}, "Prefix contains invalid characters")
 				.bind(InputParameters::getOutputPrefix, InputParameters::setOutputPrefix);
-		binder.forField(minGenesCellsField).asRequired("Required").withValidator(num -> num >= 1, "Minimum is 3")
-				.bind(InputParameters::getMinGenesCells, InputParameters::setMinGenesCells);
+
 		binder.forField(numPermutationsField).asRequired("Required")
 				.withValidator(num -> num >= 10, "Minimum number of permutations: 10")
 				.bind(InputParameters::getNumPermutations, InputParameters::setNumPermutations);
-		binder.forField(minScoreField).asRequired("Required")
-				.withValidator(num -> num >= 0.0, "Minimum correlation is 0.0")
-				.withValidator(num -> num <= 1.0, "Maximum correlation is 1.0")
-				.bind(InputParameters::getMinScore, InputParameters::setMinScore);
+
 		binder.forField(emailField).asRequired("Required")
 				.withValidator(new EmailValidator("This doesn't look like a valid email address"))
 				.bind(InputParameters::getEmail, InputParameters::setEmail);
@@ -236,10 +234,6 @@ public class AnalyzeView extends VerticalLayout {
 				.withValidator(cellTypeBranch -> cellTypeBranch != null,
 						"A cell type classification level must be selected.")
 				.bind(InputParameters::getCellTypeBranch, InputParameters::setCellTypeBranch);
-
-		binder.forField(scoringMethodCombo).asRequired("Required")
-				.withValidator(scoringMethod -> scoringMethod != null, "A scoring method must be selected.")
-				.bind(InputParameters::getScoringMethod, InputParameters::setScoringMethod);
 
 		binder.forField(datasetsCombo).asRequired("Required")
 				.withValidator(dataset -> dataset != null, "A dataset must be selected")
@@ -315,6 +309,73 @@ public class AnalyzeView extends VerticalLayout {
 		inputParameters.setPlotNegativeEnriched(false);
 		inputParameters.setInputDataFile(inputFile.getAbsolutePath());
 		inputParameters.setWriteScoresFile(false);
+		final Set<ScoringMethod> scoringMethods = scoringMethodCombo.getValue();
+		if (scoringMethods.size() > 1) {
+			try {
+				if (scoringMethods.size() != 2) {
+					throw new IllegalArgumentException("Only 2 scoring methods are allowed");
+				}
+				if (!minScoreField.getValue().contains(",")) {
+					throw new IllegalArgumentException("You should state 2 numbers in the minimum score field.");
+				}
+				final String[] minScoreFieldSplit = minScoreField.getValue().split(",");
+				if (minScoreFieldSplit.length != 2) {
+					throw new IllegalArgumentException("Only 2 numbers allowed in the minimum score field.");
+				}
+				if (minScoreFieldSplit.length != 2) {
+					throw new IllegalArgumentException();
+				}
+				if (!minGenesCellsField.getValue().contains(",")) {
+					throw new IllegalArgumentException(
+							"You should state 2 numbers in the minimum proteins per cell field.");
+				}
+				final String[] minProteinsPerCellFieldSplit = minGenesCellsField.getValue().split(",");
+				if (minProteinsPerCellFieldSplit.length != 2) {
+					throw new IllegalArgumentException(
+							"Only 2 numbers allowed in the minimum proteins per cell field.");
+				}
+				final ScoringSchema scoringSchema1 = new ScoringSchema(ScoringMethod.SIMPLE_SCORE,
+						new ScoreThreshold(Double.valueOf(minScoreFieldSplit[0])),
+						Integer.valueOf(minProteinsPerCellFieldSplit[0]));
+				inputParameters.addScoringSchema(scoringSchema1);
+				final ScoringSchema scoringSchema2 = new ScoringSchema(ScoringMethod.PEARSONS_CORRELATION,
+						new ScoreThreshold(Double.valueOf(minScoreFieldSplit[1])),
+						Integer.valueOf(minProteinsPerCellFieldSplit[1]));
+				inputParameters.addScoringSchema(scoringSchema2);
+
+			} catch (final Exception e) {
+				VaadinUtil.showErrorDialog(
+						"When using multiple scoring methods, you should state the minimum score and minimum proteins per cell for each of the scoring methods too, separated by commas. Details: "
+								+ e.getMessage());
+				return;
+			}
+		} else {
+			ScoreThreshold scoreThreshold = null;
+			try {
+				scoreThreshold = new ScoreThreshold(Double.valueOf(minScoreField.getValue()));
+				if (scoreThreshold.getThresholdValue() < 0.0) {
+					throw new NumberFormatException();
+				}
+			} catch (final NumberFormatException e) {
+				VaadinUtil.showErrorDialog("Error entering minimum score. Only positive real numbers are allowed.");
+				return;
+			}
+			Integer minGenesCells = null;
+			try {
+				minGenesCells = Integer.valueOf(minGenesCellsField.getValue());
+				if (minGenesCells < 0.0) {
+					throw new NumberFormatException();
+				}
+			} catch (final NumberFormatException e) {
+				VaadinUtil.showErrorDialog(
+						"Error entering minimum proteins per cell. Only positive integer numbers are allowed.");
+				return;
+			}
+			final ScoringSchema scoringSchema = new ScoringSchema(scoringMethods.iterator().next(), scoreThreshold,
+					minGenesCells);
+			inputParameters.addScoringSchema(scoringSchema);
+
+		}
 
 		startPCTSEAAnalysis(inputParameters);
 		Notification.show("Run starting. See below its progress..");
@@ -454,16 +515,17 @@ public class AnalyzeView extends VerticalLayout {
 		//
 		outputPrefixField.setHelperText("All output files will be named with that prefix on them");
 		//
-		minScoreField.setHelperText("Values from 0.0 to 1.0");
-		minScoreField.setValue(0.1);
-		minScoreField.setMax(1.0);
-		minScoreField.setMin(0.0);
+		minScoreField.setHelperText("Minimum Score to be considered in the cell type enrichment cell. If several "
+				+ InputParameters.SCORING_METHOD
+				+ " are provided, several values separated by commas must be provided for this parameter");
+		minScoreField.setValue("0.1");
+
 		//
-		minGenesCellsField.setValue(defaultMinGenes);
-		minGenesCellsField
-				.setHelperText("Minimum number of proteins that should have a non-zero expression value in a cell. "
-						+ "Minimum value: 5");
-		minGenesCellsField.setMin(5);
+		minGenesCellsField.setValue(String.valueOf(defaultMinGenes));
+		minGenesCellsField.setHelperText(
+				"Minimum number of proteins/genes that should have a non-zero expression value in a cell to be considered in the corresponding scoring."
+						+ " If several " + InputParameters.SCORING_METHOD
+						+ " are provided, several values separated by commas must be provided for this parameter");
 		//
 		numPermutationsField.setValue(defaultPermutations);
 		numPermutationsField.setMin(10);
@@ -519,55 +581,33 @@ public class AnalyzeView extends VerticalLayout {
 		cellTypeBranchCombo.setValue(CellTypeBranch.ORIGINAL);
 		//
 		//
-		scoringMethodCombo.setAutoOpen(true);
-		scoringMethodCombo.setHelperText(ScoringMethod.scoringMethodHelperText);
-		scoringMethodCombo.setClearButtonVisible(true);
-		scoringMethodCombo.setItemLabelGenerator(new ItemLabelGenerator<ScoringMethod>() {
+		scoringMethodCombo.setItems(ScoringMethod.values());
+//		ScoringMethod.scoringMethodHelperText);
 
-			@Override
-			public String apply(ScoringMethod item) {
-				return item.name();
-			}
-		});
-		scoringMethodCombo.setPlaceholder("Select level");
+		final THashSet<ScoringMethod> defaultScorings = new THashSet<ScoringMethod>();
+		defaultScorings.add(ScoringMethod.SIMPLE_SCORE);
+		defaultScorings.add(ScoringMethod.PEARSONS_CORRELATION);
 		scoringMethodCombo.addValueChangeListener(event -> {
-			final ScoringMethod value = event.getValue();
-			if (value != null) {
-				if (!value.isSupported()) {
-					final ConfirmDialog dialog = new ConfirmDialog("Scoring method not supported yet",
-							"The selected scoring method is not supported yet", "OK", null);
-					dialog.open();
-					scoringMethodCombo.setValue(ScoringMethod.PEARSONS_CORRELATION);
+			final Set<ScoringMethod> values = event.getValue();
+			if (values != null) {
 
-				} else if (value.isExperimental()) {
+				if (values.stream().filter(sc -> !sc.isSupported()).findAny().isPresent()) {
+					final ConfirmDialog dialog = new ConfirmDialog("Scoring method not supported yet",
+							"Some of the selected scoring methods are not supported yet", "OK", null);
+					dialog.open();
+
+					scoringMethodCombo.setValue(defaultScorings);
+
+				} else if (values.stream().filter(sc -> sc.isExperimental()).findAny().isPresent()) {
 					final ConfirmDialog dialog = new ConfirmDialog("Experimental scoring method",
 							"The selected scoring method is still experimental", "OK", null);
 					dialog.open();
 				}
 
-				// show description if has one
-				if (value.getDescription() != null) {
-					scoringMethodCombo.setHelperText(value.getDescription());
-				} else {
-					scoringMethodCombo.setHelperText(ScoringMethod.scoringMethodHelperText);
-				}
-
-				// change min score field range depending on the scoring method
-				if (value == ScoringMethod.PEARSONS_CORRELATION) {
-					minScoreField.setHelperText("Values from 0.0 to 1.0");
-					minScoreField.setValue(0.1);
-					minScoreField.setMax(1.0);
-				} else {
-					minScoreField.setHelperText("Positive values");
-					minScoreField.setValue(Double.valueOf(defaultMinGenes));
-					minScoreField.setMax(Double.MAX_VALUE);
-				}
-			} else {
-				scoringMethodCombo.setHelperText(ScoringMethod.scoringMethodHelperText);
 			}
 
 		});
-		scoringMethodCombo.setValue(ScoringMethod.PEARSONS_CORRELATION);
+		scoringMethodCombo.setValue(defaultScorings);
 		//
 		//
 		upload.setMaxFiles(1);
@@ -805,12 +845,14 @@ public class AnalyzeView extends VerticalLayout {
 
 	private void clearForm() {
 		final InputParameters bean = new InputParameters();
-		bean.setMinGenesCells(defaultMinGenes);
-		bean.setMinScore(0.1);
+		final ScoringSchema scoringSchema = new ScoringSchema(ScoringMethod.PEARSONS_CORRELATION,
+				new ScoreThreshold(0.1), defaultMinGenes);
+		final List<ScoringSchema> scoringSchemas = new ArrayList<ScoringSchema>();
+		scoringSchemas.add(scoringSchema);
+		bean.setScoringSchemas(scoringSchemas);
 		bean.setNumPermutations(defaultPermutations);
 		bean.setCellTypeBranch(CellTypeBranch.ORIGINAL);
 		bean.setInputDataType(null);
-		bean.setScoringMethod(null);
 		bean.setEmail(null);
 		binder.setBean(bean);
 		inputFileDataTab.setEnabled(false);

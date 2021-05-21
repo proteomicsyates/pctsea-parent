@@ -445,7 +445,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	 * Default number of iterations used by
 	 * {@link #monteCarloP(double, int, int, boolean, int)}
 	 */
-	private static final int MONTE_CARLO_ITERATIONS = 1000;
+	private static final int MONTE_CARLO_ITERATIONS = 500;
 
 	private double ksPValue(double dStatistic, int a, int b) {
 
