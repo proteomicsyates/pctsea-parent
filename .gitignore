@@ -11,5 +11,5 @@
 /pctsea-cl/logs/
 /pctsea-cl/others/
 /pctsea-cl/target/
-
+/pctseaweb/*.json
 .Rproj.user
