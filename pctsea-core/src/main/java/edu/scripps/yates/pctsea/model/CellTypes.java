@@ -1,6 +1,8 @@
 package edu.scripps.yates.pctsea.model;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -15,8 +17,11 @@ import java.util.stream.Collectors;
 import org.apache.commons.math3.util.CombinatoricsUtils;
 import org.apache.log4j.Logger;
 
-import edu.scripps.yates.pctsea.PCTSEA;
+import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.THashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 import gnu.trove.set.hash.THashSet;
 
 public class CellTypes {
@@ -24,10 +29,11 @@ public class CellTypes {
 
 	private final static Logger log = Logger.getLogger(CellTypes.class);
 	private static Set<String> cellTypes;
+
 	static {
 		cellTypes = org.proteored.miapeapi.cv.CellTypes.getInstance(null).getPossibleValues().stream()
 				.map(cvTerm -> cvTerm.getPreferredName().toLowerCase()).collect(Collectors.toSet());
-		PCTSEA.logStatus(cellTypes.size() + " cell types in the ontology");
+//		PCTSEA.logStatus(cellTypes.size() + " cell types in the ontology");
 
 	}
 
@@ -98,6 +104,22 @@ public class CellTypes {
 	private static final Set<String> characteristics = new THashSet<String>();
 	private static final Set<String> originalCellTypes = new THashSet<String>();
 
+	private static final TObjectIntMap<String> cellTypeIDByCellTypeName = new TObjectIntHashMap<String>();
+	private static final TIntObjectMap<String> cellTypeNamesByCellTypeID = new TIntObjectHashMap<String>();
+
+	private static int cellTypeID = 0;
+
+	public static int getCellTypeID(String cellType) {
+		if (cellTypeIDByCellTypeName.containsKey(cellType)) {
+			return cellTypeIDByCellTypeName.get(cellType);
+		} else {
+			cellTypeID++;
+			cellTypeIDByCellTypeName.put(cellType, cellTypeID);
+			cellTypeNamesByCellTypeID.put(cellTypeID, cellType);
+			return cellTypeID;
+		}
+	}
+
 	private static void loadHierarchicalCellType() {
 		BufferedReader reader = null;
 		try {
@@ -124,6 +146,10 @@ public class CellTypes {
 
 				if (split.length > 3) {
 					type = split[3].trim();
+					// I replace spaces by _
+					if (type.contains(" ")) {
+						type = type.replace(" ", "_");
+					}
 					if (!"".equals(type)) {
 						types.add(type);
 					}
@@ -140,6 +166,7 @@ public class CellTypes {
 						characteristics.add(characteristic);
 					}
 				}
+
 				final CellTypeBranched cellTypeBranched = new CellTypeBranched(originalCellType, type, subtype,
 						characteristic);
 				if (!cellTypeByOriginalCellType.containsKey(originalCellType)) {
@@ -179,11 +206,35 @@ public class CellTypes {
 		}
 	}
 
+	static Set<String> notFound = new THashSet<String>();
+
 	public static CellTypeBranched getCellTypeByOriginalType(String originalType) {
 		if (originalCellTypes.isEmpty()) {
 			loadHierarchicalCellType();
 		}
-		return cellTypeByOriginalCellType.get(originalType);
+		if (originalType == null) {
+			return null;
+		} else {
+			originalType = originalType.trim();
+		}
+		final CellTypeBranched cellTypeBranched = cellTypeByOriginalCellType.get(originalType);
+		if (cellTypeBranched == null) {
+			try {
+				if (!notFound.contains(originalType)) {
+					final FileWriter fw = new FileWriter(new File(
+							"D:\\Salva\\git_projects\\pctsea-parent\\pctsea-core\\src\\main\\resources\\cell_types_not_found_in_table.txt"),
+							true);
+					fw.write(originalType + "\n");
+					fw.close();
+					notFound.add(originalType);
+//					log.debug(originalType);
+				}
+			} catch (final IOException e) {
+				e.printStackTrace();
+			}
+
+		}
+		return cellTypeBranched;
 	}
 
 	public static Set<CellTypeBranched> getCellTypesByCharacteristics(String characteristics) {
@@ -233,5 +284,13 @@ public class CellTypes {
 			loadHierarchicalCellType();
 		}
 		return originalCellTypes;
+	}
+
+	public static String getCellTypeNameByCellTypeID(int cellTypeID) {
+		final String cellTypeName = cellTypeNamesByCellTypeID.get(cellTypeID);
+		if (cellTypeName != null) {
+			return cellTypeName;
+		}
+		return null;
 	}
 }

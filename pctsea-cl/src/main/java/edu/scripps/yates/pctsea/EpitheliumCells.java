@@ -180,7 +180,7 @@ public class EpitheliumCells implements CommandLineRunner {
 			}
 			List<Expression> expressionsFromDB = null;
 			if (!expressionsByCellName.containsKey(sce.getCellName())) {
-				expressionsFromDB = expressionMongoRepo.findExpressionsByCellName(sce.getCellName());
+				expressionsFromDB = expressionMongoRepo.findByCellName(sce.getCellName());
 				expressionsByCellName.put(sce.getGene(), expressionsFromDB);
 			} else {
 				expressionsFromDB = expressionsByCellName.get(sce.getCellName());
@@ -410,6 +410,9 @@ public class EpitheliumCells implements CommandLineRunner {
 
 	private String getSingleCellType(String singleCell) {
 		final int cellID = SingleCellsMetaInformationReader.getSingleCellIDBySingleCellName(singleCell);
+		if (cellID == -1) {
+			return null;
+		}
 		final edu.scripps.yates.pctsea.model.SingleCell cell = SingleCellsMetaInformationReader
 				.getSingleCellByCellID(cellID);
 		if (cell != null) {

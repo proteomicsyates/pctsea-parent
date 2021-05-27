@@ -8,15 +8,14 @@
 #
 list.of.packages <- c("shiny","dplyr", "stringr", "ggplot2",
                       "sjmisc", "tidyverse", "data.table",
-                      "promises", "future", "tools", "stringi",
-                      "filesstrings", "DT", "plotly")
+                      "promises", "future", "tools",
+                      "filesstrings", "DT", "plotly", "heatmaply", "shinyHeatmaply", "dendextend", "files")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)){
   # install.packages(new.packages)
 }
 library(shiny)
 library(dplyr)
-library(stringr)
 library(ggplot2)
 library(sjmisc)
 library(tidyverse)
@@ -24,14 +23,20 @@ library(data.table)
 library(promises)
 library(future)
 library(tools)
-library(stringi)
 library(filesstrings)
 library(DT)
 library(plotly)
+library(RColorBrewer)
+library(files)
+
+# library(devtools)
+library(heatmaply)
+library(shinyHeatmaply)
+library(dendextend)
 # plan(multisession)
 plan(multicore)
 
-options(shiny.maxRequestSize = 120*1024^2,
+options(shiny.maxRequestSize = 1200*1024^2,
         shiny.reactlog = TRUE
         # ,shiny.trace = TRUE
         ,shiny.fullstacktrace = TRUE
@@ -142,6 +147,40 @@ ui <- fluidPage(title = "PCTSEA",
                                                 )
                                               )
                                      ),
+                                     tabPanel("Cluster cell types by genes",
+                                              br(),
+                                              sidebarLayout(
+                                                sidebarPanel(width = 2,
+                                                             radioButtons(
+                                                               inputId = "heatmap_cell_value_type",
+                                                               label = "Cluster cell types by",
+                                                               choices = c("presence/absence"="binary",
+                                                                           "# of cells of that type in the which gene is present"="num_cells",
+                                                                           "% of cells of that type in which the gene is present"="pct_cells")
+                                                             ),
+                                                             radioButtons(inputId = "swap_rows_cols",
+                                                                          label = "Show cell types in",
+                                                                          choices = c("columns", "rows")
+                                                             ),
+                                                             checkboxInput(inputId = "cluster_genes",
+                                                                           label = "Cluster genes too",
+                                                                           value = TRUE),
+                                                             selectInput(inputId = "num_clusters", label = "Number of clusters",choices = c("Automatic",seq(2:10)), selected = "Automatic", multiple = FALSE),
+                                                             numericInput(inputId ="threshold",
+                                                                          label= "KS BH-corrected pvalue threshold",
+                                                                          value = 0.05 ),
+                                                             br(),
+                                                             numericInput(inputId = "heatmap_width", label = "heatmap width", min = 400, max = 2400, value = 1000),
+                                                             numericInput(inputId = "heatmap_height", label = "heatmap heigth", min = 400, max = 5000, value = 1000),
+                                                             numericInput(inputId = "heatmap_font_size", label = "Font size", min = 1, max = 20, value = 6)
+                                                ),
+                                                mainPanel(width = 10,
+                                                          plotlyOutput("heatmap", height = "1600px")#, width = "1000px")
+                                                )
+                                              )
+
+
+                                     ),
                                      tabPanel("Charts per cell type", icon = icon("bar-chart-o"),
                                               br(),
                                               fluidRow(style='padding-left:10px;',
@@ -181,7 +220,7 @@ ui <- fluidPage(title = "PCTSEA",
 
                                               ),
                                               fluidRow(
-                                                column(width = 6,
+                                                column(width = 10,
                                                        div(DT::dataTableOutput(outputId = "enrichmentDataTable2"), style = "font-size:80%; rowHeight: 75%")
                                                 )
                                               )
@@ -269,6 +308,7 @@ ui <- fluidPage(title = "PCTSEA",
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
   source("./functions.R", local=TRUE)
+
   observe({
     query <-parseQueryString(session$clientData$url_search)
     if (!is.null(query$results)) {
@@ -453,7 +493,7 @@ server <- function(input, output, session) {
   source("./server/Suprema.R", local=TRUE)
   source("./server/Umap.R", local=TRUE)
   source("./server/Help.R", local=TRUE)
-
+  source("./server/Clusters.R", local=TRUE)
   output$data_loaded <- reactive({FALSE})
   outputOptions(output, "data_loaded", suspendWhenHidden = FALSE)
 
@@ -461,7 +501,8 @@ server <- function(input, output, session) {
   observeEvent(input$inputUploadedFile, {
     file <- input$inputUploadedFile
     tmp <- tools::file_path_sans_ext(basename(file$name))
-    rv$run_name <- str_extract(tmp, '[^_]+$') # extract every after the last '_' until the end
+    # rv$run_name <- str_extract(tmp, '[^_]+$') # extract every after the last '_' until the end
+    rv$run_name <- sub("[^_]+_[^_]+_(.+)", "\\1", tmp) # extract every after the second '_' until the end
 
     zipfilepath = file$datapath
     withProgress({

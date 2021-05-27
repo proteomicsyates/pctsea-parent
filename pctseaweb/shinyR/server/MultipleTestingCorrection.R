@@ -1,10 +1,12 @@
 createPlotMultipleTestingCorrection <- function(table){
   req(table)
   colnames(table) <- c('Distribution', 'Enrichment_score')
-  tmp <- table[table$Distribution=='Observed',]
-  tmp2 <- hist(tmp$Enrichment_score)
-  max_y <- max(tmp2$counts)
-  plot <- plot_ly(table, alpha = 0.95, x =~Enrichment_score, type = 'histogram', split=~Distribution)%>%#, histnorm = "probability" ) %>%
+  obs_data <- table[table$Distribution=='Observed',]
+
+
+  plot <- plot_ly(table, alpha = 0.95, x =~Enrichment_score, type = 'histogram',
+                  histnorm = "probability", # so that both histograms are normalized
+                  split=~Distribution)%>%#, histnorm = "probability" ) %>%
     layout(
       xaxis = list(
         showticklabels = TRUE,
@@ -12,7 +14,8 @@ createPlotMultipleTestingCorrection <- function(table){
         tickfont = list(size = 7),
         tickangle = '45'
       ),
-      yaxis = list(titlefont = list(size = 12), range = c(0, max_y), title = "Frequency"),
+      yaxis = list(titlefont = list(size = 12), #range = c(0, max_y),
+                   title = "Frequency"),
       title = list(
         text = 'Distributions of Observed vs Random enrichment scores for FDR calculation',
         font = list(size = 11)

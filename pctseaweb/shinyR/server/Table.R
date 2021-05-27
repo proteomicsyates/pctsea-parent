@@ -10,6 +10,7 @@ observeEvent(rv$unziped_files,{
   files <- list.files(folder, pattern = ".*cell_types_enrichment.txt")
   if(length(files) > 0){
     file <- paste(folder, .Platform$file.sep, files[1], sep = "")
+    print(paste('Enrichment file found:', file))
     enrichment_file(file)
   }
 })
@@ -49,8 +50,8 @@ output$enrichmentDataTable <- DT::renderDT(
     table <- enrichment_table()
     colnames(table)[2] <- "total num cells of type"
     colnames(table)[3] <- "total num cells"
-    colnames(table)[4] <- "num cells of type with corr > threshold"
-    colnames(table)[5] <- "total num cells with corr > threshold"
+    colnames(table)[4] <- "num cells of type with score > threshold"
+    colnames(table)[5] <- "total num cells with score > threshold"
     datatable(
       table,
       filter = 'top',
@@ -58,7 +59,7 @@ output$enrichmentDataTable <- DT::renderDT(
       options = list(
         pageLength = 10,
         columnDefs = list(list(className = 'dt-center', targets = 5)),
-        order = list(list(13, 'asc'), list(12, 'asc'), list(20, 'asc'))
+        order = list(list(13, 'asc'), list(12, 'asc'), list(22, 'desc'), list(20, 'asc'))
       )
     ) %>%
       formatRound(columns=c("hyperG p-value", "FDR", "empirical p-value", "KS p-value", "KS p-value BH corrected"), digits=4) %>%
@@ -81,16 +82,17 @@ observeEvent(enrichment_table(),{
 output$enrichmentDataTable2 <- DT::renderDT(
   {
     table <- enrichment_table()
-    table <- table[, c("cell type", "num cells of type", "num cells of type corr", "ews", "2nd ews","empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value")]
+    table <- table[, c("cell type", "num cells of type", "num cells of type corr", "ews", "norm-ews", "2nd ews","empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value", "Num Genes Significant")]
     colnames(table)[2] <- "total num cells of type"
-    colnames(table)[3] <- "num cells of type with corr > threshold"
+    colnames(table)[3] <- "num cells of type with score > threshold"
     datatable(
       table,
+      filter = 'top',
       selection = 'single',
       options = list(
         pageLength = 10,
         dom = 'lftipr',
-        order = list(list(7, 'asc'), list(8, 'asc'))
+        order = list(list(8, 'asc'), list(11, 'desc'), list(9, 'asc'))
       )
     ) %>%
       formatRound(columns=c("empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value"), digits=4) %>%

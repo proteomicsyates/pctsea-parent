@@ -17,6 +17,7 @@ import org.apache.log4j.Logger;
 import org.springframework.boot.logging.LogLevel;
 
 import edu.scripps.yates.pctsea.PCTSEA;
+import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.utilities.files.FileUtils;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
@@ -174,8 +175,8 @@ public class SingleCellsMetaInformationReader {
 //							cellsNotFound++;
 //						}
 						final SingleCell singleCell = new SingleCell(cellID, cellName, Double.NaN);
-
-						singleCell.setCellType(cellType);
+						final CellTypeBranch branch = CellTypeBranch.ORIGINAL;
+						singleCell.setCellType(cellType, true, branch);
 
 						// in case of having more columns (not in human cell map)
 						if (indexesByHeader.containsKey("developmentstage")) {
@@ -275,18 +276,29 @@ public class SingleCellsMetaInformationReader {
 		PCTSEA.logStatus("Now we have " + singleCellList.size() + "(" + singleCellsByCellID.size() + ") single cells");
 	}
 
+	/**
+	 * NOTE THAT CAN RETURN -1 if the cell is not found because it was ignored from
+	 * the db because it didnt have a type
+	 * 
+	 * @param name
+	 * @return
+	 */
 	public static int getSingleCellIDBySingleCellName(String name) {
 		if (singleCellIDsBySingleCellNameMap.containsKey(name)) {
 			return singleCellIDsBySingleCellNameMap.get(name);
 		} else {
-			int cellID = 1;
-			if (!cellIDs.isEmpty()) {
-				cellID = cellIDs.max() + 1;
-			}
-//			PCTSEA.logStatus("Why cell " + name + " was not found before in the DB?",LogLevel.WARN);
-			final SingleCell cell = new SingleCell(cellID, name, Double.NaN);
-			addSingleCell(cell);
-			return cellID;
+			// if it is not found it is because that single cell has not been classified,
+			// doesnt have a type and was ignored from the database, therefore, we return
+			// -1 here
+			return -1;
+//			int cellID = 1;
+//			if (!cellIDs.isEmpty()) {
+//				cellID = cellIDs.max() + 1;
+//			}
+////			PCTSEA.logStatus("Why cell " + name + " was not found before in the DB?",LogLevel.WARN);
+//			final SingleCell cell = new SingleCell(cellID, name, Double.NaN);
+//			addSingleCell(cell);
+//			return cellID;
 		}
 	}
 

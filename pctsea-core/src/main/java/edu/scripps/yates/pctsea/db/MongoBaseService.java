@@ -1,6 +1,7 @@
 package edu.scripps.yates.pctsea.db;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.BulkOperations.BulkMode;
+import org.springframework.data.mongodb.core.DocumentCallbackHandler;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.convert.MongoConverter;
 import org.springframework.data.mongodb.core.query.BasicQuery;
@@ -27,6 +29,7 @@ import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
 import edu.scripps.yates.utilities.progresscounter.ProgressPrintingType;
 import gnu.trove.map.hash.THashMap;
+import gnu.trove.set.hash.THashSet;
 
 @Service
 public class MongoBaseService {
@@ -51,6 +54,19 @@ public class MongoBaseService {
 		return mongoTemplate;
 	}
 
+	public List<String> getGenesByCellType(String cellType, Set<String> datasets) {
+		final Criteria criteria = Criteria.where("cellType").is(cellType);
+		if (datasets != null && !datasets.isEmpty()) {
+			criteria.and("projectTag").in(datasets);
+		}
+		final Query query = new Query();
+		query.fields().exclude("cellType").exclude("cellName").exclude("expression");
+		query.addCriteria(criteria);
+
+		final List<String> genes = mongoTemplate.findDistinct(query, "gene", Expression.class, String.class);
+		return genes;
+	}
+
 	public Map<String, List<Expression>> getExpressionByGenesByInCriteria(Set<String> genes, Set<String> datasets) {
 
 		final Criteria criteria = new Criteria("gene").in(genes);
@@ -58,7 +74,7 @@ public class MongoBaseService {
 		query.fields().exclude("cellType").exclude("cell");
 		query.addCriteria(criteria);
 		if (datasets != null && !datasets.isEmpty()) {
-			criteria.and("datasetTag").in(datasets);
+			criteria.and("projectTag").in(datasets);
 		}
 		final List<Expression> expressions = mongoTemplate.find(query, Expression.class);
 		final Map<String, List<Expression>> ret = new THashMap<String, List<Expression>>();
@@ -164,6 +180,24 @@ public class MongoBaseService {
 		}
 
 		return 0l;
+	}
+
+	public List<Expression> getExpressionByGenes(Collection<String> genes, Dataset dataset) {
+		final List<Expression> ret = new ArrayList<Expression>();
+
+		if (dataset != null) {
+			final Query query = Query.query(
+					Criteria.where("gene").in(genes).andOperator(Criteria.where("projectTag").is(dataset.getTag())));
+			final List<Expression> expressions = mongoTemplate.find(query, Expression.class);
+			ret.addAll(expressions);
+
+		} else {
+			final Query query = Query.query(Criteria.where("gene").in(genes));
+			final List<Expression> expressions = mongoTemplate.find(query, Expression.class);
+			ret.addAll(expressions);
+		}
+
+		return ret;
 	}
 
 	public List<Expression> getExpressionByGene(String gene, Dataset dataset) {
@@ -292,4 +326,28 @@ public class MongoBaseService {
 			return null;
 		}
 	}
+
+	public List<String> getGenesByCellType(String cellType, String projectTag) {
+		final Set<String> projectTags = new THashSet<String>();
+		projectTags.add(projectTag);
+		return getGenesByCellType(cellType, projectTags);
+	}
+
+	public void getExpressionByGenes(Collection<String> genes, Dataset dataset,
+			DocumentCallbackHandler documentProcessor) {
+		final List<Expression> ret = new ArrayList<Expression>();
+
+		if (dataset != null) {
+			final Query query = Query.query(
+					Criteria.where("gene").in(genes).andOperator(Criteria.where("projectTag").is(dataset.getTag())));
+			mongoTemplate.executeQuery(query, "expression", documentProcessor);
+
+		} else {
+			final Query query = Query.query(Criteria.where("gene").in(genes));
+			final List<Expression> expressions = mongoTemplate.find(query, Expression.class);
+			ret.addAll(expressions);
+		}
+
+	}
+
 }

@@ -11,24 +11,25 @@ import org.apache.log4j.Logger;
 import edu.scripps.yates.pctsea.InteractorsExpressionsRetriever;
 import edu.scripps.yates.utilities.maths.Maths;
 import gnu.trove.list.TDoubleList;
-import gnu.trove.list.TIntList;
+import gnu.trove.list.TShortList;
 import gnu.trove.list.array.TDoubleArrayList;
-import gnu.trove.map.TIntFloatMap;
+import gnu.trove.map.TShortFloatMap;
 import gnu.trove.map.hash.THashMap;
-import gnu.trove.map.hash.TIntFloatHashMap;
+import gnu.trove.map.hash.TShortFloatHashMap;
 import gnu.trove.set.hash.THashSet;
 
 public class SingleCell {
 	private final static Logger log = Logger.getLogger(SingleCell.class);
 	private static Map<String, String> map = new THashMap<String, String>();
-	private final static THashMap<String, Set<String>> cellNamesByOriginalCellType = new THashMap<String, Set<String>>();
-	private final static THashMap<String, Set<String>> cellNamesByMappedCellType = new THashMap<String, Set<String>>();
+//	private final static THashMap<String, Set<String>> cellNamesByOriginalCellType = new THashMap<String, Set<String>>();
+
 	private final String name;
 	private double score;// correlation with our experimental data
 	private String cluster;
 	private double x;
 	private double y;
 	private String originalCellType;
+	private String cellType;
 	private String age;
 	private String developmentStage;
 	private String gender;
@@ -38,36 +39,24 @@ public class SingleCell {
 	private ArrayList<String> genesUsedForScore;
 	private final int id;
 	private String expressionsUsedForScore;
-	private CellTypeBranched branchedCellType;
+//	private CellTypeBranched branchedCellType;
 	private static final PearsonsCorrelation correlationCalculator = new PearsonsCorrelation();
-	private TIntFloatMap expressionsByGene;
+	private TShortFloatMap expressionsByGene;
 	private double geneExpressionVariance;
+	private int cellTypeID = -1;
 
-	public void addGeneExpressionValue(int geneID, float expressionValue) {
+	public void addGeneExpressionValue(short geneID, float expressionValue) {
 		if (expressionsByGene == null) {
-			expressionsByGene = new TIntFloatHashMap();
+			expressionsByGene = new TShortFloatHashMap();
 		}
 		expressionsByGene.put(geneID, expressionValue);
 	}
 
-	public float getGeneExpressionValue(int geneID) {
+	public float getGeneExpressionValue(short geneID) {
 		if (expressionsByGene == null) {
 			return 0.0f;
 		}
 		return expressionsByGene.get(geneID);
-	}
-
-	public String getCellType(CellTypeBranch branch) {
-		if (branch == null) {
-			return originalCellType;
-		}
-		if (branchedCellType == null) {
-			branchedCellType = CellTypes.getCellTypeByOriginalType(originalCellType);
-		}
-		if (branchedCellType != null) {
-			return branchedCellType.getCellTypeBranch(branch);
-		}
-		return null;
 	}
 
 	public static String parseCellTypeTypos(String cellType) {
@@ -141,22 +130,72 @@ public class SingleCell {
 		return cellType;
 	}
 
-	public void setCellType(String cellType) {
+//	/**
+//	 * 
+//	 * @param cellType
+//	 * @param setAsOriginalCellType if true, it is considered an originalCellType
+//	 *                              coming from the database which can be very
+//	 *                              redundant and will be mapped to a
+//	 *                              branchedCellType <br>
+//	 *                              If false, the cell type will be considered
+//	 *                              already a mapped branch
+//	 */
+//	public void setCellType(String cellType, boolean setAsOriginalCellType) {
+//		if (cellType == null) {
+//			return;
+//		}
+//		originalCellType = parseCellTypeTypos(cellType);
+//		if (!cellNamesByOriginalCellType.containsKey(originalCellType)) {
+//			cellNamesByOriginalCellType.put(originalCellType, new THashSet<String>());
+//		}
+//		cellNamesByOriginalCellType.get(originalCellType).add(getName());
+//		if (setAsOriginalCellType) {
+//			branchedCellType = CellTypes.getCellTypeByOriginalType(cellType);
+//		} else {
+//			branchedCellType = new CellTypeBranched(cellType, cellType, null, null);
+//		}
+//	}
+
+	/**
+	 * sets the cell type
+	 * 
+	 * @param cellType
+	 * @param parseTypos     if true, typos will be checked
+	 * @param cellTypeBranch if not null, a table will be used to map to the
+	 *                       corresponding branch level. If null, the cell type will
+	 *                       be set as it is
+	 */
+	public void setCellType(String cellType, boolean parseTypos, CellTypeBranch cellTypeBranch) {
 		if (cellType == null) {
+			this.cellType = null;
+			cellTypeID = -1;
 			return;
 		}
-		if (!cellNamesByOriginalCellType.containsKey(cellType)) {
-			cellNamesByOriginalCellType.put(cellType, new THashSet<String>());
+		// only parse typos if cellTypeBranch is not original
+		if (parseTypos && cellTypeBranch != CellTypeBranch.ORIGINAL) {
+			cellType = parseCellTypeTypos(cellType);
 		}
-		cellNamesByOriginalCellType.get(cellType).add(getName());
-		originalCellType = parseCellTypeTypos(cellType);
-		originalCellType = cellType;
-		if (!cellNamesByMappedCellType.containsKey(originalCellType)) {
-			cellNamesByMappedCellType.put(originalCellType, new THashSet<String>());
-		}
-		cellNamesByMappedCellType.get(originalCellType).add(getName());
-		branchedCellType = CellTypes.getCellTypeByOriginalType(cellType);
 
+		CellTypeBranched branchedCellType;
+		if (cellTypeBranch != null) {
+			branchedCellType = CellTypes.getCellTypeByOriginalType(cellType);
+			if (branchedCellType == null) {
+				this.cellType = cellType;
+				return;
+			}
+			this.cellType = branchedCellType.getCellTypeBranch(cellTypeBranch);
+		} else {
+			this.cellType = cellType;
+		}
+		cellTypeID = CellTypes.getCellTypeID(cellType);
+	}
+
+	public int getCellTypeID() {
+		return cellTypeID;
+	}
+
+	public String getCellType() {
+		return cellType;
 	}
 
 	public String getAge() {
@@ -262,7 +301,7 @@ public class SingleCell {
 //			minNumInteractorsForCorrelation = numInteractors * minNumInteractorsForCorrelation;
 //		}
 
-		final TIntList geneIDs = interactorExpressions.getInteractorsGeneIDs();
+		final TShortList geneIDs = interactorExpressions.getInteractorsGeneIDs();
 		if (minNumInteractorsForCorrelation > geneIDs.size()) {
 			throw new IllegalArgumentException(
 					"Minimum number of genes to be expressed in the cell lines (" + minNumInteractorsForCorrelation
@@ -277,7 +316,7 @@ public class SingleCell {
 		final StringBuilder description = new StringBuilder();
 		genesUsedForScore = new ArrayList<String>();
 
-		for (final int geneID : geneIDs.toArray()) {
+		for (final short geneID : geneIDs.toArray()) {
 
 			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID);
 //			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID)interactorExpressions.getExpressionsOfGene(geneID)
@@ -334,29 +373,31 @@ public class SingleCell {
 	 * 
 	 * @param interactorExpressions
 	 * @param takeZerosInCorrelation
+	 * @param minNumberExpressedGenesInCell
 	 * @param getExpressionsUsedForCorrelation
 	 * 
 	 * @return
 	 */
 	public double calculateSimpleScore(InteractorsExpressionsRetriever interactorExpressions,
-			boolean takeZerosInCorrelation, boolean getExpressionsUsedForCorrelation) {
+			boolean takeZerosInCorrelation, int minNumberExpressedGenesInCell,
+			boolean getExpressionsUsedForCorrelation) {
 //		// in case of having a percentage
 //		if (minNumInteractorsForCorrelation <= 1.0) {
 //			final int numInteractors = interactorExpressions.getInteractorsGeneIDs().size();
 //			minNumInteractorsForCorrelation = numInteractors * minNumInteractorsForCorrelation;
 //		}
 
-		final TIntList geneIDs = interactorExpressions.getInteractorsGeneIDs();
+		final TShortList geneIDs = interactorExpressions.getInteractorsGeneIDs();
 
 		final TDoubleArrayList nonZeroInteractorsExpressionsToCorrelate = new TDoubleArrayList();
 		final TDoubleArrayList nonZeroGenesExpressionsToCorrelate = new TDoubleArrayList();
-		final TDoubleList interactorsExpressionsToCorrelate = new TDoubleArrayList();
+		final TDoubleList inputGenesExpressionsToCorrelate = new TDoubleArrayList();
 		final TDoubleList genesExpressionsToCorrelate = new TDoubleArrayList();
 		int singleCellNonZero = 0;
 		final StringBuilder description = new StringBuilder();
 		genesUsedForScore = new ArrayList<String>();
 
-		for (final int geneID : geneIDs.toArray()) {
+		for (final short geneID : geneIDs.toArray()) {
 
 			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID);
 //			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID)interactorExpressions.getExpressionsOfGene(geneID)
@@ -365,7 +406,7 @@ public class SingleCell {
 			// get only pairs of values when both values are > 0.0
 			if (takeZerosInCorrelation || (geneExpressionInSingleCell > 0.0f && interactorExpression > 0.0f)) {
 
-				interactorsExpressionsToCorrelate.add(interactorExpression);
+				inputGenesExpressionsToCorrelate.add(interactorExpression);
 				genesExpressionsToCorrelate.add(geneExpressionInSingleCell);
 			}
 			if (geneExpressionInSingleCell > 0.0f) {
@@ -377,6 +418,12 @@ public class SingleCell {
 				singleCellNonZero++;
 			}
 		}
+		if (genesExpressionsToCorrelate.size() < minNumberExpressedGenesInCell) {
+			// we dont have the minimum number of genes in the cell that match the input
+			setScore(Double.NaN);
+			return Double.NaN;
+		}
+
 		for (final String gene : genesUsedForScore) {
 			if (!"".equals(description.toString())) {
 				description.append(",");
@@ -398,7 +445,7 @@ public class SingleCell {
 
 		double correlation2 = 0.0;
 		try {
-			correlation2 = correlationCalculator.correlation(interactorsExpressionsToCorrelate.toArray(),
+			correlation2 = correlationCalculator.correlation(inputGenesExpressionsToCorrelate.toArray(),
 					genesExpressionsToCorrelate.toArray());
 		} catch (final Exception e) {
 			// we dont care, in that case correlation is zero
@@ -417,28 +464,30 @@ public class SingleCell {
 	 * 
 	 * @param interactorExpressions
 	 * @param takeZerosInCorrelation
+	 * @param minNumberExpressedGenesInCell
 	 * @param getExpressionsUsedForCorrelation
 	 * 
 	 * @return
 	 */
 	public double calculateDotProductScore(InteractorsExpressionsRetriever interactorExpressions,
-			boolean takeZerosInCorrelation, boolean getExpressionsUsedForCorrelation) {
+			boolean takeZerosInCorrelation, int minNumberExpressedGenesInCell,
+			boolean getExpressionsUsedForCorrelation) {
 //		// in case of having a percentage
 //		if (minNumInteractorsForCorrelation <= 1.0) {
 //			final int numInteractors = interactorExpressions.getInteractorsGeneIDs().size();
 //			minNumInteractorsForCorrelation = numInteractors * minNumInteractorsForCorrelation;
 //		}
 
-		final TIntList geneIDs = interactorExpressions.getInteractorsGeneIDs();
+		final TShortList geneIDs = interactorExpressions.getInteractorsGeneIDs();
 
-		final TDoubleArrayList nonZeroInteractorsExpressionsToUse = new TDoubleArrayList();
-		final TDoubleArrayList nonZeroGenesExpressionsToUse = new TDoubleArrayList();
+		final TDoubleArrayList nonZeroInputGenesExpressionsToUse = new TDoubleArrayList();
+		final TDoubleArrayList nonZeroSingleCellGenesExpressionsToUse = new TDoubleArrayList();
 		TDoubleList interactorsExpressionsToUse = new TDoubleArrayList();
 		TDoubleList genesExpressionsToUSe = new TDoubleArrayList();
 		final StringBuilder description = new StringBuilder();
 		genesUsedForScore = new ArrayList<String>();
 
-		for (final int geneID : geneIDs.toArray()) {
+		for (final short geneID : geneIDs.toArray()) {
 
 			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID);
 //			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID)interactorExpressions.getExpressionsOfGene(geneID)
@@ -452,12 +501,17 @@ public class SingleCell {
 			}
 			if (geneExpressionInSingleCell > 0.0f) {
 				genesUsedForScore.add(InteractorsExpressionsRetriever.getInstance().getGeneName(geneID));
-				nonZeroGenesExpressionsToUse.add(geneExpressionInSingleCell);
-				nonZeroInteractorsExpressionsToUse.add(interactorExpression);
+				nonZeroSingleCellGenesExpressionsToUse.add(geneExpressionInSingleCell);
+				nonZeroInputGenesExpressionsToUse.add(interactorExpression);
 			}
 			if (geneExpressionInSingleCell != 0.0f) {// this is also true when value is NaN
 
 			}
+		}
+		if (nonZeroSingleCellGenesExpressionsToUse.size() < minNumberExpressedGenesInCell) {
+			// we dont have the minimum number of genes in the cell that match the input
+			setScore(Double.NaN);
+			return Double.NaN;
 		}
 		for (final String gene : genesUsedForScore) {
 			if (!"".equals(description.toString())) {
@@ -467,8 +521,8 @@ public class SingleCell {
 		}
 
 		if (getExpressionsUsedForCorrelation) {
-			expressionsUsedForScore = getExpressionsUsedForScore(nonZeroGenesExpressionsToUse,
-					nonZeroInteractorsExpressionsToUse);
+			expressionsUsedForScore = getExpressionsUsedForScore(nonZeroSingleCellGenesExpressionsToUse,
+					nonZeroInputGenesExpressionsToUse);
 		} else {
 			expressionsUsedForScore = "";
 		}
@@ -476,7 +530,7 @@ public class SingleCell {
 		scoreDescription = description.toString();
 
 		// check variance of gene expressions to correlate
-		geneExpressionVariance = Maths.var(nonZeroGenesExpressionsToUse.toArray());
+		geneExpressionVariance = Maths.var(nonZeroSingleCellGenesExpressionsToUse.toArray());
 
 		double dotProduct = 0.0;
 		try {

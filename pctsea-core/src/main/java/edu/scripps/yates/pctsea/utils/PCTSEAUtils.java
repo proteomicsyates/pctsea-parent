@@ -39,7 +39,7 @@ public class PCTSEAUtils {
 		return ret;
 	}
 
-	public static void sortByDescendingCorrelation(List<SingleCell> singleCellList) {
+	public static void sortByScoreDescending(List<SingleCell> singleCellList) {
 		Collections.sort(singleCellList, new Comparator<SingleCell>() {
 
 			@Override

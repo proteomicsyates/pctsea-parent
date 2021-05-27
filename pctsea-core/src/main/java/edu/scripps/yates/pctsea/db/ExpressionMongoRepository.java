@@ -3,7 +3,6 @@ package edu.scripps.yates.pctsea.db;
 import java.util.List;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
 
 public interface ExpressionMongoRepository extends MongoRepository<Expression, String> {
 //	public List<Expression> findByGene(String gene);
@@ -19,14 +18,18 @@ public interface ExpressionMongoRepository extends MongoRepository<Expression, S
 
 	public List<Expression> findByGeneAndProjectTag(String gene, String projectTag);
 
-	@Query("{'cellName': ?0}")
-	public List<Expression> findExpressionsByCellName(String cellName);
+//	@Query("{'cellName': ?0}")
+	public List<Expression> findByCellName(String cellName);
 
-	@Query("{'cellType': ?0}")
-	public List<Expression> findExpresssionsByCellType(String cellType);
+//	@Query("{'cellType': ?0}")
+	public List<Expression> findByCellType(String cellType);
 
 	public long countByGeneAndProjectTag(String gene, String projectTag);
 
 	public long countByGene(String gene);
+
+	public long countByGeneAndCellTypeAndProjectTag(String gene, String cellType, String projectTag);
+
+	public long countByCellTypeAndProjectTag(String cellType, String projectTag);
 
 }

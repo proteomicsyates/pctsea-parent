@@ -17,6 +17,7 @@ import org.springframework.dao.DataAccessResourceFailureException;
 
 import com.mongodb.MongoTimeoutException;
 
+import edu.scripps.yates.pctsea.db.CellTypeAndGeneMongoRepository;
 import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
 import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
@@ -38,6 +39,8 @@ public class PCTSEADbApplication implements CommandLineRunner {
 	private MongoBaseService mbs;
 	@Autowired
 	private PctseaRunLogRepository runLogsRepo;
+	@Autowired
+	private CellTypeAndGeneMongoRepository ctgmr;
 	@Autowired
 	private ExpressionMongoRepository emr;
 
@@ -184,7 +187,7 @@ public class PCTSEADbApplication implements CommandLineRunner {
 		PCTSEACommandLine c = null;
 		try {
 			args = removeSpringParams(args);
-			c = new PCTSEACommandLine(args, pmr, emr, scmr, runLogsRepo, mbs);
+			c = new PCTSEACommandLine(args, pmr, emr, scmr, runLogsRepo, ctgmr, mbs);
 
 			c.safeRun();
 
