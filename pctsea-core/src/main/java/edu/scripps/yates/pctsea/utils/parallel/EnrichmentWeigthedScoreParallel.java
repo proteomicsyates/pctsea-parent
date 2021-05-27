@@ -1,8 +1,11 @@
 package edu.scripps.yates.pctsea.utils.parallel;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,7 +13,6 @@ import org.apache.commons.math3.stat.inference.KolmogorovSmirnovTest;
 import org.springframework.boot.logging.LogLevel;
 
 import edu.scripps.yates.pctsea.PCTSEA;
-import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.CellTypeClassification;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.pctsea.utils.PCTSEAUtils;
@@ -30,7 +32,6 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	private final ParIterator<CellTypeClassification> iterator;
 	private final List<SingleCell> singleCellList = new ArrayList<SingleCell>();
 	private final KolmogorovSmirnovTest test = new KolmogorovSmirnovTest();
-	private final CellTypeBranch cellTypeBranch;
 	private final boolean permutatedData;
 	private final boolean plotNegativeEnrichedCellTypes;
 	private final String scoreName;
@@ -39,14 +40,13 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	private final boolean compensateWithNegativeSupremum;
 
 	public EnrichmentWeigthedScoreParallel(ParIterator<CellTypeClassification> iterator, int numCore,
-			List<SingleCell> singleCellList, CellTypeBranch cellTypeBranch, boolean permutatedData,
-			boolean plotNegativeEnrichedCellTypes, String scoreName, File resultsSubfolderForCellTypes, String prefix,
+			List<SingleCell> singleCellList, boolean permutatedData, boolean plotNegativeEnrichedCellTypes,
+			String scoreName, File resultsSubfolderForCellTypes, String prefix,
 			boolean compensateWithNegativeSupremum) {
 		this.iterator = iterator;
 		this.singleCellList.addAll(singleCellList);
 		// sort by correlation from higher to lower
-		PCTSEAUtils.sortByDescendingCorrelation(this.singleCellList);
-		this.cellTypeBranch = cellTypeBranch;
+		PCTSEAUtils.sortByScoreDescending(this.singleCellList);
 		this.permutatedData = permutatedData;
 		this.plotNegativeEnrichedCellTypes = plotNegativeEnrichedCellTypes;
 		this.scoreName = scoreName;
@@ -103,7 +103,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 //				System.out.println("asdf");
 			}
 
-			final String cellTypeName = cellType.getName();
+			final int cellTypeID = cellType.getCellTypeID();
 			float denominatorA = 0.0f;
 			float denominatorB = 0.0f;
 			final TFloatList differences = new TFloatArrayList();
@@ -113,11 +113,11 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 //			final float denominatorB = 1.0f * (n - nk);
 			final List<SingleCell> cellsOfType = new ArrayList<SingleCell>();
 			for (final SingleCell singleCell : singleCellList) {
-				if (cellTypeName.equals(singleCell.getCellType(cellTypeBranch))) {
+				if (cellTypeID == singleCell.getCellTypeID()) {
 					cellsOfType.add(singleCell);
-					denominatorA += Double.valueOf(singleCell.getScoreForRanking()).floatValue();
+					denominatorA += singleCell.getScoreForRanking();
 				} else {
-					denominatorB += Double.valueOf(singleCell.getScoreForRanking()).floatValue();
+					denominatorB += singleCell.getScoreForRanking();
 				}
 			}
 
@@ -147,7 +147,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 
 				float a = 0.0f;
 				float b = 0.0f;
-				if (cellTypeName.equals(singleCell.getCellType(cellTypeBranch))) {
+				if (cellTypeID == singleCell.getCellTypeID()) {
 					// this is the difference with the unweigthed, using the correlation, instead of
 					// just counting
 					numeratorA += singleCell.getScoreForRanking();
@@ -282,7 +282,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 							float a = 0.0f;
 							float b = 0.0f;
 
-							if (cellTypeName.equals(singleCell.getCellType(cellTypeBranch))) {
+							if (cellTypeID == singleCell.getCellTypeID()) {
 								// this is the difference with the unweigthed, using the correlation, instead of
 								// just counting
 								numeratorA += Math.abs(singleCell.getScoreForRanking());
@@ -333,22 +333,22 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			if (!permutatedData) {
 
 				try {
-					writeScoreCalculationFile(cellTypeName, singleCellList.size(), scoreSeriesType,
+					writeScoreCalculationFile(cellType.getName(), singleCellList.size(), scoreSeriesType,
 							scoreSeriesOtherType, supremumLineSeries, secondarySupremumLineSeries);
 
 					// and two series for score chart
-					writeScoreDistributionFile(cellTypeName, scoresFromCellType);
+					writeScoreDistributionFile(cellType.getName(), scoresFromCellType);
 //				final JFreeChart chart = createScoreDistributionChart(cellTypeName, scoresFromCellType, scoreName);
 //				cellType.setCorrelationDistributionChart(chart);
 
-					writeNumGenesHistogramFile(cellTypeName, histogramOfNumGenes);
+					writeNumGenesHistogramFile(cellType.getName(), histogramOfNumGenes);
 					// chart with the histogram of number of genes per cell in the cell type
 //				final JFreeChart chart2 = createHistogramOfCorrelatingGenesChart(cellTypeName, histogramOfNumGenes);
 //				cellType.setHistogramOfCorrelatingGenesChart(chart2);
 				} catch (final IOException e) {
 					e.printStackTrace();
 					PCTSEA.logStatus(
-							"Some error occurred while writting files for " + cellTypeName + ": " + e.getMessage(),
+							"Some error occurred while writting files for " + cellTypeID + ": " + e.getMessage(),
 							LogLevel.ERROR);
 				}
 			}
@@ -361,35 +361,57 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			List<XYPoint> secondarySupremumLineSeries) throws IOException {
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes, cellTypeName + "_ews",
 				prefix);
-		final FileWriter fw = new FileWriter(outputTXTFile);
-		fw.write("-\tcell #\tCumulative Probability [Fn(X)]\n");
+		final BufferedWriter buffer = Files.newBufferedWriter(outputTXTFile.toPath(), Charset.forName("UTF-8"));
+		buffer.write("-\tcell #\tCumulative Probability [Fn(X)]\n");
+		XYPoint previousDataItem = null;
 		for (int i = 0; i < scoreSeriesType.size(); i++) {
 			final XYPoint dataItem = scoreSeriesType.get(i);
-			final int x = dataItem.getX();
-			final float y = dataItem.getY();
-			fw.write(cellTypeName + "\t" + x + "\t" + y + "\n");
+			try {
+				final int x = dataItem.getX();
+				final float y = dataItem.getY();
+				if (previousDataItem != null && Float.compare(y, previousDataItem.getY()) == 0) {
+					continue;
+				}
+				if (previousDataItem != null) {
+					buffer.write(cellTypeName + "\t" + previousDataItem.getX() + "\t" + previousDataItem.getY() + "\n");
+				}
+				buffer.write(cellTypeName + "\t" + x + "\t" + y + "\n");
+			} finally {
+				previousDataItem = dataItem;
+			}
 		}
+		previousDataItem = null;
 		for (int i = 0; i < scoreSeriesOtherType.size(); i++) {
 			final XYPoint dataItem = scoreSeriesOtherType.get(i);
-			final int x = dataItem.getX();
-			final float y = dataItem.getY();
-			fw.write("others\t" + x + "\t" + y + "\n");
+			try {
+				final int x = dataItem.getX();
+				final float y = dataItem.getY();
+				if (previousDataItem != null && Float.compare(y, previousDataItem.getY()) == 0) {
+					continue;
+				}
+				if (previousDataItem != null) {
+					buffer.write("others\t" + previousDataItem.getX() + "\t" + previousDataItem.getY() + "\n");
+				}
+				buffer.write("others\t" + x + "\t" + y + "\n");
+			} finally {
+				previousDataItem = dataItem;
+			}
 		}
 		for (int i = 0; i < supremumLineSeries.size(); i++) {
 			final XYPoint dataItem = supremumLineSeries.get(i);
 			final int x = dataItem.getX();
 			final float y = dataItem.getY();
-			fw.write("supremum\t" + x + "\t" + y + "\n");
+			buffer.write("supremum\t" + x + "\t" + y + "\n");
 		}
 		if (secondarySupremumLineSeries != null) {
 			for (int i = 0; i < secondarySupremumLineSeries.size(); i++) {
 				final XYPoint dataItem = secondarySupremumLineSeries.get(i);
 				final int x = dataItem.getX();
 				final float y = dataItem.getY();
-				fw.write("secondary supremum\t" + x + "\t" + y + "\n");
+				buffer.write("secondary supremum\t" + x + "\t" + y + "\n");
 			}
 		}
-		fw.close();
+		buffer.close();
 	}
 
 	private void writeNumGenesHistogramFile(String cellTypeName, TIntIntMap histogramOfNumGenes) throws IOException {
@@ -406,27 +428,29 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes,
 				cellTypeName + "_genes_per_cell_hist", prefix);
 		final FileWriter fw = new FileWriter(outputTXTFile);
-		fw.write("-\t# of genes with " + scoreName + " > threshold\t# cells\n");
+		final BufferedWriter buffer = new BufferedWriter(fw);
+		buffer.write("-\t# of genes with " + scoreName + " > threshold\t# cells\n");
 		for (final int numGenes : histogramOfNumGenes.keys()) {
 			final int frequency = histogramOfNumGenes.get(numGenes);
-			fw.write("# genes\t" + numGenes + "\t" + frequency + "\n");
+			buffer.write("# genes\t" + numGenes + "\t" + frequency + "\n");
 		}
 		for (final int numGenes : histogramOfNumGenesAccumulative.keys()) {
 			final int frequency = histogramOfNumGenesAccumulative.get(numGenes);
-			fw.write("# genes or more\t" + numGenes + "\t" + frequency + "\n");
+			buffer.write("# genes or more\t" + numGenes + "\t" + frequency + "\n");
 		}
-		fw.close();
+		buffer.close();
 	}
 
 	private void writeScoreDistributionFile(String cellTypeName, TDoubleList scoresFromCellType) throws IOException {
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes, cellTypeName + "_corr",
 				prefix);
 		final FileWriter fw = new FileWriter(outputTXTFile);
-		fw.write(scoreName + "\n");
+		final BufferedWriter buffer = new BufferedWriter(fw);
+		buffer.write(scoreName + "\n");
 		for (final double score : scoresFromCellType.toArray()) {
-			fw.write(Double.valueOf(score) + "\n");
+			buffer.write(Double.valueOf(score) + "\n");
 		}
-		fw.close();
+		buffer.close();
 	}
 
 	/**
@@ -445,7 +469,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	 * Default number of iterations used by
 	 * {@link #monteCarloP(double, int, int, boolean, int)}
 	 */
-	private static final int MONTE_CARLO_ITERATIONS = 1000;
+	private static final int MONTE_CARLO_ITERATIONS = 500;
 
 	private double ksPValue(double dStatistic, int a, int b) {
 

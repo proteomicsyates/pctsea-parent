@@ -7,6 +7,7 @@ import org.springframework.boot.logging.LogLevel;
 import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
+import edu.scripps.yates.pctsea.model.ScoringSchema;
 import edu.scripps.yates.utilities.dates.DatesUtil;
 import edu.scripps.yates.utilities.email.EmailSender;
 
@@ -32,8 +33,7 @@ public class EmailUtil {
 		body.append("Parameters: \n ");
 
 		body.append(InputParameters.EEF + ": " + FilenameUtils.getName(inputParameters.getInputDataFile()) + " \n ");
-		body.append(InputParameters.MIN_SCORE + ": " + inputParameters.getMinScore() + "\n");
-		body.append(InputParameters.MIN_GENES_CELLS + ": " + inputParameters.getMinGenesCells() + "\n");
+
 		body.append(InputParameters.DATASETS + ": " + inputParameters.getDataset().getTag() + " ("
 				+ inputParameters.getDataset().getName() + " - " + inputParameters.getDataset().getReference() + ")"
 				+ "\n");
@@ -44,7 +44,21 @@ public class EmailUtil {
 		body.append(InputParameters.LOAD_RANDOM + ": " + inputParameters.isLoadRandom() + "\n");
 		body.append(InputParameters.WRITE_SCORES + ": " + inputParameters.isWriteScoresFile() + "\n");
 		body.append(InputParameters.UNIPROT_RELEASE + ": " + inputParameters.getUniprotRelease() + "\n");
-		body.append(InputParameters.SCORING_METHOD + ": " + inputParameters.getScoringMethod().getScoreName() + "\n");
+
+		int round = 1;
+		for (final ScoringSchema scoringSchemas : inputParameters.getScoringSchemas()) {
+			if (inputParameters.getScoringSchemas().size() > 1) {
+				body.append("Round " + round + ":\n");
+			}
+			body.append(
+					InputParameters.SCORING_METHOD + ": " + scoringSchemas.getScoringMethod().getScoreName() + "\n");
+			body.append(
+					InputParameters.MIN_SCORE + ": " + scoringSchemas.getScoringThreshold().getThresholdValue() + "\n");
+			body.append(
+					InputParameters.MIN_GENES_CELLS + ": " + scoringSchemas.getMinNumberExpressedGenesInCell() + "\n");
+			round++;
+		}
+
 		body.append("\n\n");
 		// results
 		body.append("You can access to your results at this location in the machine you run it: "

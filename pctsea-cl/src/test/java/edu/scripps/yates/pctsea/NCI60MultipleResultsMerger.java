@@ -151,7 +151,7 @@ public class NCI60MultipleResultsMerger {
 				final Map<String, CellTypeClassification> cellTypesByName = cellTypesByExperiment.get(experimentName);
 				if (cellTypesByName.containsKey(cellTypeName)) {
 					final CellTypeClassification cellType = cellTypesByName.get(cellTypeName);
-					fw.write(columnToPrint.getValue(cellType, -1, -1, null));
+					fw.write(columnToPrint.getValue(cellType, -1, null, null));
 				}
 			}
 			fw.write("\n");

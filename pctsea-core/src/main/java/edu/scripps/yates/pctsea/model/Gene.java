@@ -6,7 +6,6 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
 import gnu.trove.list.TFloatList;
 import gnu.trove.list.TIntList;
@@ -30,34 +29,36 @@ public class Gene {
 	private List<Integer> singleCellsIDs;
 	private TFloatList expressions;
 	private List<Integer> indexes;
-	private final int geneID;
+	private final short geneID;
 
 //	public Gene(String geneName) {
 //		this(++staticGeneID, geneName);
 //	}
 
-	public Gene(int geneID, String geneName) {
+	public Gene(short geneID, String geneName) {
 		this.geneID = geneID;
 		this.geneName = geneName;
 
 	}
 
 	public void addExpressionValueInSingleCell(int singleCellID, float expressionValue, String cellTypeName) {
+
 		if (expressionsBySingleCellID.containsKey(singleCellID)) {
-			if (Float.compare(expressionsBySingleCellID.get(singleCellID), expressionValue) != 0) {
+			final float expressionPrevious = expressionsBySingleCellID.get(singleCellID);
+			if (Float.compare(expressionPrevious, expressionValue) != 0) {
 				// keep the highest
-				if (expressionsBySingleCellID.get(singleCellID) < expressionValue) {
-					PCTSEA.logStatus("Gene " + geneName + " already contained an expression value for single cell "
-							+ singleCellID + " ("
-							+ SingleCellsMetaInformationReader.getSingleCellByCellID(singleCellID).getName()
-							+ ") which is " + expressionsBySingleCellID.get(singleCellID)
-							+ " now it will be updated to the highest number");
+				if (expressionPrevious < expressionValue) {
+//					PCTSEA.logStatus("Gene " + geneName + " already contained an expression value for single cell "
+//							+ singleCellID + " ("
+//							+ SingleCellsMetaInformationReader.getSingleCellByCellID(singleCellID).getName()
+//							+ ") which is " + expressionPrevious
+//							+ " now it will be updated to the highest number");
 				} else {
 					return;
 				}
 			}
 		}
-		this.expressionsBySingleCellID.put(singleCellID, expressionValue);
+		expressionsBySingleCellID.put(singleCellID, expressionValue);
 		if (!cellIDsByCellType.containsKey(cellTypeName)) {
 			cellIDsByCellType.put(cellTypeName, new TIntArrayList());
 		}
@@ -69,15 +70,15 @@ public class Gene {
 	}
 
 	public int getNumSingleCellsInWhichIsExpressed(String cellTypeName) {
-		if (this.cellIDsByCellType.containsKey(cellTypeName)) {
-			return this.cellIDsByCellType.get(cellTypeName).size();
+		if (cellIDsByCellType.containsKey(cellTypeName)) {
+			return cellIDsByCellType.get(cellTypeName).size();
 		}
 		return 0;
 	}
 
 	public int[] getSingleCellsIDsInWhichIsExpressed(String cellTypeName) {
-		if (this.cellIDsByCellType.containsKey(cellTypeName)) {
-			return this.cellIDsByCellType.get(cellTypeName).toArray();
+		if (cellIDsByCellType.containsKey(cellTypeName)) {
+			return cellIDsByCellType.get(cellTypeName).toArray();
 		}
 		return new int[0];
 	}

@@ -8,15 +8,14 @@
 #
 list.of.packages <- c("shiny","dplyr", "stringr", "ggplot2",
                       "sjmisc", "tidyverse", "data.table",
-                      "promises", "future", "tools", "stringi",
-                      "filesstrings", "DT", "plotly")
+                      "promises", "future", "tools",
+                      "filesstrings", "DT", "plotly", "heatmaply", "shinyHeatmaply", "dendextend", "files")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)){
   # install.packages(new.packages)
 }
 library(shiny)
 library(dplyr)
-library(stringr)
 library(ggplot2)
 library(sjmisc)
 library(tidyverse)
@@ -24,14 +23,13 @@ library(data.table)
 library(promises)
 library(future)
 library(tools)
-library(stringi)
 library(filesstrings)
 library(DT)
 library(plotly)
 library(RColorBrewer)
 library(files)
 
-library(devtools)
+# library(devtools)
 library(heatmaply)
 library(shinyHeatmaply)
 library(dendextend)
