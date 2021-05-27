@@ -17,7 +17,11 @@ import java.util.stream.Collectors;
 import org.apache.commons.math3.util.CombinatoricsUtils;
 import org.apache.log4j.Logger;
 
+import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.THashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 import gnu.trove.set.hash.THashSet;
 
 public class CellTypes {
@@ -25,6 +29,7 @@ public class CellTypes {
 
 	private final static Logger log = Logger.getLogger(CellTypes.class);
 	private static Set<String> cellTypes;
+
 	static {
 		cellTypes = org.proteored.miapeapi.cv.CellTypes.getInstance(null).getPossibleValues().stream()
 				.map(cvTerm -> cvTerm.getPreferredName().toLowerCase()).collect(Collectors.toSet());
@@ -98,6 +103,22 @@ public class CellTypes {
 	private static final Set<String> types = new THashSet<String>();
 	private static final Set<String> characteristics = new THashSet<String>();
 	private static final Set<String> originalCellTypes = new THashSet<String>();
+
+	private static final TObjectIntMap<String> cellTypeIDByCellTypeName = new TObjectIntHashMap<String>();
+	private static final TIntObjectMap<String> cellTypeNamesByCellTypeID = new TIntObjectHashMap<String>();
+
+	private static int cellTypeID = 0;
+
+	public static int getCellTypeID(String cellType) {
+		if (cellTypeIDByCellTypeName.containsKey(cellType)) {
+			return cellTypeIDByCellTypeName.get(cellType);
+		} else {
+			cellTypeID++;
+			cellTypeIDByCellTypeName.put(cellType, cellTypeID);
+			cellTypeNamesByCellTypeID.put(cellTypeID, cellType);
+			return cellTypeID;
+		}
+	}
 
 	private static void loadHierarchicalCellType() {
 		BufferedReader reader = null;
@@ -201,7 +222,7 @@ public class CellTypes {
 			try {
 				if (!notFound.contains(originalType)) {
 					final FileWriter fw = new FileWriter(new File(
-							"C:\\Users\\salvador\\eclipse-workspace\\pctsea-parent\\pctsea-core\\src\\main\\resources\\cell_types_not_found_in_table.txt"),
+							"D:\\Salva\\git_projects\\pctsea-parent\\pctsea-core\\src\\main\\resources\\cell_types_not_found_in_table.txt"),
 							true);
 					fw.write(originalType + "\n");
 					fw.close();
@@ -263,5 +284,13 @@ public class CellTypes {
 			loadHierarchicalCellType();
 		}
 		return originalCellTypes;
+	}
+
+	public static String getCellTypeNameByCellTypeID(int cellTypeID) {
+		final String cellTypeName = cellTypeNamesByCellTypeID.get(cellTypeID);
+		if (cellTypeName != null) {
+			return cellTypeName;
+		}
+		return null;
 	}
 }

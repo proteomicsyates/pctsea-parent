@@ -53,6 +53,7 @@ public class CellTypeClassification {
 	private double ksTestCorrectedPValue;
 	private ArrayList<GeneOccurrence> geneOccurrences;
 	private int numGenesSignificant;
+	private int cellTypeID;
 
 	public long getNumCellsOfTypePassingCorrelationThreshold() {
 		return numCellsOfTypePassingCorrelationThreshold;
@@ -60,6 +61,7 @@ public class CellTypeClassification {
 
 	public CellTypeClassification(String name, double hypergeometricPValue) {
 		super();
+		setCellTypeID(CellTypes.getCellTypeID(name));
 		setName(name);
 		this.hypergeometricPValue = hypergeometricPValue;
 	}
@@ -513,5 +515,13 @@ public class CellTypeClassification {
 
 	public int getNumGenesSignificant() {
 		return numGenesSignificant;
+	}
+
+	public int getCellTypeID() {
+		return cellTypeID;
+	}
+
+	public void setCellTypeID(int cellTypeID) {
+		this.cellTypeID = cellTypeID;
 	}
 }

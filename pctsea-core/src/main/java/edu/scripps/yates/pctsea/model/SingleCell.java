@@ -21,13 +21,15 @@ import gnu.trove.set.hash.THashSet;
 public class SingleCell {
 	private final static Logger log = Logger.getLogger(SingleCell.class);
 	private static Map<String, String> map = new THashMap<String, String>();
-	private final static THashMap<String, Set<String>> cellNamesByOriginalCellType = new THashMap<String, Set<String>>();
+//	private final static THashMap<String, Set<String>> cellNamesByOriginalCellType = new THashMap<String, Set<String>>();
+
 	private final String name;
 	private double score;// correlation with our experimental data
 	private String cluster;
 	private double x;
 	private double y;
 	private String originalCellType;
+	private String cellType;
 	private String age;
 	private String developmentStage;
 	private String gender;
@@ -37,10 +39,11 @@ public class SingleCell {
 	private ArrayList<String> genesUsedForScore;
 	private final int id;
 	private String expressionsUsedForScore;
-	private CellTypeBranched branchedCellType;
+//	private CellTypeBranched branchedCellType;
 	private static final PearsonsCorrelation correlationCalculator = new PearsonsCorrelation();
 	private TShortFloatMap expressionsByGene;
 	private double geneExpressionVariance;
+	private int cellTypeID = -1;
 
 	public void addGeneExpressionValue(short geneID, float expressionValue) {
 		if (expressionsByGene == null) {
@@ -54,19 +57,6 @@ public class SingleCell {
 			return 0.0f;
 		}
 		return expressionsByGene.get(geneID);
-	}
-
-	public String getCellType(CellTypeBranch branch) {
-		if (branch == null) {
-			return originalCellType;
-		}
-		if (branchedCellType == null) {
-			branchedCellType = CellTypes.getCellTypeByOriginalType(originalCellType);
-		}
-		if (branchedCellType != null) {
-			return branchedCellType.getCellTypeBranch(branch);
-		}
-		return null;
 	}
 
 	public static String parseCellTypeTypos(String cellType) {
@@ -140,30 +130,72 @@ public class SingleCell {
 		return cellType;
 	}
 
+//	/**
+//	 * 
+//	 * @param cellType
+//	 * @param setAsOriginalCellType if true, it is considered an originalCellType
+//	 *                              coming from the database which can be very
+//	 *                              redundant and will be mapped to a
+//	 *                              branchedCellType <br>
+//	 *                              If false, the cell type will be considered
+//	 *                              already a mapped branch
+//	 */
+//	public void setCellType(String cellType, boolean setAsOriginalCellType) {
+//		if (cellType == null) {
+//			return;
+//		}
+//		originalCellType = parseCellTypeTypos(cellType);
+//		if (!cellNamesByOriginalCellType.containsKey(originalCellType)) {
+//			cellNamesByOriginalCellType.put(originalCellType, new THashSet<String>());
+//		}
+//		cellNamesByOriginalCellType.get(originalCellType).add(getName());
+//		if (setAsOriginalCellType) {
+//			branchedCellType = CellTypes.getCellTypeByOriginalType(cellType);
+//		} else {
+//			branchedCellType = new CellTypeBranched(cellType, cellType, null, null);
+//		}
+//	}
+
 	/**
+	 * sets the cell type
 	 * 
 	 * @param cellType
-	 * @param setAsOriginalCellType if true, it is considered an originalCellType
-	 *                              coming from the database which can be very
-	 *                              redundant and will be mapped to a
-	 *                              branchedCellType <br>
-	 *                              If false, the cell type will be considered
-	 *                              already a mapped branch
+	 * @param parseTypos     if true, typos will be checked
+	 * @param cellTypeBranch if not null, a table will be used to map to the
+	 *                       corresponding branch level. If null, the cell type will
+	 *                       be set as it is
 	 */
-	public void setCellType(String cellType, boolean setAsOriginalCellType) {
+	public void setCellType(String cellType, boolean parseTypos, CellTypeBranch cellTypeBranch) {
 		if (cellType == null) {
+			this.cellType = null;
+			cellTypeID = -1;
 			return;
 		}
-		originalCellType = parseCellTypeTypos(cellType);
-		if (!cellNamesByOriginalCellType.containsKey(originalCellType)) {
-			cellNamesByOriginalCellType.put(originalCellType, new THashSet<String>());
+		// only parse typos if cellTypeBranch is not original
+		if (parseTypos && cellTypeBranch != CellTypeBranch.ORIGINAL) {
+			cellType = parseCellTypeTypos(cellType);
 		}
-		cellNamesByOriginalCellType.get(originalCellType).add(getName());
-		if (setAsOriginalCellType) {
+
+		CellTypeBranched branchedCellType;
+		if (cellTypeBranch != null) {
 			branchedCellType = CellTypes.getCellTypeByOriginalType(cellType);
+			if (branchedCellType == null) {
+				this.cellType = cellType;
+				return;
+			}
+			this.cellType = branchedCellType.getCellTypeBranch(cellTypeBranch);
 		} else {
-			branchedCellType = new CellTypeBranched(cellType, cellType, null, null);
+			this.cellType = cellType;
 		}
+		cellTypeID = CellTypes.getCellTypeID(cellType);
+	}
+
+	public int getCellTypeID() {
+		return cellTypeID;
+	}
+
+	public String getCellType() {
+		return cellType;
 	}
 
 	public String getAge() {
@@ -205,9 +237,6 @@ public class SingleCell {
 	public SingleCell(int singleCellID, String name, double correlation) {
 		id = singleCellID;
 		this.name = name;
-		if (name.equals("AdultAdipose_1.CCAGACCCTAGAGAGATC")) {
-			log.info(name);
-		}
 		score = correlation;
 	}
 

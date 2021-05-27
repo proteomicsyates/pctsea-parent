@@ -17,6 +17,7 @@ import org.apache.log4j.Logger;
 import org.springframework.boot.logging.LogLevel;
 
 import edu.scripps.yates.pctsea.PCTSEA;
+import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.utilities.files.FileUtils;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
@@ -174,8 +175,8 @@ public class SingleCellsMetaInformationReader {
 //							cellsNotFound++;
 //						}
 						final SingleCell singleCell = new SingleCell(cellID, cellName, Double.NaN);
-
-						singleCell.setCellType(cellType, true);
+						final CellTypeBranch branch = CellTypeBranch.ORIGINAL;
+						singleCell.setCellType(cellType, true, branch);
 
 						// in case of having more columns (not in human cell map)
 						if (indexesByHeader.containsKey("developmentstage")) {

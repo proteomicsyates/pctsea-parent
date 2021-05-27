@@ -155,6 +155,7 @@ mucous epithelial cell	epithelial cell	mucous epithelial	epithelial	mucous
 mucous neck cell	mucous neck cell	neck mucous	mucous	neck	
 multipotential progenitor cell	multipotential progenitor cell	multipotential progenitor 	multipotential		progenitor
 muscle progenitor cell	muscle cell	progenitor muscle 	muscle		progenitor
+muscle cell	muscle cell	muscle cell	muscle		
 myelinating oligodendrocyte	oligodendrocyte	myelinating oligodendrocyte	oligodendrocyte		myelinating
 myeloid cell	myeloid cell	myeloid 	myeloid		
 myeloid progenitor cell	myeloid cell	progenitor myeloid	myeloid	progenitor	
@@ -205,6 +206,7 @@ radial glia	radial glia	radial glia	glia	radial
 retinal pigment epithelal cell	pigment cell	retinal_pigment epithelial	epithelial	retinal_pigment	
 retinal progenitor cell	retinal progenitor cell	retinal progenitor 	retinal		progenitor
 secretory epithelial cell	secretory cell	secretory epithelial	epithelial	secretory	
+secretory cell	secretory cell	secretory cell	secretory		
 sertoli cell	sertoli cell	sertoli 	sertoli		
 sinusoidal endothelial cell	endothelial cell	sinusoidal endothelial 	endothelial	sinusoidal	
 smooth muscle cell	smooth muscle cell	smooth muscle 	muscle	smooth	
@@ -444,6 +446,7 @@ intercalated cell_slc26a4 high			intercalated	slc26a4 high
 intercalated cell_spink1 high			intercalated	spink1 high	
 interstitial cell_postn high			interstitial	postn high	
 interstitial cell_ptn high			interstitial	ptn high	
+leydig cell	leydig cell	leydig cell	leydig		
 loop of henle _anxa1 high			loop of henle	anxa1 high	
 loop of henle _kng1 high			loop of henle	kng1 high	
 loop of henle _umod high			loop of henle	umod high	
@@ -553,6 +556,7 @@ paneth cell_defa5 high			paneth	defa5 high
 paneth cell_reg3a high			paneth	reg3a high	
 parietal cell_atp4b high			parietal	atp4b high	
 parietal cell_gif high			parietal	gif high	
+pigment cell	pigment cell	pigment cell	pigment		
 pit cell_foxq1 high			pit	foxq1 high	
 pit cell_muc6 high			pit	muc6 high	
 pit cell_tff2 high			pit	tff2 high	
@@ -634,6 +638,7 @@ t cell_il7r high			t	il7r high
 t cell_leprotl1 high			t	leprotl1 high	
 t cell_trac high			t	trac high	
 tendon cell_gcg high			tendon	gcg high	
+trophoblast cell	trophoblast cell	trophoblast cell	trophoblast		
 unknown epithelial cell_efna1 high			epithelial	unknown	efna1 high
 unknown epithelial cell_fos high			epithelial	unknown	fos high
 unknown1			unknown	unknown1	

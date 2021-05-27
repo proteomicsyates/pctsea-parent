@@ -100,11 +100,11 @@ public class MongoDBCreator {
 
 	private void logIndexCreation(String field, Class documentClass, boolean withCollation) {
 		if (withCollation) {
-			PCTSEA.logStatus("Making sure index on '" + field + "' field of collection " + documentClass
+			PCTSEA.logStatus("Making sure index on '" + field + "' field of collection " + documentClass.getName()
 					+ " with collation is present.");
 		} else {
-			PCTSEA.logStatus(
-					"Making sure index on '" + field + "' field of collection " + documentClass + " is present.");
+			PCTSEA.logStatus("Making sure index on '" + field + "' field of collection " + documentClass.getName()
+					+ " is present.");
 		}
 	}
 

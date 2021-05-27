@@ -21,10 +21,8 @@ import com.mongodb.MongoException;
 
 import edu.scripps.yates.annotations.uniprot.UniprotProteinLocalRetriever;
 import edu.scripps.yates.pctsea.db.Dataset;
-import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.PctseaRunLog;
-import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.Gene;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
@@ -58,13 +56,11 @@ public class InteractorsExpressionsRetriever {
 	private final List<String> genes;
 	private static final TObjectShortMap<String> geneIDsByGeneNameMap = new TObjectShortHashMap<String>();
 	private static final TShortObjectMap<String> geneNamesByGeneIDMap = new TShortObjectHashMap<String>();
-	private final ExpressionMongoRepository expresssionsMongoRepository;
 	private final MongoBaseService mongoBaseService;
 	private final Dataset dataset;
 	private final String uniprotRelease;
 	private final PctseaRunLog runLog;
 	private static InteractorsExpressionsRetriever instance;
-	private final CellTypeBranch cellTypeBranch;
 
 	/**
 	 * 
@@ -74,12 +70,10 @@ public class InteractorsExpressionsRetriever {
 	 * @param uniprotRelease
 	 * @param runLog                          to log the number of genes found from
 	 *                                        input list in the database
-	 * @param cellTypeBranch
 	 * @throws IOException
 	 */
-	public InteractorsExpressionsRetriever(ExpressionMongoRepository expresssionsMongoRepository,
-			MongoBaseService mongoBaseService, File experimentalExpressionsFile, Dataset dataset, String uniprotRelease,
-			PctseaRunLog runLog, CellTypeBranch cellTypeBranch) throws IOException {
+	public InteractorsExpressionsRetriever(MongoBaseService mongoBaseService, File experimentalExpressionsFile,
+			Dataset dataset, String uniprotRelease, PctseaRunLog runLog) throws IOException {
 //		if (SingleCellsMetaInformationReader.singleCellIDsBySingleCellNameMap.isEmpty()) {
 //			throw new IllegalArgumentException(
 //					"We need to read the single cell metainformation before reading expressions");
@@ -90,9 +84,7 @@ public class InteractorsExpressionsRetriever {
 		this.runLog = runLog;
 		this.dataset = dataset;
 		this.mongoBaseService = mongoBaseService;
-		this.expresssionsMongoRepository = expresssionsMongoRepository;
 		this.uniprotRelease = uniprotRelease;
-		this.cellTypeBranch = cellTypeBranch;
 		genes = readExperimentalExpressionsFile(experimentalExpressionsFile);
 		instance = this;
 	}
@@ -160,7 +152,9 @@ public class InteractorsExpressionsRetriever {
 				if (expressionObj != null) {
 					expression = Float.valueOf(expressionObj.toString());
 				}
-
+				if (Float.compare(0f, expression) == 0) {
+					return;
+				}
 				foundGeneNames.add(geneName);
 				// it already has an id associated from the call to getGenesFromInputList
 				final short geneID = geneIDsByGeneNameMap.get(geneName.toUpperCase());
@@ -169,12 +163,14 @@ public class InteractorsExpressionsRetriever {
 					genesById.put(geneID, gene);
 					geneIDsSet.add(geneID);
 				}
-
+				if (cellName.equals("AdultAdrenalGland_2.CTCGCATGTCACTCGGGT") && "AK6".equals(geneName.toUpperCase())) {
+					System.out.println("asfd");
+				}
 				final int singleCellID = SingleCellsMetaInformationReader.getSingleCellIDBySingleCellName(cellName);
 				singleCellIDs.add(singleCellID);
 				final SingleCell cell = SingleCellsMetaInformationReader.getSingleCellByCellID(singleCellID);
 				cell.addGeneExpressionValue(geneID, expression);
-				final String cellTypeName = cell.getCellType(cellTypeBranch);
+				final String cellTypeName = cell.getCellType();
 				final Gene gene = getExpressionsOfGene(geneID);
 				gene.addExpressionValueInSingleCell(singleCellID, expression, cellTypeName);
 			}
@@ -333,6 +329,7 @@ public class InteractorsExpressionsRetriever {
 				}
 				final String geneName = split[0].toUpperCase();
 				final short geneID = id++;
+				System.out.println(geneID);
 				genes.add(geneName);
 				InteractorsExpressionsRetriever.geneIDsByGeneNameMap.put(geneName, geneID);
 				InteractorsExpressionsRetriever.geneNamesByGeneIDMap.put(geneID, geneName);
