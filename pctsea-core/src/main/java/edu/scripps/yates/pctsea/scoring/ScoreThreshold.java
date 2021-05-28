@@ -69,8 +69,8 @@ public class ScoreThreshold {
 	}
 
 	public boolean passThreshold(SingleCell singleCell) {
-		if (correlationThresholdValue > 0.0) {
-			return singleCell.getScoreForRanking() > correlationThresholdValue;
+		if (correlationThresholdValue >= 0.0) {
+			return singleCell.getScoreForRanking() >= correlationThresholdValue;
 		} else {
 			return singleCell.getScoreForRanking() < correlationThresholdValue;
 		}
