@@ -18,8 +18,8 @@ public class ScoreThreshold {
 	}
 
 	public List<SingleCell> getSingleCellsPassingThreshold(Collection<SingleCell> singleCells) {
-		if (correlationThresholdValue > 0.0) {
-			return singleCells.stream().filter(cell -> cell.getScoreForRanking() > correlationThresholdValue)
+		if (correlationThresholdValue >= 0.0) {
+			return singleCells.stream().filter(cell -> cell.getScoreForRanking() >= correlationThresholdValue)
 					.collect(Collectors.toList());
 		} else {
 			return singleCells.stream().filter(cell -> cell.getScoreForRanking() < correlationThresholdValue)
@@ -28,8 +28,8 @@ public class ScoreThreshold {
 	}
 
 	public List<SingleCell> getSingleCellsPassingThresholdSortedByScore(Collection<SingleCell> singleCells) {
-		if (correlationThresholdValue > 0.0) {
-			return singleCells.stream().filter(cell -> cell.getScoreForRanking() > correlationThresholdValue)
+		if (correlationThresholdValue >= 0.0) {
+			return singleCells.stream().filter(cell -> cell.getScoreForRanking() >= correlationThresholdValue)
 					.sorted(new Comparator<SingleCell>() {
 						@Override
 						public int compare(SingleCell o1, SingleCell o2) {
@@ -48,9 +48,9 @@ public class ScoreThreshold {
 	}
 
 	public long getCountSingleCellsPassingThreshold(Collection<SingleCell> singleCellList) {
-		if (correlationThresholdValue > 0.0) {
+		if (correlationThresholdValue >= 0.0) {
 			final Stream<SingleCell> filter = singleCellList.stream()
-					.filter(sc -> sc.getScoreForRanking() > correlationThresholdValue);
+					.filter(sc -> sc.getScoreForRanking() >= correlationThresholdValue);
 			final int ret = filter.collect(Collectors.toSet()).size();
 //			ret= filter.count();
 			return ret;
@@ -96,7 +96,7 @@ public class ScoreThreshold {
 			public int compare(SingleCell o1, SingleCell o2) {
 				// sort by correlation from higher to lower
 
-				if (correlationThresholdValue > 0.0) {
+				if (correlationThresholdValue >= 0.0) {
 					final double corr1 = Double.isNaN(o1.getScoreForRanking()) ? -Double.MAX_VALUE
 							: o1.getScoreForRanking();
 					final double corr2 = Double.isNaN(o2.getScoreForRanking()) ? -Double.MAX_VALUE
