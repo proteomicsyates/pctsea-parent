@@ -2156,7 +2156,7 @@ public class PCTSEA {
 				cellTypeClassification.setCasimirsEnrichmentScore(casimirsEnrichmentScore.floatValue());
 			} else {
 				PCTSEA.logStatus(cellTypeName + " cannot have a casimirs score because # of '" + cellTypeName
-						+ "' cells is " + numCellsOfType + " and # of '" + cellTypeName + "' cells with corr "
+						+ "' cells is " + numCellsOfType + " and # of '" + cellTypeName + "' cells with score "
 						+ scoreThreshold + " is " + numSingleCellsPassingThreshold);
 			}
 			newCellTypeClassifications.add(cellTypeClassification);
