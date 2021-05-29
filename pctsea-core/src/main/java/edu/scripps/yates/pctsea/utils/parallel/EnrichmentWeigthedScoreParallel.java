@@ -45,8 +45,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			boolean compensateWithNegativeSupremum) {
 		this.iterator = iterator;
 		this.singleCellList.addAll(singleCellList);
-		// sort by correlation from higher to lower
-		PCTSEAUtils.sortByScoreDescending(this.singleCellList);
+
 		this.permutatedData = permutatedData;
 		this.plotNegativeEnrichedCellTypes = plotNegativeEnrichedCellTypes;
 		this.scoreName = scoreName;
@@ -64,13 +63,6 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			this.y = y;
 		}
 
-		int getX() {
-			return x;
-		}
-
-		float getY() {
-			return y;
-		}
 	}
 
 	@Override
@@ -84,9 +76,9 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			List<XYPoint> secondarySupremumLineSeries = null;
 			TDoubleList scoresFromCellType = null;
 			TDoubleList scoresForOtherCellTypes = null;
-
-			final TDoubleList fx = new TDoubleArrayList();
-			final TDoubleList fy = new TDoubleArrayList();
+			TFloatList as = null;
+			TFloatList bs = null;
+			TFloatList differences = null;
 			//
 			final CellTypeClassification cellType = iterator.next();
 			// create chart if not permutated Data, just for real score
@@ -99,16 +91,15 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 
 				scoresFromCellType = new TDoubleArrayList();
 				scoresForOtherCellTypes = new TDoubleArrayList();
-			} else {
-//				System.out.println("asdf");
+
+				as = new TFloatArrayList(singleCellList.size());
+				bs = new TFloatArrayList(singleCellList.size());
+				differences = new TFloatArrayList(singleCellList.size());
 			}
 
 			final int cellTypeID = cellType.getCellTypeID();
 			float denominatorA = 0.0f;
 			float denominatorB = 0.0f;
-			final TFloatList differences = new TFloatArrayList();
-			final TFloatList as = new TFloatArrayList();
-			final TFloatList bs = new TFloatArrayList();
 
 //			final float denominatorB = 1.0f * (n - nk);
 			final List<SingleCell> cellsOfType = new ArrayList<SingleCell>();
@@ -151,9 +142,8 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 					// this is the difference with the unweigthed, using the correlation, instead of
 					// just counting
 					numeratorA += singleCell.getScoreForRanking();
-					fx.add(singleCell.getScoreForRanking());
 					a = numeratorA / denominatorA;
-					cellType.addToCellTypeCorrelationDistribution(
+					cellType.addToCellTypeScoreDistribution(
 							Double.valueOf(singleCell.getScoreForRanking()).floatValue());
 					b = previousB;
 					if (scoresFromCellType != null && !Double.isNaN(singleCell.getScoreForRanking())) {
@@ -167,7 +157,6 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 					}
 
 				} else {
-					fy.add(singleCell.getScoreForRanking());
 					numeratorB += singleCell.getScoreForRanking();
 					a = previousA;
 					b = numeratorB / denominatorB;
@@ -177,14 +166,15 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 						scoresForOtherCellTypes.add(singleCell.getScoreForRanking());
 					}
 				}
+				final float difference = a - b;
 				if (!permutatedData) {
 					as.add(a);
 					bs.add(b);
 					scoreSeriesType.add(new XYPoint(i + 1, a));
 					scoreSeriesOtherType.add(new XYPoint(i + 1, b));
+					differences.add(difference);
 				}
-				final float difference = a - b;
-				differences.add(difference);
+
 				if (Math.abs(difference) > Math.abs(supremum)) {
 					supremum = difference;
 					supremumX = i + 1;
@@ -198,16 +188,16 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 				previousA = a;
 				previousB = b;
 			}
-			if (cellType.getCellTypeCorrelationDistribution().size() > 1
-					&& cellType.getOtherCellTypesCorrelationDistribution().size() > 1) {
+			if (cellType.getCellTypeCorrelationDistribution() > 1
+					&& cellType.getOtherCellTypesCorrelationDistribution() > 1) {
 
 				// now we apply a term factor which is coming from the equation 11 at
 				// https://www.pathwaycommons.org/guide/primers/data_analysis/gsea/
 				// but also from wikipedia at
 				// https://en.wikipedia.org/wiki/Kolmogorov%E2%80%93Smirnov_test
 				// when samples are large
-				final int sizea = cellType.getCellTypeCorrelationDistribution().size();
-				final int sizeb = cellType.getOtherCellTypesCorrelationDistribution().size();
+				final int sizea = cellType.getCellTypeCorrelationDistribution();
+				final int sizeb = cellType.getOtherCellTypesCorrelationDistribution();
 				final float sqrt = Double.valueOf(Math.sqrt((sizea * sizeb * 1d) / (1d * (sizea + sizeb))))
 						.floatValue();
 				final float dStatistic = supremum * sqrt;
@@ -367,13 +357,13 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		for (int i = 0; i < scoreSeriesType.size(); i++) {
 			final XYPoint dataItem = scoreSeriesType.get(i);
 			try {
-				final int x = dataItem.getX();
-				final float y = dataItem.getY();
-				if (previousDataItem != null && Float.compare(y, previousDataItem.getY()) == 0) {
+				final int x = dataItem.x;
+				final float y = dataItem.y;
+				if (previousDataItem != null && Float.compare(y, previousDataItem.y) == 0) {
 					continue;
 				}
 				if (previousDataItem != null) {
-					buffer.write(cellTypeName + "\t" + previousDataItem.getX() + "\t" + previousDataItem.getY() + "\n");
+					buffer.write(cellTypeName + "\t" + previousDataItem.x + "\t" + previousDataItem.y + "\n");
 				}
 				buffer.write(cellTypeName + "\t" + x + "\t" + y + "\n");
 			} finally {
@@ -384,13 +374,13 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		for (int i = 0; i < scoreSeriesOtherType.size(); i++) {
 			final XYPoint dataItem = scoreSeriesOtherType.get(i);
 			try {
-				final int x = dataItem.getX();
-				final float y = dataItem.getY();
-				if (previousDataItem != null && Float.compare(y, previousDataItem.getY()) == 0) {
+				final int x = dataItem.x;
+				final float y = dataItem.y;
+				if (previousDataItem != null && Float.compare(y, previousDataItem.y) == 0) {
 					continue;
 				}
 				if (previousDataItem != null) {
-					buffer.write("others\t" + previousDataItem.getX() + "\t" + previousDataItem.getY() + "\n");
+					buffer.write("others\t" + previousDataItem.x + "\t" + previousDataItem.y + "\n");
 				}
 				buffer.write("others\t" + x + "\t" + y + "\n");
 			} finally {
@@ -399,15 +389,15 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		}
 		for (int i = 0; i < supremumLineSeries.size(); i++) {
 			final XYPoint dataItem = supremumLineSeries.get(i);
-			final int x = dataItem.getX();
-			final float y = dataItem.getY();
+			final int x = dataItem.x;
+			final float y = dataItem.y;
 			buffer.write("supremum\t" + x + "\t" + y + "\n");
 		}
 		if (secondarySupremumLineSeries != null) {
 			for (int i = 0; i < secondarySupremumLineSeries.size(); i++) {
 				final XYPoint dataItem = secondarySupremumLineSeries.get(i);
-				final int x = dataItem.getX();
-				final float y = dataItem.getY();
+				final int x = dataItem.x;
+				final float y = dataItem.y;
 				buffer.write("secondary supremum\t" + x + "\t" + y + "\n");
 			}
 		}

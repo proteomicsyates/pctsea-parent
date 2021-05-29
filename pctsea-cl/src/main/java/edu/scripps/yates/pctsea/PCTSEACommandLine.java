@@ -69,7 +69,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			for (int i = 0; i < scoringMethodsPerRound.size(); i++) {
 
 				final ScoringMethod scoringMethod = scoringMethodsPerRound.get(i);
-				final int minNumberExpressedGenesInCell = this.minNumberExpressedGenesInCellPerRound.get(i);
+				final int minNumberExpressedGenesInCell = minNumberExpressedGenesInCellPerRound.get(i);
 				if (scoringMethod == ScoringMethod.QUICK_SCORE) {
 					pctsea.addScoreSchema(
 							new ScoringSchema(scoringMethod, new NoThreshold(), minNumberExpressedGenesInCell));
@@ -202,7 +202,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			}
 		}
 
-		cellTypeBranch = CellTypeBranch.TYPE;
+		cellTypeBranch = CellTypeBranch.ORIGINAL;
 
 		if (cmd.hasOption(InputParameters.CELL_TYPES_CLASSIFICATION)) {
 			final String optionValue = cmd.getOptionValue(InputParameters.CELL_TYPES_CLASSIFICATION).trim();
@@ -241,7 +241,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		}
 
 		//
-		this.scoringMethodsPerRound = new ArrayList<ScoringMethod>();
+		scoringMethodsPerRound = new ArrayList<ScoringMethod>();
 		if (cmd.hasOption(InputParameters.SCORING_METHOD)) {
 			final String scoringMethodString = cmd.getOptionValue(InputParameters.SCORING_METHOD);
 			try {
@@ -249,11 +249,11 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 					final String[] split = scoringMethodString.split(",");
 					for (final String string : split) {
 						final ScoringMethod scoringMethod = ScoringMethod.valueOf(string.trim());
-						this.scoringMethodsPerRound.add(scoringMethod);
+						scoringMethodsPerRound.add(scoringMethod);
 					}
 				} else {
 					final ScoringMethod scoringMethod = ScoringMethod.valueOf(scoringMethodString.trim());
-					this.scoringMethodsPerRound.add(scoringMethod);
+					scoringMethodsPerRound.add(scoringMethod);
 				}
 
 			} catch (final Exception e) {
@@ -270,7 +270,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 
 		{
 			try {
-				this.inputDataType = InputDataType.valueOf(cmd.getOptionValue(InputParameters.INPUT_DATA_TYPE).trim());
+				inputDataType = InputDataType.valueOf(cmd.getOptionValue(InputParameters.INPUT_DATA_TYPE).trim());
 			} catch (final Exception e) {
 				errorInParameters("Error in value for option '-" + InputParameters.INPUT_DATA_TYPE + "'. Value '"
 						+ cmd.getOptionValue(InputParameters.INPUT_DATA_TYPE).trim()
@@ -279,8 +279,8 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		}
 
 		// check the number of parameters regarding the scoring schema
-		final boolean valid = minNumberExpressedGenesInCellPerRound.size() == this.scoresPerRound.size()
-				&& this.scoresPerRound.size() == this.scoringMethodsPerRound.size();
+		final boolean valid = minNumberExpressedGenesInCellPerRound.size() == scoresPerRound.size()
+				&& scoresPerRound.size() == scoringMethodsPerRound.size();
 		if (!valid) {
 			errorInParameters(
 					"The number of parameters (separated by commas if more than one) of the following parameters must be the same:"
@@ -339,8 +339,8 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 
 		final Option optionCellTypeBranch = new Option(InputParameters.CELL_TYPES_CLASSIFICATION, true,
 				"Level of cell type classification according to the hierarchical structure of its classification. Consult the administrator to know more about it. Possible values of this list are: "
-						+ CellTypeBranch.getStringSeparated(",") + ". If not provided, " + CellTypeBranch.TYPE.name()
-						+ " will be considered.");
+						+ CellTypeBranch.getStringSeparated(",") + ". If not provided, "
+						+ CellTypeBranch.ORIGINAL.name() + " will be considered.");
 		options.add(optionCellTypeBranch);
 
 		//

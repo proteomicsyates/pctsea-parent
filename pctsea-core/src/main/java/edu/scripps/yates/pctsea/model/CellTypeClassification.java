@@ -28,8 +28,10 @@ public class CellTypeClassification {
 		return singleCellsOfThisType;
 	}
 
-	private final TFloatList cellTypeCorrelationDistribution = new TFloatArrayList();
-	private final TFloatList otherCellTypesCorrelationDistribution = new TFloatArrayList();
+//	private final TFloatList cellTypeScoreDistribution = new TFloatArrayList();
+	private int numCellTypeScores = 0;
+//	private final TFloatList otherCellTypesScoreDistribution = new TFloatArrayList();
+	private int numOtherCellTypesScores = 0;
 	private double enrichmentSignificance;
 	private float casimirsEnrichmentScore;
 //	private JFreeChart correlationDistributionChart;
@@ -221,20 +223,24 @@ public class CellTypeClassification {
 		}
 	}
 
-	public void addToCellTypeCorrelationDistribution(float correlationValue) {
-		cellTypeCorrelationDistribution.add(correlationValue);
+	public void addToCellTypeScoreDistribution(float scoreValue) {
+//		cellTypeScoreDistribution.add(scoreValue);
+		numCellTypeScores++;
 	}
 
 	public void addOtherCellTypesCorrelationDistribution(float b) {
-		otherCellTypesCorrelationDistribution.add(b);
+//		otherCellTypesScoreDistribution.add(b);
+		numOtherCellTypesScores++;
 	}
 
-	public TFloatList getCellTypeCorrelationDistribution() {
-		return cellTypeCorrelationDistribution;
+	public int getCellTypeCorrelationDistribution() {
+//		return cellTypeScoreDistribution;
+		return numCellTypeScores;
 	}
 
-	public TFloatList getOtherCellTypesCorrelationDistribution() {
-		return otherCellTypesCorrelationDistribution;
+	public int getOtherCellTypesCorrelationDistribution() {
+//		return otherCellTypesScoreDistribution;
+		return numOtherCellTypesScores;
 	}
 
 	public void setEnrichmentSignificance(double pvalue) {
@@ -246,16 +252,17 @@ public class CellTypeClassification {
 	}
 
 	public void clearCellTypeDistribution() {
-		if (cellTypeCorrelationDistribution != null) {
-			cellTypeCorrelationDistribution.clear();
-		}
-
+//		if (cellTypeScoreDistribution != null) {
+//			cellTypeScoreDistribution.clear();
+//		}
+		numCellTypeScores = 0;
 	}
 
 	public void clearOutsideCellTypeDistribution() {
-		if (otherCellTypesCorrelationDistribution != null) {
-			otherCellTypesCorrelationDistribution.clear();
-		}
+//		if (otherCellTypesScoreDistribution != null) {
+//			otherCellTypesScoreDistribution.clear();
+//		}
+		numOtherCellTypesScores = 0;
 	}
 
 	public float getCasimirsEnrichmentScore() {

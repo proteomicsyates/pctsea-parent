@@ -13,9 +13,8 @@ import edu.scripps.yates.utilities.maths.Maths;
 import gnu.trove.list.TDoubleList;
 import gnu.trove.list.TShortList;
 import gnu.trove.list.array.TDoubleArrayList;
-import gnu.trove.map.TShortFloatMap;
+import gnu.trove.list.array.TFloatArrayList;
 import gnu.trove.map.hash.THashMap;
-import gnu.trove.map.hash.TShortFloatHashMap;
 import gnu.trove.set.hash.THashSet;
 
 public class SingleCell {
@@ -41,22 +40,66 @@ public class SingleCell {
 	private String expressionsUsedForScore;
 //	private CellTypeBranched branchedCellType;
 	private static final PearsonsCorrelation correlationCalculator = new PearsonsCorrelation();
-	private TShortFloatMap expressionsByGene;
+
 	private double geneExpressionVariance;
 	private int cellTypeID = -1;
+	private final int numGenesCapacity;
+	// here we will add the expressions
+	private TFloatArrayList expressionsByGene;
+	// we will create an array of shorts in which each position corresponds with a
+	// gene. The value in each position will be the index in the expressionByGene
+	// array
+	private short[] expressionIndexes;
+
+	public SingleCell(int singleCellID, String name, double correlation) {
+		this(singleCellID, name, correlation, 1);
+	}
+
+	public SingleCell(int singleCellID, String name, double correlation, int numGenesCapacity) {
+		id = singleCellID;
+		this.name = name;
+		score = correlation;
+		this.numGenesCapacity = numGenesCapacity;
+		expressionIndexes = new short[numGenesCapacity];
+		for (short i = 0; i < numGenesCapacity; i++) {
+			expressionIndexes[i] = -1; // we put -1 so that we can detect when there is nothing in that position
+		}
+	}
 
 	public void addGeneExpressionValue(short geneID, float expressionValue) {
 		if (expressionsByGene == null) {
-			expressionsByGene = new TShortFloatHashMap();
+			expressionsByGene = new TFloatArrayList();
 		}
-		expressionsByGene.put(geneID, expressionValue);
+		final short indexInWhichIsInsertedInExpressionsFloatArray = (short) expressionsByGene.size();
+		// we add the expression to the array of floats
+		expressionsByGene.add(expressionValue);
+		// this should do something ONLY if in the constructor the capacity was not set.
+		ensureCapacityOfIndexes(geneID);
+		// we keep the index in the array of indexes
+		expressionIndexes[geneID] = indexInWhichIsInsertedInExpressionsFloatArray;
+
+	}
+
+	private void ensureCapacityOfIndexes(short capacity) {
+		if (capacity > expressionIndexes.length) {
+			final int newCap = Math.max(expressionIndexes.length << 1, capacity);
+			final short[] tmp = new short[newCap];
+			System.arraycopy(expressionIndexes, 0, tmp, 0, expressionIndexes.length);
+			expressionIndexes = tmp;
+		}
 	}
 
 	public float getGeneExpressionValue(short geneID) {
 		if (expressionsByGene == null) {
 			return 0.0f;
 		}
-		return expressionsByGene.get(geneID);
+		// we look up the array of indexes
+		final short expressionIndex = expressionIndexes[geneID];
+		if (expressionIndex < 0) {
+			return 0f; // because this single cell doesnt have expression for that gene
+		}
+		return expressionsByGene.get(expressionIndex);
+
 	}
 
 	public static String parseCellTypeTypos(String cellType) {
@@ -232,12 +275,6 @@ public class SingleCell {
 
 	public void setCluster(String cluster) {
 		this.cluster = cluster;
-	}
-
-	public SingleCell(int singleCellID, String name, double correlation) {
-		id = singleCellID;
-		this.name = name;
-		score = correlation;
 	}
 
 	public String getName() {

@@ -73,7 +73,6 @@ import edu.scripps.yates.pctsea.utils.EmailUtil;
 import edu.scripps.yates.pctsea.utils.PCTSEAUtils;
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
 import edu.scripps.yates.pctsea.utils.parallel.EnrichmentWeigthedScoreParallel;
-import edu.scripps.yates.pctsea.utils.parallel.KolmogorovSmirnovTestParallel;
 import edu.scripps.yates.utilities.appversion.AppVersion;
 import edu.scripps.yates.utilities.cores.SystemCoreManager;
 import edu.scripps.yates.utilities.dates.DatesUtil;
@@ -161,6 +160,9 @@ public class PCTSEA {
 	 */
 	private final List<ScoringSchema> sequentialScoringSchemas = new ArrayList<ScoringSchema>();
 	private InputDataType inputDataType;
+	private boolean currentTimeStampFolderCreated;
+	private File resultsSubFolderForCellTypes;
+	private File resultsSubFolderGeneral;
 	private static final double CELL_TYPE_FDR_SIGNIFICANCE_THRESHOLD = 0.05;
 	private static final int MAX_SINGLE_CELLS_FOR_SCORE = 60000;
 
@@ -281,6 +283,7 @@ public class PCTSEA {
 
 		// first of all create a time stamp
 		currentTimeStamp = createTimeStamp(prefix);
+		currentTimeStampFolderCreated = false;
 		// create log
 		final PctseaRunLog runLog = new PctseaRunLog();
 		runLog.setTimeStamp(currentTimeStamp);
@@ -310,8 +313,9 @@ public class PCTSEA {
 //			if (true) {
 //				return;
 //			}
-
-			final List<SingleCell> singleCellList = getSingleCellListFromDB(dataset, cellTypeBranch);
+			final int numGenes = (int) java.nio.file.Files.readAllLines(experimentExpressionFile.toPath()).stream()
+					.filter(f -> !"".equals(f.trim())).count();
+			final List<SingleCell> singleCellList = getSingleCellListFromDB(dataset, cellTypeBranch, numGenes);
 
 			interactorExpressions = new InteractorsExpressionsRetriever(mongoBaseService, experimentExpressionFile,
 					dataset, uniprotRelease, runLog);
@@ -377,7 +381,7 @@ public class PCTSEA {
 						Math.min(singleCellsPassingScoreThreshold.size() - 1, MAX_SINGLE_CELLS_FOR_SCORE));
 				if (scoringMethod != ScoringMethod.QUICK_SCORE) {
 					calculateEnrichmentScore(cellTypeClassificationsInRound, singleCellsPassingScoreThreshold, true,
-							false, true, false, plotNegativeEnrichedCellTypes, scoringMethod.getScoreName());
+							true, false, plotNegativeEnrichedCellTypes, scoringMethod.getScoreName());
 
 					// calculate significance by cell types permutations
 					calculateSignificanceByCellTypesPermutations(interactorExpressions, cellTypeClassificationsInRound,
@@ -1197,7 +1201,18 @@ public class PCTSEA {
 		buffer.close();
 	}
 
-	private List<SingleCell> getSingleCellListFromDB(Dataset dataset, CellTypeBranch cellTypeBranch) {
+	/**
+	 * Gets the list of single cells from the database of an specific
+	 * {@link Dataset}
+	 * 
+	 * @param dataset
+	 * @param cellTypeBranch
+	 * @param numInputGenes  this is to reserve space in the single cell object for
+	 *                       a maximum of that number of expressions
+	 * @return
+	 */
+	private List<SingleCell> getSingleCellListFromDB(Dataset dataset, CellTypeBranch cellTypeBranch,
+			int numInputGenes) {
 
 		final long t0 = System.currentTimeMillis();
 
@@ -1239,7 +1254,7 @@ public class PCTSEA {
 //			}
 			cellID++;
 
-			final SingleCell sc = new SingleCell(cellID, singleCelldb.getName(), Double.NaN);
+			final SingleCell sc = new SingleCell(cellID, singleCelldb.getName(), Double.NaN, numInputGenes);
 
 			sc.setCellType(singleCelldb.getType(), true, cellTypeBranch);
 			ret.add(sc);
@@ -1300,7 +1315,7 @@ public class PCTSEA {
 
 					// calculate enrichment scores with the Kolmogorov-Smirnov test
 
-					calculateEnrichmentScore(cellTypeClassifications, singleCellsPassingScoreThreshold, false, false,
+					calculateEnrichmentScore(cellTypeClassifications, singleCellsPassingScoreThreshold, false,
 							outputToLog, true, plotNegativeEnrichedCellTypes, scoreName);
 
 					counter.increment();
@@ -1335,9 +1350,6 @@ public class PCTSEA {
 		final boolean onlyTakePositiveScores = true;
 		PCTSEA.logStatus("Calculating enrichment scores significance...");
 		for (final CellTypeClassification cellType : cellTypeClassifications) {
-			if (cellType.getName().equalsIgnoreCase("neuron")) {
-				log.info("asdf");
-			}
 			final float realScore = cellType.getEnrichmentScore();
 			if (Float.isNaN(realScore)) {
 				cellType.setEnrichmentSignificance(Double.NaN);
@@ -1424,28 +1436,15 @@ public class PCTSEA {
 			final int index2 = Arrays.binarySearch(totalRandomNormalizedScoresArray, realNormalizedScore);
 
 			final int sobs = nobs - (index >= 0 ? index + 1 : -index - 1);
-			if (sobs < 0) {
-				System.out.println("asdf");
-			}
-			if (sobs == 0) {
-				System.out.println("asdf");
-			}
+
 			final int snull = nnull - (index2 >= 0 ? index2 + 1 : -index2 - 1);
-			if (snull < 0) {
-				System.out.println("asdf");
-			}
-			if (snull == 0) {
-				System.out.println("asdf");
-			}
+
 			double fdr = Double.NaN;
 			if (snull == 0) {
 				fdr = 0.0;
 			} else {
 				fdr = (1.0 * snull / sobs) * (1.0 * nobs / nnull);
 			}
-//			if (fdr > 1) {
-//				System.out.println("asdf");
-//			}
 
 			cellType.setEnrichmentFDR(fdr);
 		}
@@ -1610,7 +1609,7 @@ public class PCTSEA {
 					singleCellsPassingScoreThreshold = singleCellsPassingScoreThreshold.subList(0,
 							Math.min(singleCellsPassingScoreThreshold.size() - 1, MAX_SINGLE_CELLS_FOR_SCORE));
 					// calculate enrichment scores with the Kolmogorov-Smirnov test
-					calculateEnrichmentScore(cellTypeClassifications, singleCellsPassingScoreThreshold, false, false,
+					calculateEnrichmentScore(cellTypeClassifications, singleCellsPassingScoreThreshold, false,
 							outputToLog, true, plotNegativeEnrichedCellTypes, scoreName);
 
 					counter.increment();
@@ -1832,7 +1831,11 @@ public class PCTSEA {
 		final String currenttimeStampPath = experimentExpressionFile.getParent() + File.separator + currentTimeStamp
 				+ File.separator;
 		final File file = new File(currenttimeStampPath);
-		file.mkdirs();
+		if (!currentTimeStampFolderCreated) {
+
+			file.mkdirs();
+			currentTimeStampFolderCreated = true;
+		}
 		return file;
 	}
 
@@ -2316,12 +2319,6 @@ public class PCTSEA {
 //		final JFreeChart chart = ChartFactory.createXYLineChart(plotTitle, xaxis, yaxis, histogramDataset, orientation,
 //				show, toolTips, urls);
 
-		final File folder = getResultsSubfolderForCellTypes(prefix);
-		if (!folder.exists()) {
-			folder.mkdirs();
-			logStatus("Folder '" + folder.getAbsolutePath() + "' created");
-		}
-
 		try {
 			writeGlobalScoreDistributionChart(scores, getResultsSubfolderGeneral(), scoringMethod.getScoreName());
 //			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
@@ -2358,8 +2355,8 @@ public class PCTSEA {
 	 * @param scoreName
 	 */
 	private void calculateEnrichmentScore(List<CellTypeClassification> cellTypeClassifications,
-			List<SingleCell> singleCellList, boolean calculateUnweighted, boolean calculateKolmogorovSmirnovTest,
-			boolean outputToLog, boolean permutatedData, boolean plotNegativeEnrichedCellTypes, String scoreName) {
+			List<SingleCell> singleCellList, boolean calculateUnweighted, boolean outputToLog, boolean permutatedData,
+			boolean plotNegativeEnrichedCellTypes, String scoreName) {
 		if (outputToLog) {
 			PCTSEA.logStatus("Calculating enrichment scores...");
 		}
@@ -2387,39 +2384,10 @@ public class PCTSEA {
 			}
 		});
 
-		if (calculateKolmogorovSmirnovTest) {
-			// calculate significance
-			calculateKolmogorovSmirnovTestInParallel(cellTypeClassifications, outputToLog);
-		}
-	}
-
-	private void calculateKolmogorovSmirnovTestInParallel(List<CellTypeClassification> cellTypeClassifications,
-			boolean outputToLog) {
-//		final KolmogorovSmirnovTest ksTest = new KolmogorovSmirnovTest();
-		if (outputToLog) {
-			PCTSEA.logStatus(
-					"Calculating enrichment significancy with KS test (in parallel with " + threadCount + " cores)...");
-		}
-		final ParIterator<CellTypeClassification> iterator = ParIteratorFactory
-				.createParIterator(cellTypeClassifications, threadCount, Schedule.GUIDED);
-//		final Reducible<List<CellTypeClassification>> reducibles = new Reducible<List<CellTypeClassification>>();
-		final List<KolmogorovSmirnovTestParallel> runners = new ArrayList<KolmogorovSmirnovTestParallel>();
-		for (int numCore = 1; numCore <= threadCount; numCore++) {
-			// take current DB session
-			final KolmogorovSmirnovTestParallel runner = new KolmogorovSmirnovTestParallel(iterator, numCore);
-			runners.add(runner);
-			runner.start();
-		}
-
-		// Main thread waits for worker threads to complete
-		for (int k = 0; k < threadCount; k++) {
-			try {
-				runners.get(k).join();
-			} catch (final InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-
+//		if (calculateKolmogorovSmirnovTest) {
+//			// calculate significance
+//			calculateKolmogorovSmirnovTestInParallel(cellTypeClassifications, outputToLog);
+//		}
 	}
 
 	private void calculateWeigthedScoreInParallel(List<CellTypeClassification> cellTypeClassifications,
@@ -2428,6 +2396,8 @@ public class PCTSEA {
 		if (outputToLog) {
 			PCTSEA.logStatus("Calculating weigthed enrichment score and KS statistics...");
 		}
+		// sort by score from higher to lower
+		PCTSEAUtils.sortByScoreDescending(singleCellList);
 		final ParIterator<CellTypeClassification> iterator = ParIteratorFactory
 				.createParIterator(cellTypeClassifications, threadCount, Schedule.GUIDED);
 		final List<EnrichmentWeigthedScoreParallel> runners = new ArrayList<EnrichmentWeigthedScoreParallel>();
@@ -2559,27 +2529,23 @@ public class PCTSEA {
 	}
 
 	private File getResultsSubfolderGeneral() {
-		return getResultsSubfolderGeneral(prefix);
+		if (resultsSubFolderGeneral == null) {
+			resultsSubFolderGeneral = new File(getCurrentTimeStampPath() + "global_charts");
+			if (!resultsSubFolderGeneral.exists()) {
+				resultsSubFolderGeneral.mkdirs();
+			}
+		}
+		return resultsSubFolderGeneral;
 	}
 
 	private File getResultsSubfolderForCellTypes() {
-		return getResultsSubfolderForCellTypes(prefix);
-	}
-
-	private File getResultsSubfolderGeneral(String prefix) {
-		final File folder = new File(getCurrentTimeStampPath() + "global_charts");
-		if (!folder.exists()) {
-			folder.mkdirs();
+		if (resultsSubFolderForCellTypes == null) {
+			resultsSubFolderForCellTypes = new File(getCurrentTimeStampPath() + "cell_types_charts");
+			if (!resultsSubFolderForCellTypes.exists()) {
+				resultsSubFolderForCellTypes.mkdirs();
+			}
 		}
-		return folder;
-	}
-
-	private File getResultsSubfolderForCellTypes(String prefix) {
-		final File folder = new File(getCurrentTimeStampPath() + "cell_types_charts");
-		if (!folder.exists()) {
-			folder.mkdirs();
-		}
-		return folder;
+		return resultsSubFolderForCellTypes;
 	}
 
 	private File getZipOutputFile() {
