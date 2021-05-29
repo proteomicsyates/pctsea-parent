@@ -149,8 +149,6 @@ public class PCTSEA {
 
 	private Dataset dataset;
 
-	private String resultsViewerURL;
-
 	private boolean writeScoresFile = false;
 
 	private String fromEmail;
@@ -163,6 +161,7 @@ public class PCTSEA {
 	private boolean currentTimeStampFolderCreated;
 	private File resultsSubFolderForCellTypes;
 	private File resultsSubFolderGeneral;
+	private String resultsViewerURL;
 	private static final double CELL_TYPE_FDR_SIGNIFICANCE_THRESHOLD = 0.05;
 	private static final int MAX_SINGLE_CELLS_FOR_SCORE = 60000;
 
@@ -293,17 +292,12 @@ public class PCTSEA {
 		runLogsRepo.save(runLog);
 
 		Exception errorMessage = null;
-		final File zipOutputFile = getZipOutputFile();
 
 		// create PCTSEAResult object
 		PCTSEAResult result = null;
 		try {
-			URL urlToViewer = null;
-			if (resultsViewerURL != null) {
-				urlToViewer = new URL(
-						resultsViewerURL + "/?results=" + FilenameUtils.getBaseName(zipOutputFile.getAbsolutePath()));
-			}
-			result = new PCTSEAResult(zipOutputFile, urlToViewer, runLog);
+
+			result = new PCTSEAResult(runLog);
 
 //			// read input files
 //			final SingleCellsMetaInformationReader cellsInfo = new SingleCellsMetaInformationReader(
@@ -325,6 +319,13 @@ public class PCTSEA {
 			final List<List<CellTypeClassification>> cellTypesPerRound = new ArrayList<List<CellTypeClassification>>();
 			for (final ScoringSchema scoringSchema : sequentialScoringSchemas) {
 				final ScoringMethod scoringMethod = scoringSchema.getScoringMethod();
+				final File zipOutputFile = getZipOutputFile(scoringMethod);
+				result.addResultsFile(zipOutputFile);
+				if (resultsViewerURL != null) {
+					final URL urlToViewer = new URL(resultsViewerURL + "/?results="
+							+ FilenameUtils.getBaseName(zipOutputFile.getAbsolutePath()));
+					result.addUrlToViewer(urlToViewer);
+				}
 				final ScoreThreshold scoreThreshold = scoringSchema.getScoringThreshold();
 				if (scoringMethod != ScoringMethod.QUICK_SCORE) {
 
@@ -357,15 +358,15 @@ public class PCTSEA {
 					}
 					// make a chart with the histogram of number of genes used to correlate for each
 					// cells with and without the threshold
-					createHistogramOfCorrelatingGenes(singleCellList, null, scoringMethod.getScoreName());
+					createHistogramOfCorrelatingGenes(singleCellList, null, scoringMethod);
 					createHistogramOfCorrelatingGenes(singleCellList, scoreThreshold.getThresholdValue(),
-							scoringMethod.getScoreName());
+							scoringMethod);
 					// make a chart with the distribution of correlations over the ranked list of
 					// cells
 					if (scoringMethod == ScoringMethod.PEARSONS_CORRELATION) {
-						createDistributionChartOfCorrelationsOverRankedCells(singleCellList, scoreThreshold);
+						createDistributionChartOfCorrelationsOverRankedCells(singleCellList, scoringSchema);
 					} else {
-						createDistributionChartOfScoresOverRankedCells(singleCellList, scoreThreshold, scoringMethod);
+						createDistributionChartOfScoresOverRankedCells(singleCellList, scoringSchema);
 					}
 					ConcurrentUtil.sleep(1L);
 				}
@@ -381,48 +382,51 @@ public class PCTSEA {
 						Math.min(singleCellsPassingScoreThreshold.size() - 1, MAX_SINGLE_CELLS_FOR_SCORE));
 				if (scoringMethod != ScoringMethod.QUICK_SCORE) {
 					calculateEnrichmentScore(cellTypeClassificationsInRound, singleCellsPassingScoreThreshold, true,
-							true, false, plotNegativeEnrichedCellTypes, scoringMethod.getScoreName());
+							true, false, plotNegativeEnrichedCellTypes, scoringMethod);
 
 					// calculate significance by cell types permutations
 					calculateSignificanceByCellTypesPermutations(interactorExpressions, cellTypeClassificationsInRound,
 							singleCellsPassingScoreThreshold, cellTypeBranch, maxIterations,
-							loadRandomDistributionsIfExist, plotNegativeEnrichedCellTypes,
-							scoringMethod.getScoreName());
+							loadRandomDistributionsIfExist, plotNegativeEnrichedCellTypes, scoringMethod);
 
 					// calculate significance by phenotype permutations
 					if (false) { // DISABLED since we used significance by cell types permutations
 						calculateSignificanceByPhenotypePermutations(interactorExpressions,
 								cellTypeClassificationsInRound, singleCellsPassingScoreThreshold, cellTypeBranch,
 								scoringSchema, loadRandomDistributionsIfExist, plotNegativeEnrichedCellTypes,
-								maxIterations, takeZerosForCorrelation, scoringMethod.getScoreName());
+								maxIterations, takeZerosForCorrelation);
 					}
 				} else {
 					// calculate quick score
 					calculateQuickScore(cellTypeClassificationsInRound, scoreThreshold);
 				}
 				cellTypesPerRound.add(cellTypeClassificationsInRound);
+
+				// perform the post analysis with the significant cell types
+				postAnalysis(cellTypeClassificationsInRound, singleCellList.size());
+
+				// perform a clustering of the genes participating in each cell type
+				umapClustering(cellTypeClassificationsInRound, scoringSchema);
+
+				// with no filtering
+
+				// export to output: Prints cell type classifications into a table in a file
+				printCellTypeClassifications(cellTypeClassificationsInRound, singleCellList, scoringSchema);
+
+				// plots about suprema
+				createScatterPlotOfSuprema(cellTypeClassificationsInRound, plotNegativeEnrichedCellTypes,
+						scoringMethod);
+				createHistogramOfSuprema(cellTypeClassificationsInRound, plotNegativeEnrichedCellTypes, scoringMethod);
+				// print mapping of cell types
+//					SingleCell.printCellTypeMapping(getCellTypesMappingOutputFile());
+				// export file with genes involved in the correlations per cell type
+				printGenesInvolvedInScores(cellTypeClassificationsInRound, scoringSchema);
+
+				writeGZipOutputFile(zipOutputFile, scoringSchema);
+				currentTimeStampFolderCreated = false;
 			}
 			// now we get the cell types that are significant in all rounds
 			final List<CellTypeClassification> cellTypeClassifications = getIntersection(cellTypesPerRound);
-
-			// perform the post analysis with the significant cell types
-			postAnalysis(cellTypeClassifications, singleCellList.size());
-
-			// perform a clustering of the genes participating in each cell type
-			umapClustering(cellTypeClassifications, sequentialScoringSchemas.get(0).getScoringThreshold());
-
-			// with no filtering
-
-			// export to output: Prints cell type classifications into a table in a file
-			printCellTypeClassifications(cellTypeClassifications, singleCellList, sequentialScoringSchemas);
-
-			// plots about suprema
-			createScatterPlotOfSuprema(cellTypeClassifications, plotNegativeEnrichedCellTypes);
-			createHistogramOfSuprema(cellTypeClassifications, plotNegativeEnrichedCellTypes);
-			// print mapping of cell types
-//				SingleCell.printCellTypeMapping(getCellTypesMappingOutputFile());
-			// export file with genes involved in the correlations per cell type
-			printGenesInvolvedInScores(cellTypeClassifications, sequentialScoringSchemas.get(0));
 
 			return result;
 		} catch (final IOException e) {
@@ -451,37 +455,22 @@ public class PCTSEA {
 						logStatus("Thread creating charts got an error: " + e1.getMessage(), LogLevel.ERROR);
 					}
 				}
-				// export charts to a single PDF
-				final File resultsSubfolder = getResultsSubfolderForCellTypes();
-				try {
-//						if (generatePDFCharts) {
-//							logStatus("Writting charts into PDF files...");
-//							ChartsGenerated.getInstance().saveChartsAsPDF();
-//							logStatus("PDFs created");
-//						}
-					// add pdf file to tar file
 
-					// create tar.gz with all output files
+				// set finish time
+				runLog.setFinished(getDateNow());
+				// update log
+				runLogsRepo.save(runLog);
 
-					writeGZipOutputFile(getCurrentTimeStampFolder(), zipOutputFile, sequentialScoringSchemas);
-
-					// set finish time
-					runLog.setFinished(getDateNow());
-					// update log
-					runLogsRepo.save(runLog);
-
-					if (runLog.getInputParameters().getEmail() != null && fromEmail != null) {
-						EmailUtil.sendEmailWithResults(result, fromEmail);
+				if (runLog.getInputParameters().getEmail() != null && fromEmail != null) {
+					EmailUtil.sendEmailWithResults(result, fromEmail);
+				}
+				log.info("PCTSEA got some results in "
+						+ DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime()));
+				for (int i = 0; i < result.getResultsFiles().size(); i++) {
+					log.info("Results file created at: " + result.getResultsFiles().get(i));
+					if (result.getUrlToViewers().get(i) != null) {
+						log.info("Also, results can be visualized at: " + result.getUrlToViewers().get(i));
 					}
-					log.info("PCTSEA got some results in "
-							+ DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime()));
-					log.info("Results file created at: " + result.getResultsFile());
-					if (result.getUrlToViewer() != null) {
-						log.info("Also, results can be visualized at: " + result.getUrlToViewer());
-					}
-				} catch (final IOException e) {
-					e.printStackTrace();
-					logStatus("Error writing PDF file with charts: " + e.getMessage(), LogLevel.ERROR);
 				}
 
 				logStatus("Finishing now.");
@@ -681,16 +670,16 @@ public class PCTSEA {
 		return ret;
 	}
 
-	private void writeGZipOutputFile(File folder, File zipFile, List<ScoringSchema> scoringSchemas) throws IOException {
+	private void writeGZipOutputFile(File zipFile, ScoringSchema scoringSchema) throws IOException {
+		final File folder = getCurrentTimeStampFolder(scoringSchema.getScoringMethod());
 		logStatus("Compacting output files in single zip file...");
 		// move out the correlations file so that is not included in the zip file
 
 		final Set<String> fileNames = new THashSet<String>();
-		for (final ScoringSchema scoringSchema : scoringSchemas) {
-			final String fileName = FilenameUtils
-					.getName(getScoresOutputFile(scoringSchema.getScoringMethod()).getAbsolutePath());
-			fileNames.add(fileName);
-		}
+
+		final String fileName = FilenameUtils
+				.getName(getScoresOutputFile(scoringSchema.getScoringMethod()).getAbsolutePath());
+		fileNames.add(fileName);
 
 		// it may be or not
 		final File[] scoreFiles = folder.listFiles(new FilenameFilter() {
@@ -767,35 +756,35 @@ public class PCTSEA {
 		}
 	}
 
-	private void umapClustering(List<CellTypeClassification> cellTypeClassifications, ScoreThreshold scoreThreshold) {
+	private void umapClustering(List<CellTypeClassification> cellTypeClassifications, ScoringSchema scoringSchema) {
 		final List<CellTypeClassification> cellTypesWithPositiveEnrichmentWeigthedScore = cellTypeClassifications
 				.stream().filter(ct -> ct.getEnrichmentScore() > 0.0f).collect(Collectors.toList());
 		logStatus(cellTypesWithPositiveEnrichmentWeigthedScore.size()
 				+ " cell types with positive enrichment weigthed score");
 		logStatus("Performing UMAP clusterings with different thresholds...");
-		umapClustering(cellTypesWithPositiveEnrichmentWeigthedScore, scoreThreshold,
+		umapClustering(cellTypesWithPositiveEnrichmentWeigthedScore, scoringSchema,
 				"UMAP clustering of all cell types (no sig threshold)", true, "all");
 
 		// by significancy < 0.01
 		List<CellTypeClassification> significantCellTypes = cellTypesWithPositiveEnrichmentWeigthedScore.stream()
 				.filter(ct -> ct.getEnrichmentSignificance() < 0.01).collect(Collectors.toList());
-		umapClustering(significantCellTypes, scoreThreshold, "UMAP clustering of significant cell types (sig<0.01)",
+		umapClustering(significantCellTypes, scoringSchema, "UMAP clustering of significant cell types (sig<0.01)",
 				false, "sig_0.01");
 		// by significancy < 0.05
 		significantCellTypes = cellTypesWithPositiveEnrichmentWeigthedScore.stream()
 				.filter(ct -> ct.getEnrichmentSignificance() < 0.05).collect(Collectors.toList());
-		umapClustering(significantCellTypes, scoreThreshold, "UMAP clustering of significant cell types (sig<0.05)",
+		umapClustering(significantCellTypes, scoringSchema, "UMAP clustering of significant cell types (sig<0.05)",
 				false, "sig_0.05");
 		// by hypergeometric p-value < 0.05
 		significantCellTypes = cellTypesWithPositiveEnrichmentWeigthedScore.stream()
 				.filter(ct -> ct.getHypergeometricPValue() < 0.05).collect(Collectors.toList());
-		umapClustering(significantCellTypes, scoreThreshold,
+		umapClustering(significantCellTypes, scoringSchema,
 				"UMAP clustering of significant cell types by hypergeometric test (p-value<0.05)", false,
 				"hypG_pvalue_0.05");
 		// by Kolmogorov-Smirnov test: take only the ones with *,** or ***
 		significantCellTypes = cellTypesWithPositiveEnrichmentWeigthedScore.stream()
 				.filter(ct -> !"".equals(ct.getSignificancyString())).collect(Collectors.toList());
-		umapClustering(significantCellTypes, scoreThreshold,
+		umapClustering(significantCellTypes, scoringSchema,
 				"UMAP clustering of significant cell types by KS test (*, ** or ***)", false, "sig_KStest");
 
 	}
@@ -808,13 +797,13 @@ public class PCTSEA {
 	 * @param plotNegativeEnrichedCellTypes
 	 */
 	private void createHistogramOfSuprema(List<CellTypeClassification> cellTypeClassifications,
-			boolean plotNegativeEnrichedCellTypes) {
+			boolean plotNegativeEnrichedCellTypes, ScoringMethod scoringMethod) {
 		final List<CellTypeClassification> cellTypes = cellTypeClassifications.stream()
 				.filter(ct -> plotNegativeEnrichedCellTypes || ct.getEnrichmentScore() > 0.0f)
 				.collect(Collectors.toList());
 		try {
-			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(), "suprema_hist",
-					prefix);
+			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(scoringMethod),
+					"suprema_hist", prefix);
 			final FileWriter fw = new FileWriter(outputTXTFile);
 			fw.write("cell type\tsupremumX\n");
 			for (final CellTypeClassification cellType : cellTypes) {
@@ -843,13 +832,13 @@ public class PCTSEA {
 	 * @param plotNegativeEnrichedCellTypes
 	 */
 	private void createScatterPlotOfSuprema(List<CellTypeClassification> cellTypeClassifications,
-			boolean plotNegativeEnrichedCellTypes) {
+			boolean plotNegativeEnrichedCellTypes, ScoringMethod scoringMethod) {
 		final List<CellTypeClassification> cellTypes = cellTypeClassifications.stream()
 				.filter(ct -> plotNegativeEnrichedCellTypes || ct.getEnrichmentScore() > 0.0f)
 				.collect(Collectors.toList());
 		try {
-			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(), "suprema_scatter",
-					prefix);
+			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(scoringMethod),
+					"suprema_scatter", prefix);
 			final FileWriter fw = new FileWriter(outputTXTFile);
 			fw.write("cell type\tSuprema position in ranked cell list\tsupremum size\n");
 			final TDoubleList supremaXs = new TDoubleArrayList();
@@ -880,22 +869,26 @@ public class PCTSEA {
 	 * @param singleCellList
 	 */
 	private void createDistributionChartOfCorrelationsOverRankedCells(List<SingleCell> singleCellList,
-			ScoreThreshold correlationThreshold) {
+			ScoringSchema scoringSchema) {
 		try {
-			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(), "corr_rank_dist",
-					prefix);
+			if (scoringSchema.getScoringMethod() != ScoringMethod.PEARSONS_CORRELATION) {
+				throw new IllegalArgumentException("This function is only for pearsons correlation method");
+			}
+			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(
+					getResultsSubfolderGeneral(scoringSchema.getScoringMethod()), "corr_rank_dist", prefix);
 			final FileWriter fw = new FileWriter(outputTXTFile);
 			fw.write("rank\tclass\t" + ScoringMethod.PEARSONS_CORRELATION.getScoreName() + "\n");
 			PCTSEAUtils.sortByScoreDescending(singleCellList);
 
-			final String positiveKey = "corr >= " + correlationThreshold.getThresholdValue();
-			final String negativeKey = "corr < " + correlationThreshold.getThresholdValue();
+			final ScoreThreshold scoringThreshold = scoringSchema.getScoringThreshold();
+			final String positiveKey = "corr >= " + scoringThreshold.getThresholdValue();
+			final String negativeKey = "corr < " + scoringThreshold.getThresholdValue();
 
 			int numCell = 1;
 			ConcurrentUtil.sleep(1L);
 			for (final SingleCell singleCell : singleCellList) {
 				if (!Double.isNaN(singleCell.getScoreForRanking())) {
-					if (correlationThreshold.passThreshold(singleCell)) {
+					if (scoringThreshold.passThreshold(singleCell)) {
 						fw.write(numCell + "\t" + positiveKey + "\t" + singleCell.getScoreForRanking() + "\n");
 					} else {
 						fw.write(numCell + "\t" + negativeKey + "\t" + singleCell.getScoreForRanking() + "\n");
@@ -921,10 +914,13 @@ public class PCTSEA {
 	 * @param scoringMethod
 	 */
 	private void createDistributionChartOfScoresOverRankedCells(List<SingleCell> singleCellList,
-			ScoreThreshold scoreThreshold, ScoringMethod scoringMethod) {
+			ScoringSchema scoringSchema) {
+		final ScoringMethod scoringMethod = scoringSchema.getScoringMethod();
+		final ScoreThreshold scoringThreshold = scoringSchema.getScoringThreshold();
 		try {
-			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(), "corr_rank_dist",
-					prefix);
+
+			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(scoringMethod),
+					"corr_rank_dist", prefix);
 			final FileWriter fw = new FileWriter(outputTXTFile);
 			fw.write("rank\tclass\t" + scoringMethod.getScoreName() + "\n");
 			PCTSEAUtils.sortByScoreDescending(singleCellList);
@@ -932,7 +928,7 @@ public class PCTSEA {
 			ConcurrentUtil.sleep(1L);
 			for (final SingleCell singleCell : singleCellList) {
 				if (!Double.isNaN(singleCell.getScoreForRanking())) {
-					if (scoreThreshold.passThreshold(singleCell)) {
+					if (scoringThreshold.passThreshold(singleCell)) {
 						fw.write(numCell + "\t" + scoringMethod.getScoreName() + "\t" + singleCell.getScoreForRanking()
 								+ "\n");
 					}
@@ -953,9 +949,11 @@ public class PCTSEA {
 	 * correlation for all single cells
 	 * 
 	 * @param singleCellList
+	 * @param minCorrelation
+	 * @param scoringMethod
 	 */
 	private void createHistogramOfCorrelatingGenes(List<SingleCell> singleCellList, Double minCorrelation,
-			String scoreName) {
+			ScoringMethod scoringMethod) {
 
 //		final DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 		final TIntIntMap histogramData = new TIntIntHashMap();
@@ -1008,7 +1006,7 @@ public class PCTSEA {
 //		renderer.setBarPainter(new StandardBarPainter());
 		try {
 
-			writeNumGenesHistogramFile(histogramData, scoreName);
+			writeNumGenesHistogramFile(histogramData, scoringMethod);
 //			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
 //			if (generatePDFCharts) {
 //				final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
@@ -1026,7 +1024,8 @@ public class PCTSEA {
 
 	}
 
-	private void writeNumGenesHistogramFile(TIntIntMap histogramOfNumGenes, String scoreName) throws IOException {
+	private void writeNumGenesHistogramFile(TIntIntMap histogramOfNumGenes, ScoringMethod scoringMethod)
+			throws IOException {
 		final TIntIntMap histogramOfNumGenesAccumulative = new TIntIntHashMap();
 		final TIntList keys = new TIntArrayList(histogramOfNumGenes.keys());
 		keys.sort();
@@ -1037,11 +1036,12 @@ public class PCTSEA {
 			}
 			histogramOfNumGenesAccumulative.put(keys.get(i), accumulativeNumGenes);
 		}
-		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(), "genes_hist", prefix);
+		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(scoringMethod), "genes_hist",
+				prefix);
 		final FileWriter fw = new FileWriter(outputTXTFile);
 		final BufferedWriter buffer = new BufferedWriter(fw);
 
-		buffer.write("-\t# genes with " + scoreName + " > threshold\t# cells\n");
+		buffer.write("-\t# genes with " + scoringMethod.getScoreName() + " > threshold\t# cells\n");
 		for (final int numGenes : histogramOfNumGenes.keys()) {
 			final int frequency = histogramOfNumGenes.get(numGenes);
 			buffer.write("# genes\t" + numGenes + "\t" + frequency + "\n");
@@ -1056,18 +1056,19 @@ public class PCTSEA {
 	/**
 	 * 
 	 * @param cellTypeClassifications
-	 * @param scoreThreshold
+	 * @param scoringSchema
 	 * @param chartTitle
 	 * @param setAsDefaultUMAPOnCellType if true, the umap coordinates will be the
 	 *                                   ones reported in the table
 	 * @param labelChartFile
 	 */
-	private void umapClustering(List<CellTypeClassification> cellTypeClassifications, ScoreThreshold scoreThreshold,
+	private void umapClustering(List<CellTypeClassification> cellTypeClassifications, ScoringSchema scoringSchema,
 			String chartTitle, boolean setAsDefaultUMAPOnCellType, String labelChartFile) {
 		if (cellTypeClassifications.isEmpty()) {
 			return;
 		}
 		ConcurrentUtil.sleep(1L);
+		final ScoreThreshold scoreThreshold = scoringSchema.getScoringThreshold();
 		final Set<String> totalGeneSet = new THashSet<String>();
 		for (final CellTypeClassification cellType : cellTypeClassifications) {
 			final List<GeneOccurrence> geneOccurrences = cellType
@@ -1160,8 +1161,8 @@ public class PCTSEA {
 				"(" + cellTypeClassifications.size() + " cell types | param nnn=" + numberNearestNeighbours + ")"));
 		try {
 			final String fileName = "umap_" + labelChartFile + "_scatter";
-			writeGlobalUMAPDimensionsChart(getResultsSubfolderGeneral(), prefix, fileName, cellTypeClassifications,
-					fitTransform);
+			writeGlobalUMAPDimensionsChart(getResultsSubfolderGeneral(scoringSchema.getScoringMethod()), prefix,
+					fileName, cellTypeClassifications, fitTransform);
 //			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
 //			if (generatePDFCharts) {
 //				final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
@@ -1282,10 +1283,11 @@ public class PCTSEA {
 	private void calculateSignificanceByCellTypesPermutations(InteractorsExpressionsRetriever interactorExpressions,
 			List<CellTypeClassification> cellTypeClassifications, List<SingleCell> singleCellsPassingScoreThreshold,
 			CellTypeBranch cellTypeBranch, int maxIterations, boolean loadRandomDistributionsIfExist,
-			boolean plotNegativeEnrichedCellTypes, String scoreName) throws IOException {
+			boolean plotNegativeEnrichedCellTypes, ScoringMethod scoringMethod) throws IOException {
 
-		if (loadRandomDistributionsIfExist && getRandomScoresFile().exists() && getRandomScoresFile().length() > 0l) {
-			readRandomDistributionFile(getRandomScoresFile(), cellTypeClassifications);
+		final File randomScoresFile = getRandomScoresFile(scoringMethod);
+		if (loadRandomDistributionsIfExist && randomScoresFile.exists() && randomScoresFile.length() > 0l) {
+			readRandomDistributionFile(randomScoresFile, cellTypeClassifications);
 		} else {
 
 			final List<String> originalCellTypes = new ArrayList<String>();
@@ -1316,7 +1318,7 @@ public class PCTSEA {
 					// calculate enrichment scores with the Kolmogorov-Smirnov test
 
 					calculateEnrichmentScore(cellTypeClassifications, singleCellsPassingScoreThreshold, false,
-							outputToLog, true, plotNegativeEnrichedCellTypes, scoreName);
+							outputToLog, true, plotNegativeEnrichedCellTypes, scoringMethod);
 
 					counter.increment();
 					final String printIfNecessary = counter.printIfNecessary();
@@ -1329,9 +1331,9 @@ public class PCTSEA {
 
 			}
 
-			printToRandomDistributionFile(getRandomScoresFile(), cellTypeClassifications);
+			printToRandomDistributionFile(randomScoresFile, cellTypeClassifications);
 			PCTSEA.logStatus("Iterations  finished. Random scores distributions are stored at: "
-					+ getRandomScoresFile().getAbsolutePath());
+					+ randomScoresFile.getAbsolutePath());
 			// we set back the original correlations values
 			for (int i = 0; i < singleCellsPassingScoreThreshold.size(); i++) {
 				final String originalCellType = originalCellTypes.get(i);
@@ -1409,7 +1411,7 @@ public class PCTSEA {
 				}
 			}
 		}
-		createFDRCalculationPlot(totalRealNormalizedScores, totalRandomNormalizedScores);
+		createFDRCalculationPlot(totalRealNormalizedScores, totalRandomNormalizedScores, scoringMethod);
 		// now, for each real one, we calculate FDR as
 		// FDR = (snull / sobs) * (nobs / nnull), where
 		// snull is the number of random scores that are equal or greater than the real
@@ -1473,7 +1475,7 @@ public class PCTSEA {
 	}
 
 	private JFreeChart createFDRCalculationPlot(TFloatList totalRealNormalizedScores,
-			TFloatList totalRandomNormalizedScores) {
+			TFloatList totalRandomNormalizedScores, ScoringMethod scoringMethod) {
 		PCTSEA.logStatus("Creating FDR calculation plot with " + totalRealNormalizedScores.size() + " real scores and "
 				+ totalRandomNormalizedScores.size() + " random scores");
 		// create chart
@@ -1534,8 +1536,8 @@ public class PCTSEA {
 		try {
 			final String fileName = "ews_obs_null_hist";
 //			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
-			writeGlobalFDRCalculationChart(getResultsSubfolderGeneral(), prefix, fileName, totalRealNormalizedScores,
-					totalRandomNormalizedScores);
+			writeGlobalFDRCalculationChart(getResultsSubfolderGeneral(scoringMethod), prefix, fileName,
+					totalRealNormalizedScores, totalRandomNormalizedScores);
 
 		} catch (final IOException e) {
 			e.printStackTrace();
@@ -1578,7 +1580,7 @@ public class PCTSEA {
 	private void calculateSignificanceByPhenotypePermutations(InteractorsExpressionsRetriever interactorExpressions,
 			List<CellTypeClassification> cellTypeClassifications, List<SingleCell> singleCellList,
 			CellTypeBranch cellTypeBranch, ScoringSchema scoreSchema, boolean loadRandomDistributionsIfExist,
-			boolean plotNegativeEnrichedCellTypes, int maxIterations, boolean takeZerosForCorrelation, String scoreName)
+			boolean plotNegativeEnrichedCellTypes, int maxIterations, boolean takeZerosForCorrelation)
 			throws IOException {
 
 		// as well as the correlations
@@ -1587,8 +1589,9 @@ public class PCTSEA {
 			correlationsBySingleCellID.put(singleCell.getId(), singleCell.getScoreForRanking());
 		}
 
-		if (loadRandomDistributionsIfExist && getRandomScoresFile().exists() && getRandomScoresFile().length() > 0l) {
-			readRandomDistributionFile(getRandomScoresFile(), cellTypeClassifications);
+		final File randomScoresFile = getRandomScoresFile(scoreSchema.getScoringMethod());
+		if (loadRandomDistributionsIfExist && randomScoresFile.exists() && randomScoresFile.length() > 0l) {
+			readRandomDistributionFile(randomScoresFile, cellTypeClassifications);
 		} else {
 			final boolean outputToLog = false;
 			int iteration = 1;
@@ -1610,7 +1613,7 @@ public class PCTSEA {
 							Math.min(singleCellsPassingScoreThreshold.size() - 1, MAX_SINGLE_CELLS_FOR_SCORE));
 					// calculate enrichment scores with the Kolmogorov-Smirnov test
 					calculateEnrichmentScore(cellTypeClassifications, singleCellsPassingScoreThreshold, false,
-							outputToLog, true, plotNegativeEnrichedCellTypes, scoreName);
+							outputToLog, true, plotNegativeEnrichedCellTypes, scoreSchema.getScoringMethod());
 
 					counter.increment();
 					final String printIfNecessary = counter.printIfNecessary();
@@ -1623,8 +1626,8 @@ public class PCTSEA {
 
 			}
 			logStatus("Iterations  finished. Random scores distributions are stored at: "
-					+ getRandomScoresFile().getAbsolutePath());
-			printToRandomDistributionFile(getRandomScoresFile(), cellTypeClassifications);
+					+ randomScoresFile.getAbsolutePath());
+			printToRandomDistributionFile(randomScoresFile, cellTypeClassifications);
 		}
 		// we set back the original correlations values
 		for (final SingleCell singleCell : singleCellList) {
@@ -1809,8 +1812,8 @@ public class PCTSEA {
 		PCTSEA.logStatus("File with null distributions of scores written at: " + randomScoresFile.getAbsolutePath());
 	}
 
-	private File getRandomScoresFile() {
-		return new File(getCurrentTimeStampPath() + prefix + "_" + maxIterations + "_random_scores.txt");
+	private File getRandomScoresFile(ScoringMethod scoringMethod) {
+		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_" + maxIterations + "_random_scores.txt");
 	}
 
 	/**
@@ -1818,8 +1821,8 @@ public class PCTSEA {
 	 * 
 	 * @return
 	 */
-	private String getCurrentTimeStampPath() {
-		return getCurrentTimeStampFolder().getAbsolutePath() + File.separator;
+	private String getCurrentTimeStampPath(ScoringMethod scoringMethod) {
+		return getCurrentTimeStampFolder(scoringMethod).getAbsolutePath() + File.separator;
 	}
 
 	/**
@@ -1827,9 +1830,13 @@ public class PCTSEA {
 	 * 
 	 * @return
 	 */
-	private File getCurrentTimeStampFolder() {
+	private File getCurrentTimeStampFolder(ScoringMethod scoringMethod) {
+		String scoringMethodString = "";
+		if (scoringMethod != null) {
+			scoringMethodString = "_" + scoringMethod.getScoreName();
+		}
 		final String currenttimeStampPath = experimentExpressionFile.getParent() + File.separator + currentTimeStamp
-				+ File.separator;
+				+ scoringMethodString + File.separator;
 		final File file = new File(currenttimeStampPath);
 		if (!currentTimeStampFolderCreated) {
 
@@ -1844,12 +1851,12 @@ public class PCTSEA {
 	 * 
 	 * @param cellTypeClassifications
 	 * @param singleCellList
-	 * @param scoreThreshold
+	 * @param scoringSchema
 	 * @param minNumberExpressedGenesInCell
 	 * @throws IOException
 	 */
 	private void printCellTypeClassifications(List<CellTypeClassification> cellTypeClassifications,
-			List<SingleCell> singleCellList, List<ScoringSchema> scoringSchemas) throws IOException {
+			List<SingleCell> singleCellList, ScoringSchema scoringSchema) throws IOException {
 		logStatus("Printing output table...");
 		// sort cell type classifications by the enrichment score significancy, but
 		// keeping the negative scores at the end
@@ -1916,19 +1923,13 @@ public class PCTSEA {
 		});
 		ConcurrentUtil.sleep(1L);
 		final int numSingleCells = singleCellList.size();
-		final StringBuilder numSingleCellsPassingThresholdInEachRound = new StringBuilder();
-		for (final ScoringSchema scoringSchema : scoringSchemas) {
-			final long numSingleCellsPassingThreshold = scoringSchema.getScoringThreshold()
-					.getCountSingleCellsPassingThreshold(singleCellList);
-			if (!"".equals(numSingleCellsPassingThresholdInEachRound.toString())) {
-				numSingleCellsPassingThresholdInEachRound.append(",");
-			}
-			numSingleCellsPassingThresholdInEachRound.append(String.valueOf(numSingleCellsPassingThreshold));
-		}
+
+		final long numSingleCellsPassingThreshold = scoringSchema.getScoringThreshold()
+				.getCountSingleCellsPassingThreshold(singleCellList);
 
 		// print to file
-		final File parametersFile = getParametersOutputFile();
-		final File cellTypesFile = getCellTypesOutputFile();
+		final File parametersFile = getParametersOutputFile(scoringSchema.getScoringMethod());
+		final File cellTypesFile = getCellTypesOutputFile(scoringSchema.getScoringMethod());
 		FileWriter fw = null;
 		BufferedWriter buffer = null;
 		FileWriter fwParameters = null;
@@ -1949,9 +1950,9 @@ public class PCTSEA {
 			paramsHeader.append("\n");
 			paramsHeader.append("Time:\t" + AutomaticGUICreator.getFormattedTime() + "\n");
 			paramsHeader.append(parameters);
-			paramsHeader.append("Total number of single cells with at least "
-					+ scoringSchemas.get(0).getMinNumberExpressedGenesInCell() + " genes present in the input data:\t"
-					+ singleCellList.size() + "\n");
+			paramsHeader.append(
+					"Total number of single cells with at least " + scoringSchema.getMinNumberExpressedGenesInCell()
+							+ " genes present in the input data:\t" + singleCellList.size() + "\n");
 			buffer.write(paramsHeader.toString());
 			fwParameters.write(paramsHeader.toString());
 			fwParameters.close();
@@ -2011,8 +2012,8 @@ public class PCTSEA {
 					positiveScore = false;
 				}
 				for (final CellTypesOutputTableColumns column : CellTypesOutputTableColumns.values()) {
-					buffer.write(column.getValue(cellType, numSingleCells,
-							numSingleCellsPassingThresholdInEachRound.toString(), sequentialScoringSchemas) + "\t");
+					buffer.write(column.getValue(cellType, numSingleCells, numSingleCellsPassingThreshold,
+							sequentialScoringSchemas) + "\t");
 				}
 				buffer.write("\n");
 				buffer.flush();
@@ -2065,8 +2066,8 @@ public class PCTSEA {
 			ScoreThreshold scoreThreshold, ScoringMethod scoringMethod) {
 		List<Integer> celltypes = null;
 		if (previousRoundCellTypeClassifications == null) {
-			celltypes = singleCellList.stream().map(sc -> sc.getCellTypeID()).filter(ct -> ct != -1).distinct().sorted()
-					.collect(Collectors.toList());
+			celltypes = singleCellList.stream().map(sc -> sc.getCellTypeID()).filter(ct -> !ct.equals(-1)).distinct()
+					.sorted().collect(Collectors.toList());
 			final String message = celltypes.size() + " different cell types with branch " + cellTypeBranch;
 			PCTSEA.logStatus(message);
 		} else {
@@ -2290,9 +2291,9 @@ public class PCTSEA {
 				scoreFileWriter.close();
 			}
 			if (outputToLog) {
-				if (!(sequentialScoringSchemas instanceof NoThreshold)) {
-					logStatus(numPassingThreshold + " cells pass the score threshold (" + sequentialScoringSchemas
-							+ ") out of " + originalNumCells);
+				if (!(scoreSchema.getScoringThreshold() instanceof NoThreshold)) {
+					logStatus(numPassingThreshold + " cells pass the score threshold ("
+							+ scoreSchema.getScoringThreshold() + ") out of " + originalNumCells);
 				}
 				if (writeScoresFile) {
 					logStatus("File with " + scoringMethod.getScoreName() + " created at: "
@@ -2320,7 +2321,7 @@ public class PCTSEA {
 //				show, toolTips, urls);
 
 		try {
-			writeGlobalScoreDistributionChart(scores, getResultsSubfolderGeneral(), scoringMethod.getScoreName());
+			writeGlobalScoreDistributionChart(scores, scoringMethod);
 //			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
 
 		} catch (final IOException e) {
@@ -2330,12 +2331,13 @@ public class PCTSEA {
 
 	}
 
-	private void writeGlobalScoreDistributionChart(TDoubleList scores, File resultsSubfolderGeneral, String scoreName)
-			throws IOException {
+	private void writeGlobalScoreDistributionChart(TDoubleList scores, ScoringMethod scoringMethod) throws IOException {
+		final File resultsSubfolderGeneral = getResultsSubfolderGeneral(scoringMethod);
+
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderGeneral, "corr_hist", prefix);
 		final FileWriter fw = new FileWriter(outputTXTFile);
 		final BufferedWriter buffer = new BufferedWriter(fw);
-		buffer.write(scoreName + "\n");
+		buffer.write(scoringMethod.getScoreName() + "\n");
 		for (final double score : scores.toArray()) {
 			buffer.write(score + "\n");
 		}
@@ -2356,7 +2358,7 @@ public class PCTSEA {
 	 */
 	private void calculateEnrichmentScore(List<CellTypeClassification> cellTypeClassifications,
 			List<SingleCell> singleCellList, boolean calculateUnweighted, boolean outputToLog, boolean permutatedData,
-			boolean plotNegativeEnrichedCellTypes, String scoreName) {
+			boolean plotNegativeEnrichedCellTypes, ScoringMethod scoringMethod) {
 		if (outputToLog) {
 			PCTSEA.logStatus("Calculating enrichment scores...");
 		}
@@ -2369,11 +2371,11 @@ public class PCTSEA {
 
 		// calculate unweighted Score
 		if (calculateUnweighted) {
-			calculateUnweigthedScore(cellTypeClassifications, singleCellList, outputToLog);
+			calculateUnweigthedEnrichmentScore(cellTypeClassifications, singleCellList, outputToLog);
 		}
 		// calculate weighted Score
-		calculateWeigthedScoreInParallel(cellTypeClassifications, singleCellList, outputToLog, permutatedData,
-				plotNegativeEnrichedCellTypes, scoreName);
+		calculateWeigthedEnrichmentScoreInParallel(cellTypeClassifications, singleCellList, outputToLog, permutatedData,
+				plotNegativeEnrichedCellTypes, scoringMethod);
 
 		// sort by score descending
 		Collections.sort(cellTypeClassifications, new Comparator<CellTypeClassification>() {
@@ -2390,9 +2392,9 @@ public class PCTSEA {
 //		}
 	}
 
-	private void calculateWeigthedScoreInParallel(List<CellTypeClassification> cellTypeClassifications,
+	private void calculateWeigthedEnrichmentScoreInParallel(List<CellTypeClassification> cellTypeClassifications,
 			List<SingleCell> singleCellList, boolean outputToLog, boolean permutatedData,
-			boolean plotNegativeEnrichedCellTypes, String scoreName) {
+			boolean plotNegativeEnrichedCellTypes, ScoringMethod scoreMethod) {
 		if (outputToLog) {
 			PCTSEA.logStatus("Calculating weigthed enrichment score and KS statistics...");
 		}
@@ -2404,8 +2406,8 @@ public class PCTSEA {
 		for (int numCore = 1; numCore <= threadCount; numCore++) {
 			// take current DB session
 			final EnrichmentWeigthedScoreParallel runner = new EnrichmentWeigthedScoreParallel(iterator, numCore,
-					singleCellList, permutatedData, plotNegativeEnrichedCellTypes, scoreName,
-					getResultsSubfolderForCellTypes(), prefix, true);
+					singleCellList, permutatedData, plotNegativeEnrichedCellTypes, scoreMethod.getScoreName(),
+					getResultsSubfolderForCellTypes(scoreMethod), prefix, true);
 			runners.add(runner);
 			runner.start();
 		}
@@ -2427,7 +2429,7 @@ public class PCTSEA {
 	}
 
 	private void saveScoreCalculationCharts(List<CellTypeClassification> cellTypeClassifications,
-			boolean generatePDFCharts) {
+			boolean generatePDFCharts, ScoringMethod scoringMethod) {
 
 		final List<CellTypeClassification> newList = new ArrayList<CellTypeClassification>();
 		newList.addAll(cellTypeClassifications);
@@ -2436,7 +2438,7 @@ public class PCTSEA {
 			@Override
 			public void run() {
 				PCTSEA.logStatus("Creating charts for each cell type in the background...");
-				final File resultsSubfolderForCellTypes = getResultsSubfolderForCellTypes();
+				final File resultsSubfolderForCellTypes = getResultsSubfolderForCellTypes(scoringMethod);
 
 				// we create the writableImages on the FX thread and store them in a list, so
 				// that then we can save them
@@ -2461,7 +2463,7 @@ public class PCTSEA {
 	 * @param singleCellList
 	 * @param outputToLog
 	 */
-	private void calculateUnweigthedScore(List<CellTypeClassification> cellTypeClassifications,
+	private void calculateUnweigthedEnrichmentScore(List<CellTypeClassification> cellTypeClassifications,
 			List<SingleCell> singleCellList, boolean outputToLog) {
 		if (outputToLog) {
 			PCTSEA.logStatus("Calculating unweigthed enrichment score...");
@@ -2528,9 +2530,9 @@ public class PCTSEA {
 
 	}
 
-	private File getResultsSubfolderGeneral() {
+	private File getResultsSubfolderGeneral(ScoringMethod scoringMethod) {
 		if (resultsSubFolderGeneral == null) {
-			resultsSubFolderGeneral = new File(getCurrentTimeStampPath() + "global_charts");
+			resultsSubFolderGeneral = new File(getCurrentTimeStampPath(scoringMethod) + "global_charts");
 			if (!resultsSubFolderGeneral.exists()) {
 				resultsSubFolderGeneral.mkdirs();
 			}
@@ -2538,9 +2540,9 @@ public class PCTSEA {
 		return resultsSubFolderGeneral;
 	}
 
-	private File getResultsSubfolderForCellTypes() {
+	private File getResultsSubfolderForCellTypes(ScoringMethod scoringMethod) {
 		if (resultsSubFolderForCellTypes == null) {
-			resultsSubFolderForCellTypes = new File(getCurrentTimeStampPath() + "cell_types_charts");
+			resultsSubFolderForCellTypes = new File(getCurrentTimeStampPath(scoringMethod) + "cell_types_charts");
 			if (!resultsSubFolderForCellTypes.exists()) {
 				resultsSubFolderForCellTypes.mkdirs();
 			}
@@ -2548,14 +2550,16 @@ public class PCTSEA {
 		return resultsSubFolderForCellTypes;
 	}
 
-	private File getZipOutputFile() {
-		File file = new File(getCurrentTimeStampFolder().getParent() + File.separator
-				+ FilenameUtils.getBaseName(getCurrentTimeStampFolder().getAbsolutePath()) + ".zip");
+	private File getZipOutputFile(ScoringMethod scoringMethod) {
+
+		final File currentTimeStampFolder = getCurrentTimeStampFolder(scoringMethod);
+		File file = new File(currentTimeStampFolder.getParent() + File.separator
+				+ FilenameUtils.getBaseName(currentTimeStampFolder.getAbsolutePath()) + ".zip");
 		if (file.exists()) {
 			int i = 2;
 			while (file.exists()) {
-				file = new File(getCurrentTimeStampFolder().getParent() + File.separator
-						+ FilenameUtils.getBaseName(getCurrentTimeStampFolder().getAbsolutePath()) + "_" + i + ".zip");
+				file = new File(currentTimeStampFolder.getParent() + File.separator
+						+ FilenameUtils.getBaseName(currentTimeStampFolder.getAbsolutePath()) + "_" + i + ".zip");
 				i++;
 			}
 		}
@@ -2563,25 +2567,26 @@ public class PCTSEA {
 	}
 
 	private File getGenesInvolvedInCorrelationsOutputFile(ScoringMethod scoringMethod) {
-		return new File(getCurrentTimeStampPath() + prefix + "_" + scoringMethod.getScoreName() + "_genes.txt");
+		return new File(
+				getCurrentTimeStampPath(scoringMethod) + prefix + "_" + scoringMethod.getScoreName() + "_genes.txt");
 	}
 
-	private File getCellTypesOutputFile() {
-		return new File(getCurrentTimeStampPath() + prefix + "_cell_types_enrichment.txt");
+	private File getCellTypesOutputFile(ScoringMethod scoringMethod) {
+		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_cell_types_enrichment.txt");
 	}
 
-	private File getParametersOutputFile() {
-		return new File(getCurrentTimeStampPath() + prefix + "_parameters.txt");
+	private File getParametersOutputFile(ScoringMethod scoringMethod) {
+		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_parameters.txt");
 	}
 
 	private File getScoresOutputFile(ScoringMethod scoringMethod) {
 		final String scoreName = scoringMethod.getScoreName();
-		return new File(getCurrentTimeStampPath() + prefix + "_single_cell_" + scoreName + ".txt");
+		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_single_cell_" + scoreName + ".txt");
 	}
 
 	private File getGeneExpressionOutputFile(String geneName, ScoreThreshold scoreThreshold2,
 			ScoringMethod scoringMethod) {
-		return new File(getCurrentTimeStampPath() + prefix + "_" + geneName + "_expressions_with_"
+		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_" + geneName + "_expressions_with_"
 				+ scoringMethod.getScoreName() + "_" + scoreThreshold2.getThresholdValue() + ".txt");
 	}
 

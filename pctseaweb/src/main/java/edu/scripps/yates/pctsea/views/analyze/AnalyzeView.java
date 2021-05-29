@@ -423,7 +423,7 @@ public class AnalyzeView extends VerticalLayout {
 				try {
 					final PCTSEAResult results = pctsea.run();
 					ui.access(() -> {
-						showLinkToResults(results.getUrlToViewer());
+						showLinkToResults(results.getUrlToViewers());
 					});
 
 				} catch (final Exception e) {
@@ -479,13 +479,17 @@ public class AnalyzeView extends VerticalLayout {
 //		generatePDFCheckbox.setEnabled(true);
 	}
 
-	protected void showLinkToResults(URL url) {
-		if (url != null) {
-			final Anchor link = new Anchor(url.toString(), url.toString());
-			link.setTarget("_blank");
+	protected void showLinkToResults(List<URL> urls) {
+		if (urls != null) {
 			resultsPanel.removeAll();
 			resultsPanel.add("Access your results at: ");
-			resultsPanel.add(link);
+			for (final URL url : urls) {
+				final Anchor link = new Anchor(url.toString(), url.toString());
+				link.setTarget("_blank");
+
+				resultsPanel.add(link);
+			}
+
 		} else {
 			resultsPanel.removeAll();
 			resultsPanel.add("Your results cannot be accessed by our web. Hopefully you got them by email.");

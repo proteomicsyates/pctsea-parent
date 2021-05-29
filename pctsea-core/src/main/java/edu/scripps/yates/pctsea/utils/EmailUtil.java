@@ -1,10 +1,13 @@
 package edu.scripps.yates.pctsea.utils;
 
+import java.util.List;
+
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
 import org.springframework.boot.logging.LogLevel;
 
 import edu.scripps.yates.pctsea.PCTSEA;
+import edu.scripps.yates.pctsea.model.CellTypeClassification;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.pctsea.model.ScoringSchema;
@@ -23,53 +26,79 @@ public class EmailUtil {
 
 		// BODY
 		final StringBuilder body = new StringBuilder();
-		body.append("This email is generated from pCtSEA tool \n ");
-		body.append("Run submited: " + result.getRunLog().getStarted() + " \n ");
-		body.append("Run finished: " + result.getRunLog().getFinished() + " \n ");
+		body.append("<h4>This email is generated from pCtSEA tool</h4><br>");
+		body.append("Run submited: " + result.getRunLog().getStarted() + " <br> ");
+		body.append("Run finished: " + result.getRunLog().getFinished() + " <br> ");
 		body.append("Running time: " + DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime())
-				+ " \n\n ");
+				+ " <br><br> ");
 
 		// parameters
-		body.append("Parameters: \n ");
+		body.append("Parameters: <br> ");
+		body.append("<ul>");
+		body.append("<li>" + InputParameters.EEF + ": " + FilenameUtils.getName(inputParameters.getInputDataFile())
+				+ " </li> ");
 
-		body.append(InputParameters.EEF + ": " + FilenameUtils.getName(inputParameters.getInputDataFile()) + " \n ");
-
-		body.append(InputParameters.DATASETS + ": " + inputParameters.getDataset().getTag() + " ("
+		body.append("<li>" + InputParameters.DATASETS + ": " + inputParameters.getDataset().getTag() + " ("
 				+ inputParameters.getDataset().getName() + " - " + inputParameters.getDataset().getReference() + ")"
-				+ "\n");
+				+ "</li>");
 
-		body.append(InputParameters.OUT + ": " + inputParameters.getOutputPrefix() + "\n");
-		body.append(InputParameters.PERM + ": " + inputParameters.getNumPermutations() + "\n");
-		body.append(InputParameters.PLOT_NEGATIVE_ENRICHED + ": " + inputParameters.isPlotNegativeEnriched() + "\n");
-		body.append(InputParameters.LOAD_RANDOM + ": " + inputParameters.isLoadRandom() + "\n");
-		body.append(InputParameters.WRITE_SCORES + ": " + inputParameters.isWriteScoresFile() + "\n");
-		body.append(InputParameters.UNIPROT_RELEASE + ": " + inputParameters.getUniprotRelease() + "\n");
+		body.append("<li>" + InputParameters.OUT + ": " + inputParameters.getOutputPrefix() + "</li>");
+		body.append("<li>" + InputParameters.PERM + ": " + inputParameters.getNumPermutations() + "</li>");
+		body.append("<li>" + InputParameters.PLOT_NEGATIVE_ENRICHED + ": " + inputParameters.isPlotNegativeEnriched()
+				+ "</li>");
+		body.append("<li>" + InputParameters.LOAD_RANDOM + ": " + inputParameters.isLoadRandom() + "</li>");
+		body.append("<li>" + InputParameters.WRITE_SCORES + ": " + inputParameters.isWriteScoresFile() + "</li>");
+		body.append("<li>" + InputParameters.UNIPROT_RELEASE + ": " + inputParameters.getUniprotRelease() + "</li>");
 
 		int round = 1;
 		for (final ScoringSchema scoringSchemas : inputParameters.getScoringSchemas()) {
 			if (inputParameters.getScoringSchemas().size() > 1) {
-				body.append("Round " + round + ":\n");
+				body.append("<li>Round " + round + ":<ul>");
 			}
-			body.append(
-					InputParameters.SCORING_METHOD + ": " + scoringSchemas.getScoringMethod().getScoreName() + "\n");
-			body.append(
-					InputParameters.MIN_SCORE + ": " + scoringSchemas.getScoringThreshold().getThresholdValue() + "\n");
-			body.append(
-					InputParameters.MIN_GENES_CELLS + ": " + scoringSchemas.getMinNumberExpressedGenesInCell() + "\n");
+			body.append("<li>" + InputParameters.SCORING_METHOD + ": "
+					+ scoringSchemas.getScoringMethod().getScoreName() + "</li>");
+			body.append("<li>" + InputParameters.MIN_SCORE + ": "
+					+ scoringSchemas.getScoringThreshold().getThresholdValue() + "</li>");
+			body.append("<li>" + InputParameters.MIN_GENES_CELLS + ": "
+					+ scoringSchemas.getMinNumberExpressedGenesInCell() + "</li>");
+			body.append("</ul></li>");
 			round++;
 		}
-
-		body.append("\n\n");
+		body.append("</ul>");
+		body.append("<br><br>");
 		// results
-		body.append("You can access to your results at this location in the machine you run it: "
-				+ result.getResultsFile().getAbsolutePath() + "\n");
-		if (result.getUrlToViewer() != null) {
-			body.append(
-					"Alternatively, you can go to this URL to visualize the results (also to download the results): "
-							+ result.getUrlToViewer() + "\n");
-			body.append("\n\n\n");
+		final List<CellTypeClassification> cellTypes = result.getSignificantCellTypes();
+		if (cellTypes == null || cellTypes.isEmpty()) {
+			body.append("There is no significantly enriched cell types in your data<br>");
+		} else {
+			String plural = "is";
+			String plural2 = "";
+			if (cellTypes.size() > 1) {
+				plural = "are";
+				plural2 = "s";
+			}
+			body.append("There " + plural + " " + cellTypes.size() + " significantly enriched cell type" + plural2
+					+ " in your data:<br>");
+			body.append("<ul>");
+			for (final CellTypeClassification cellType : cellTypes) {
+				body.append("<li>" + cellType.getName() + "</li>");
+			}
+			body.append("</ul>");
 		}
-		body.append("Please, don't hesitate to contact salvador@scripps.edu for more information about pCtSEA");
+		if (result.getResultsFiles().size() == 1) {
+			body.append("<br>You can download and visualize the results at this URL: <a href=\""
+					+ result.getUrlToViewers().get(0) + "\">" + result.getUrlToViewers().get(0) + "</a><br>");
+			body.append("<br><br><br>");
+		} else {
+			body.append(
+					"Your can download and visualize the results in these 2 URLs, corresponding to the 2 rounds approach:<br>");
+			body.append("First round: <a href=\"" + result.getUrlToViewers().get(0) + "\">"
+					+ result.getUrlToViewers().get(0) + "</a><br>");
+			body.append("Second round: <a href=\"" + result.getUrlToViewers().get(1) + "\">"
+					+ result.getUrlToViewers().get(1) + "</a><br>");
+		}
+		body.append(
+				"Please, don't hesitate to contact <a href=\"mailto:salvador@scripps.edu\">salvador@scripps.edu</a> for more information about pCtSEA");
 
 		// DESTINATION EMAIL
 		final String destinationEmail = inputParameters.getEmail();
@@ -77,7 +106,8 @@ public class EmailUtil {
 		// FROM EMAIL
 
 		// SEND THE EMAIL
-		final String error = EmailSender.sendEmail(subject, body.toString(), fromEmail, destinationEmail, fromEmail);
+		final String error = EmailSender.sendEmail(subject, body.toString(), fromEmail, destinationEmail, fromEmail,
+				true);
 		if (error != null) {
 			PCTSEA.logStatus("Error sending email. Perhaps emails cannot be sent from this machine: " + error,
 					LogLevel.ERROR);

@@ -59,7 +59,7 @@ public enum CellTypesOutputTableColumns {
 	}
 
 	public String getValue(CellTypeClassification cellType, int numSingleCells,
-			String numSingleCellsWithPositiveCorrelationInEachRound, List<ScoringSchema> scoringSchemas) {
+			long numSingleCellsWithPositiveCorrelation, List<ScoringSchema> scoringSchemas) {
 		switch (this) {
 		case CELLTYPE:
 			return cellType.getName();
@@ -70,7 +70,7 @@ public enum CellTypesOutputTableColumns {
 		case NUM_CELLS_OF_TYPE_CORR:
 			return String.valueOf(cellType.getNumCellsOfTypePassingCorrelationThreshold());
 		case NUM_CELLS_CORR:
-			return String.valueOf(numSingleCellsWithPositiveCorrelationInEachRound);
+			return String.valueOf(numSingleCellsWithPositiveCorrelation);
 		case HYPERG_PVALUE:
 			return String.valueOf(cellType.getHypergeometricPValue());
 		case LOG2_RATIO:

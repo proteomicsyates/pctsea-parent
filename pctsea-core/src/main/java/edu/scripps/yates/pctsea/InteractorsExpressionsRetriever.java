@@ -163,9 +163,7 @@ public class InteractorsExpressionsRetriever {
 					genesById.put(geneID, gene);
 					geneIDsSet.add(geneID);
 				}
-				if (cellName.equals("AdultAdrenalGland_2.CTCGCATGTCACTCGGGT") && "AK6".equals(geneName.toUpperCase())) {
-					System.out.println("asfd");
-				}
+
 				final int singleCellID = SingleCellsMetaInformationReader.getSingleCellIDBySingleCellName(cellName);
 				singleCellIDs.add(singleCellID);
 				final SingleCell cell = SingleCellsMetaInformationReader.getSingleCellByCellID(singleCellID);
@@ -329,7 +327,6 @@ public class InteractorsExpressionsRetriever {
 				}
 				final String geneName = split[0].toUpperCase();
 				final short geneID = id++;
-				System.out.println(geneID);
 				genes.add(geneName);
 				InteractorsExpressionsRetriever.geneIDsByGeneNameMap.put(geneName, geneID);
 				InteractorsExpressionsRetriever.geneNamesByGeneIDMap.put(geneID, geneName);
