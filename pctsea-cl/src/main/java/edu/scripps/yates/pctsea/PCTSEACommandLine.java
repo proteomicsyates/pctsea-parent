@@ -248,11 +248,11 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 				if (scoringMethodString.contains(",")) {
 					final String[] split = scoringMethodString.split(",");
 					for (final String string : split) {
-						final ScoringMethod scoringMethod = ScoringMethod.valueOf(string.trim());
+						final ScoringMethod scoringMethod = ScoringMethod.getByScoreName(string.trim());
 						scoringMethodsPerRound.add(scoringMethod);
 					}
 				} else {
-					final ScoringMethod scoringMethod = ScoringMethod.valueOf(scoringMethodString.trim());
+					final ScoringMethod scoringMethod = ScoringMethod.getByScoreName(scoringMethodString.trim());
 					scoringMethodsPerRound.add(scoringMethod);
 				}
 

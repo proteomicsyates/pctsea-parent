@@ -64,17 +64,23 @@ public enum ScoringMethod {
 		return ret;
 	}
 
-	public ScoringMethod getByScoreName(String scoreName) {
+	public static ScoringMethod getByScoreName(String scoreName) {
 		for (final ScoringMethod sc : values()) {
 			if (sc.getScoreName().equals(scoreName)) {
 				return sc;
 			}
 		}
+		for (final ScoringMethod sc : values()) {
+			if (sc.name().equals(scoreName)) {
+				return sc;
+			}
+		}
 		return null;
+
 	}
 
 	@Override
 	public String toString() {
-		return this.scoreName;
+		return scoreName;
 	}
 }
