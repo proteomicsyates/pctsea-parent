@@ -321,10 +321,19 @@ public class InteractorsExpressionsRetriever {
 				if ("".equals(line.trim())) {
 					continue;
 				}
-				final String[] split = line.split("\t");
+
 				numLine++;
 				if (numLine == 1) {
 					continue;
+				}
+				if (!line.contains("\t")) {
+					throw new Exception("Error reading input file at line " + numLine
+							+ ": At least 2 columns separated by TAB are needed");
+				}
+				final String[] split = line.split("\t");
+				if (split.length < 2) {
+					throw new Exception("Error reading input file at line " + numLine
+							+ ": At least 2 columns separated by TAB are needed");
 				}
 				final String geneName = split[0].toUpperCase();
 				final short geneID = id++;
@@ -335,11 +344,16 @@ public class InteractorsExpressionsRetriever {
 				interactorExpressionsInOurExperiment.put(geneID, interactorExpressionInOurExperiment);
 
 			}
-		} finally {
-			reader.close();
 			final String message = "Information from " + interactorExpressionsInOurExperiment.size()
 					+ " genes/proteins readed";
 			PCTSEA.logStatus(message);
+		} catch (final Exception e) {
+			e.printStackTrace();
+			log.error("Error reading input file: " + e.getMessage());
+			throw new IOException(e);
+		} finally {
+			reader.close();
+
 		}
 		return genes.stream().collect(Collectors.toList());
 	}
