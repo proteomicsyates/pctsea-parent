@@ -8,12 +8,11 @@ import org.apache.log4j.Logger;
 
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
 import gnu.trove.list.TFloatList;
-import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TFloatArrayList;
-import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntFloatMap;
-import gnu.trove.map.hash.THashMap;
+import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TIntFloatHashMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 
 /**
  * Normalized count expression values of a gene in different single cells
@@ -25,7 +24,7 @@ public class Gene {
 	private final static Logger log = Logger.getLogger(Gene.class);
 	private final String geneName;
 	private final TIntFloatMap expressionsBySingleCellID = new TIntFloatHashMap();
-	private final THashMap<String, TIntList> cellIDsByCellType = new THashMap<String, TIntList>();
+	private final TObjectIntMap<String> numCellsByCellType = new TObjectIntHashMap<String>();
 	private List<Integer> singleCellsIDs;
 	private TFloatList expressions;
 	private List<Integer> indexes;
@@ -59,10 +58,10 @@ public class Gene {
 			}
 		}
 		expressionsBySingleCellID.put(singleCellID, expressionValue);
-		if (!cellIDsByCellType.containsKey(cellTypeName)) {
-			cellIDsByCellType.put(cellTypeName, new TIntArrayList());
+		if (!numCellsByCellType.containsKey(cellTypeName)) {
+			numCellsByCellType.put(cellTypeName, 0);
 		}
-		cellIDsByCellType.get(cellTypeName).add(singleCellID);
+		numCellsByCellType.put(cellTypeName, numCellsByCellType.get(cellTypeName) + 1);
 	}
 
 	public String getGeneName() {
@@ -70,17 +69,10 @@ public class Gene {
 	}
 
 	public int getNumSingleCellsInWhichIsExpressed(String cellTypeName) {
-		if (cellIDsByCellType.containsKey(cellTypeName)) {
-			return cellIDsByCellType.get(cellTypeName).size();
+		if (numCellsByCellType.containsKey(cellTypeName)) {
+			return numCellsByCellType.get(cellTypeName);
 		}
 		return 0;
-	}
-
-	public int[] getSingleCellsIDsInWhichIsExpressed(String cellTypeName) {
-		if (cellIDsByCellType.containsKey(cellTypeName)) {
-			return cellIDsByCellType.get(cellTypeName).toArray();
-		}
-		return new int[0];
 	}
 
 	public boolean permuteGeneExpressionInCells(List<SingleCell> singleCells) {
