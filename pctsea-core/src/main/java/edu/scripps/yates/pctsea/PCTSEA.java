@@ -134,7 +134,7 @@ public class PCTSEA {
 
 	private int maxIterations;
 	private boolean loadRandomDistributionsIfExist;
-	private static final int threadCount = SystemCoreManager.getAvailableNumSystemCores();
+	private static final int threadCount = SystemCoreManager.getAvailableNumSystemCores() * 2;
 	private static final int MIN_CELLS_PASSING_SCORE_TRESHOLD = 1000;
 	private CellTypeBranch cellTypeBranch;
 	private InteractorsExpressionsRetriever interactorExpressions;
@@ -223,7 +223,7 @@ public class PCTSEA {
 				this.resultsViewerURL = this.resultsViewerURL.substring(0, this.resultsViewerURL.length() - 1);
 			}
 		} catch (MalformedURLException | URISyntaxException e) {
-
+			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
 	}
@@ -373,7 +373,7 @@ public class PCTSEA {
 				// calculate hypergeometric statistics
 				// this creates the cell types that are part of the output
 				final List<CellTypeClassification> cellTypeClassificationsInRound = calculateHyperGeometricStatistics(
-						null, singleCellList, scoreThreshold, scoringMethod);
+						singleCellList, scoreThreshold, scoringMethod);
 
 				// calculate enrichment scores with the Kolmogorov-Smirnov test
 				List<SingleCell> singleCellsPassingScoreThreshold = scoreThreshold
@@ -468,7 +468,7 @@ public class PCTSEA {
 						+ DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime()));
 				for (int i = 0; i < result.getResultsFiles().size(); i++) {
 					log.info("Results file created at: " + result.getResultsFiles().get(i));
-					if (result.getUrlToViewers().get(i) != null) {
+					if (result.getUrlToViewers() != null && result.getUrlToViewers().get(i) != null) {
 						log.info("Also, results can be visualized at: " + result.getUrlToViewers().get(i));
 					}
 				}
@@ -2061,21 +2061,13 @@ public class PCTSEA {
 		return sb.toString();
 	}
 
-	private List<CellTypeClassification> calculateHyperGeometricStatistics(
-			List<CellTypeClassification> previousRoundCellTypeClassifications, List<SingleCell> singleCellList,
+	private List<CellTypeClassification> calculateHyperGeometricStatistics(List<SingleCell> singleCellList,
 			ScoreThreshold scoreThreshold, ScoringMethod scoringMethod) {
-		List<Integer> celltypes = null;
-		if (previousRoundCellTypeClassifications == null) {
-			celltypes = singleCellList.stream().map(sc -> sc.getCellTypeID()).filter(ct -> !ct.equals(-1)).distinct()
-					.sorted().collect(Collectors.toList());
-			final String message = celltypes.size() + " different cell types with branch " + cellTypeBranch;
-			PCTSEA.logStatus(message);
-		} else {
-			celltypes = previousRoundCellTypeClassifications.stream()
-					.filter(cellTypeClassification -> passFDRThreshold(cellTypeClassification,
-							CELL_TYPE_FDR_SIGNIFICANCE_THRESHOLD))
-					.map(cellTypeClassification -> cellTypeClassification.getCellTypeID()).collect(Collectors.toList());
-		}
+		PCTSEA.logStatus("Starting hyperG...");
+		final List<Integer> celltypes = singleCellList.stream().map(sc -> sc.getCellTypeID())
+				.filter(ct -> !ct.equals(-1)).distinct().sorted().collect(Collectors.toList());
+		final String message = celltypes.size() + " different cell types with branch " + cellTypeBranch;
+		PCTSEA.logStatus(message);
 
 		// by cell types
 
