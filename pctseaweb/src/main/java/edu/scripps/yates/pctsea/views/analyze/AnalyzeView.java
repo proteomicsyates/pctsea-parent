@@ -403,7 +403,8 @@ public class AnalyzeView extends VerticalLayout {
 			}
 		});
 
-		pctsea.setResultsViewerURL(PCTSEALocalConfiguration.getPCTSEAResultsViewerURL());
+		final String pctseaResultsViewerURL = PCTSEALocalConfiguration.getPCTSEAResultsViewerURL();
+		pctsea.setResultsViewerURL(pctseaResultsViewerURL);
 		final String fromEmail = PCTSEALocalConfiguration.getFromEmail();
 		pctsea.setFromEmail(fromEmail);
 
