@@ -272,6 +272,7 @@ public class InteractorsExpressionsRetriever {
 					genesByInputEntry.get(uniprotAcc).add(uniprotAcc);
 				}
 			}
+			uplr.clearMemory();
 		}
 		return genesByInputEntry;
 	}
