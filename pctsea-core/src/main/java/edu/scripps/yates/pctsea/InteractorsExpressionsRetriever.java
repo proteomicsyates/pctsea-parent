@@ -150,7 +150,7 @@ public class InteractorsExpressionsRetriever {
 				final Double expressionObj = (Double) doc.get("expression");
 				float expression = Float.NaN;
 				if (expressionObj != null) {
-					expression = Float.valueOf(expressionObj.toString());
+					expression = expressionObj.floatValue();
 				}
 				if (Float.compare(0f, expression) == 0) {
 					return;
