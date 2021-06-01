@@ -22,7 +22,7 @@ public class SingleCell {
 	private static Map<String, String> map = new THashMap<String, String>();
 //	private final static THashMap<String, Set<String>> cellNamesByOriginalCellType = new THashMap<String, Set<String>>();
 
-	private final String name;
+	private String name;
 	private double score;// correlation with our experimental data
 	private String cluster;
 	private double x;
@@ -663,6 +663,10 @@ public class SingleCell {
 
 	public String getOriginalCellType() {
 		return originalCellType;
+	}
+
+	public void setName(String name) {
+		this.name = name;
 	}
 
 }

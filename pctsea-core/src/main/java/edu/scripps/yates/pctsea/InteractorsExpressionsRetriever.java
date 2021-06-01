@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -60,6 +61,7 @@ public class InteractorsExpressionsRetriever {
 	private final Dataset dataset;
 	private final String uniprotRelease;
 	private final PctseaRunLog runLog;
+	private final List<SingleCell> singleCellList;
 	private static InteractorsExpressionsRetriever instance;
 
 	/**
@@ -70,10 +72,12 @@ public class InteractorsExpressionsRetriever {
 	 * @param uniprotRelease
 	 * @param runLog                          to log the number of genes found from
 	 *                                        input list in the database
+	 * @param singleCellList
 	 * @throws IOException
 	 */
 	public InteractorsExpressionsRetriever(MongoBaseService mongoBaseService, File experimentalExpressionsFile,
-			Dataset dataset, String uniprotRelease, PctseaRunLog runLog) throws IOException {
+			Dataset dataset, String uniprotRelease, PctseaRunLog runLog, List<SingleCell> singleCellList)
+			throws IOException {
 //		if (SingleCellsMetaInformationReader.singleCellIDsBySingleCellNameMap.isEmpty()) {
 //			throw new IllegalArgumentException(
 //					"We need to read the single cell metainformation before reading expressions");
@@ -87,6 +91,7 @@ public class InteractorsExpressionsRetriever {
 		this.uniprotRelease = uniprotRelease;
 		genes = readExperimentalExpressionsFile(experimentalExpressionsFile);
 		instance = this;
+		this.singleCellList = singleCellList;
 	}
 
 	public static InteractorsExpressionsRetriever getInstance() {
@@ -105,7 +110,6 @@ public class InteractorsExpressionsRetriever {
 
 //		PCTSEA.logStatus(geneIDsByGeneNameMap.size() + " - " + geneNamesByGeneIDMap.size());
 		final TIntSet singleCellIDs = new TIntHashSet();
-		final List<String> genesFound = new ArrayList<String>();
 
 		final Map<String, List<String>> genesByInputEntry = getGenesFromInputList(inputProteinGeneList);
 		final Map<String, List<String>> inputEntryByGene = new THashMap<String, List<String>>();
@@ -178,6 +182,28 @@ public class InteractorsExpressionsRetriever {
 
 		final long t1 = System.currentTimeMillis();
 		System.out.println("Expressions retrieved in " + DatesUtil.getDescriptiveTimeFromMillisecs(t1 - t0));
+
+		// discard the cells that don't have expression for the input proteins
+		int numDiscarded = 0;
+		final Iterator<SingleCell> iterator = singleCellList.iterator();
+		while (iterator.hasNext()) {
+			final SingleCell cell = iterator.next();
+			if (!singleCellIDs.contains(cell.getCellTypeID())) {
+				iterator.remove();
+				numDiscarded++;
+			}
+		}
+		log.debug(numDiscarded + " discarded for not having any non zero expression in the input protein/gene list");
+
+		// now we can discard the static single cells from the
+		// SingleCellsMetaInformationReader because the cells that are in the list are
+		// the ones that we want
+		SingleCellsMetaInformationReader.clearInformation();
+		// and remove the names from the single cells
+		for (final SingleCell cell : singleCellList) {
+			cell.setName(null);
+		}
+
 //		final List<Expression> totalExpressions = mongoBaseService.getExpressionByGenes(totalGenes, dataset);
 //		final long t2 = System.currentTimeMillis();
 //		System.out.println(totalExpressions.size() + " in " + DatesUtil.getDescriptiveTimeFromMillisecs(t2 - t1));
@@ -200,17 +226,14 @@ public class InteractorsExpressionsRetriever {
 		// log num input genes that are not found
 		runLog.setInputGenesNotFound(notFoundInputEntries);
 		if (!notFoundInputEntries.isEmpty()) {
-			final String message2 = "Expression values from " + genesFound.size()
-					+ " input entries were found in the database. Expression values from " + notFoundInputEntries.size()
-					+ " genes were NOT found in the single cells dataset:";
-			PCTSEA.logStatus(message2);
-//					System.out.println(message2);
-			String message3 = "";
+			final StringBuilder sb = new StringBuilder();
 			for (final String geneNotFound : notFoundInputEntries) {
-				message3 += geneNotFound + ",";
+				sb.append(geneNotFound + ",");
 			}
-			PCTSEA.logStatus(message3);
-//					System.out.println(message3);
+			final String message2 = "Expression values from " + foundInputEntries.size()
+					+ " input entries were found in the database. Expression values from " + notFoundInputEntries.size()
+					+ " genes were NOT found in the single cells dataset: " + sb.toString();
+			PCTSEA.logStatus(message2);
 		}
 
 		geneIDs.addAll(geneIDsSet);

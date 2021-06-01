@@ -34,8 +34,8 @@ public class SingleCellsMetaInformationReader {
 	private static final TIntObjectMap<SingleCell> singleCellsByCellID = new TIntObjectHashMap<SingleCell>();
 	private static final List<SingleCell> singleCellList = new ArrayList<SingleCell>();
 	private static final TObjectIntMap<String> singleCellIDsBySingleCellNameMap = new TObjectIntHashMap<String>();
-	private static final TIntObjectMap<String> singleCellNamesBySingleCellIDMap = new TIntObjectHashMap<String>();
 	private static final TIntList cellIDs = new TIntArrayList();
+	private static int totalNumCellsForDataset;
 
 //	/**
 //	 * This reads a file with the meta-information of the single cells, their
@@ -168,7 +168,6 @@ public class SingleCellsMetaInformationReader {
 
 						cellID++;
 						singleCellIDsBySingleCellNameMap.put(cellName, cellID);
-						singleCellNamesBySingleCellIDMap.put(cellID, cellName);
 						cellIDs.add(cellID);
 //						final List<edu.scripps.yates.pctsea.db.SingleCell> dbCell = repo.findByName(cellName);
 //						if (dbCell.isEmpty()) {
@@ -225,10 +224,6 @@ public class SingleCellsMetaInformationReader {
 
 	public static SingleCell getSingleCellByCellID(int cellID) {
 		return singleCellsByCellID.get(cellID);
-	}
-
-	public List<SingleCell> getSingleCellList() {
-		return singleCellList;
 	}
 
 	public List<SingleCell> getSingleCellListWithCorrelationGT(double minCorrelation) {
@@ -304,8 +299,8 @@ public class SingleCellsMetaInformationReader {
 
 	public static void addSingleCell(SingleCell singleCell) {
 		addSingleCellIDBySingleCellName(singleCell.getName(), singleCell.getId());
-		addSingleCellNameBySingleCellID(singleCell.getId(), singleCell.getName());
 		singleCellList.add(singleCell);
+		totalNumCellsForDataset++;
 		singleCellsByCellID.put(singleCell.getId(), singleCell);
 	}
 
@@ -314,13 +309,14 @@ public class SingleCellsMetaInformationReader {
 		cellIDs.add(id);
 	}
 
-	private static void addSingleCellNameBySingleCellID(int id, String name) {
-		singleCellNamesBySingleCellIDMap.put(id, name);
-
+	public static int getNumSingleCells() {
+		return totalNumCellsForDataset;
 	}
 
-	public static int getNumSingleCells() {
-		return cellIDs.size();
+	public static void clearInformation() {
+		singleCellIDsBySingleCellNameMap.clear();
+		singleCellList.clear();
+		singleCellsByCellID.clear();
 	}
 
 }

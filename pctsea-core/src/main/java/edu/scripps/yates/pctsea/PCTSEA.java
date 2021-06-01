@@ -312,9 +312,13 @@ public class PCTSEA {
 			final List<SingleCell> singleCellList = getSingleCellListFromDB(dataset, cellTypeBranch, numGenes);
 
 			interactorExpressions = new InteractorsExpressionsRetriever(mongoBaseService, experimentExpressionFile,
-					dataset, uniprotRelease, runLog);
+					dataset, uniprotRelease, runLog, singleCellList);
+
 			// log
 			runLog.setNumInputGenes(interactorExpressions.getInteractorsGeneIDs().size());
+
+			log.info(singleCellList.size() + " cells");
+
 			// here we store the cell types from each round
 			final List<List<CellTypeClassification>> cellTypesPerRound = new ArrayList<List<CellTypeClassification>>();
 			for (final ScoringSchema scoringSchema : sequentialScoringSchemas) {
@@ -2194,7 +2198,7 @@ public class PCTSEA {
 		try {
 			if (writeScoresFile) {
 				scoreFileWriter = new FileWriter(scoresOutputFile);
-				scoreFileWriter.write("cell\tcell_type\t" + scoringMethod.getScoreName()
+				scoreFileWriter.write("cell ID\tcell_type\t" + scoringMethod.getScoreName()
 						+ "\tvalues_used\tgenes\tnum_genes\tgene_expression_variance_on_cell\n");
 			}
 			final Iterator<SingleCell> cellsIterator = singleCellList.iterator();
@@ -2266,7 +2270,7 @@ public class PCTSEA {
 					if (!"".equals(printIfNecessary)) {
 						logStatus(printIfNecessary);
 					}
-					scoreFileWriter.write(singleCell.getName() + "\t" + singleCell.getCellType() + "\t"
+					scoreFileWriter.write(singleCell.getCellTypeID() + "\t" + singleCell.getCellType() + "\t"
 							+ +singleCell.getScoreForRanking() + "\t" + singleCell.getExpressionsUsedForScore() + "\t"
 							+ singleCell.getGenesUsedForScoreString() + "\t" + singleCell.getGenesUsedForScore().size()
 							+ "\t" + singleCell.getGeneExpressionVariance() + "\n");
