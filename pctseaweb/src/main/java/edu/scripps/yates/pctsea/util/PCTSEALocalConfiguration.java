@@ -2,12 +2,15 @@ package edu.scripps.yates.pctsea.util;
 
 import java.io.File;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 import edu.scripps.yates.utilities.properties.PropertiesUtil;
 
 public class PCTSEALocalConfiguration {
+	private static final Logger log = Logger.getLogger(PCTSEALocalConfiguration.class.getName());
 	/**
 	 * You must have this environmental variable pointing to the path of the folder
 	 * in which the pctsea.conf properties is located
@@ -53,8 +56,10 @@ public class PCTSEALocalConfiguration {
 		final String property = getPropertyValue(resultsViewerURLProperty);
 		if (property != null && !"".equals(property)) {
 			try {
-				new java.net.URL(property).toURI();
+				final URI uri = new java.net.URL(property).toURI();
+				log.log(java.util.logging.Level.INFO, "URL is good: " + uri.toString());
 			} catch (MalformedURLException | URISyntaxException e) {
+				e.printStackTrace();
 				throw new PCTSEAConfigurationException(e);
 			}
 			return property;
