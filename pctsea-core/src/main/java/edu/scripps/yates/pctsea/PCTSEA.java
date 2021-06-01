@@ -325,6 +325,7 @@ public class PCTSEA {
 					final URL urlToViewer = new URL(resultsViewerURL + "/?results="
 							+ FilenameUtils.getBaseName(zipOutputFile.getAbsolutePath()));
 					result.addUrlToViewer(urlToViewer);
+					log.debug("Setting results URL at: " + urlToViewer.toString());
 				}
 				final ScoreThreshold scoreThreshold = scoringSchema.getScoringThreshold();
 				if (scoringMethod != ScoringMethod.QUICK_SCORE) {
@@ -468,7 +469,8 @@ public class PCTSEA {
 						+ DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime()));
 				for (int i = 0; i < result.getResultsFiles().size(); i++) {
 					log.info("Results file created at: " + result.getResultsFiles().get(i));
-					if (result.getUrlToViewers() != null && result.getUrlToViewers().get(i) != null) {
+					if (result.getUrlToViewers() != null && result.getUrlToViewers().size() > i
+							&& result.getUrlToViewers().get(i) != null) {
 						log.info("Also, results can be visualized at: " + result.getUrlToViewers().get(i));
 					}
 				}

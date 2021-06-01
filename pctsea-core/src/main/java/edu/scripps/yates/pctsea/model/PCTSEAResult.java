@@ -29,12 +29,6 @@ public class PCTSEAResult {
 		this.runLog = runLog;
 	}
 
-	public PCTSEAResult(File resultsFile, URL urlToViewer, PctseaRunLog runLog) {
-		resultsFiles.add(resultsFile);
-		urlToViewers.add(urlToViewer);
-		this.runLog = runLog;
-	}
-
 	public List<File> getResultsFiles() {
 		return resultsFiles;
 	}
