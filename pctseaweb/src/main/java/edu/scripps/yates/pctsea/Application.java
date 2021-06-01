@@ -3,7 +3,7 @@ package edu.scripps.yates.pctsea;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
-import org.vaadin.artur.helpers.LaunchUtil;
+import org.springframework.context.ConfigurableApplicationContext;
 
 /**
  * The entry point of the Spring Boot application.
@@ -14,7 +14,8 @@ public class Application extends SpringBootServletInitializer {
 
 	public static void main(String[] args) {
 
-		LaunchUtil.launchBrowserInDevelopmentMode(SpringApplication.run(Application.class, args));
+		final ConfigurableApplicationContext context = SpringApplication.run(Application.class, args);
+//		LaunchUtil.launchBrowserInDevelopmentMode(context);
 
 	}
 
