@@ -112,7 +112,6 @@ public enum CellTypesOutputTableColumns {
 		case UMAP_4:
 			return parseNullableNumber(cellType.getUmapClustering(3));
 		case GENES:
-
 			return cellType.getStringOfRankingOfGenesThatContributedToTheScore(scoringSchema.getScoringThreshold());
 
 		default:

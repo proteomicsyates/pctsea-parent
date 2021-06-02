@@ -28,7 +28,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-import org.apache.commons.compress.utils.FileNameUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.commons.math3.distribution.HypergeometricDistribution;
@@ -441,6 +440,10 @@ public class PCTSEA {
 			errorMessage = e;
 			throw new RuntimeException(e);
 		} catch (final RuntimeException e) {
+			e.printStackTrace();
+			errorMessage = e;
+			throw e;
+		} catch (final Exception e) {
 			e.printStackTrace();
 			errorMessage = e;
 			throw e;
@@ -2022,14 +2025,15 @@ public class PCTSEA {
 					positiveScore = false;
 				}
 				for (final CellTypesOutputTableColumns column : CellTypesOutputTableColumns.values()) {
-					buffer.write(
-							column.getValue(cellType, numSingleCells, numSingleCellsPassingThreshold, scoringSchema)
-									+ "\t");
+					final String value = column.getValue(cellType, numSingleCells, numSingleCellsPassingThreshold,
+							scoringSchema);
+//					System.out.println(value);
+					buffer.write(value + "\t");
 				}
 				buffer.write("\n");
 				buffer.flush();
 			}
-			logStatus("File created: " + FileNameUtils.getBaseName(cellTypesFile.getAbsolutePath()));
+			logStatus("File created: " + FilenameUtils.getBaseName(cellTypesFile.getAbsolutePath()));
 			log.info("File writen at " + cellTypesFile.getAbsolutePath());
 		} finally {
 			if (buffer != null) {
