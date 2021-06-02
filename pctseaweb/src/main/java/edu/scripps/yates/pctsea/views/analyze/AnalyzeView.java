@@ -937,6 +937,7 @@ public class AnalyzeView extends VerticalLayout {
 			formLayout.add(outputPrefixField);
 			formLayout.add(emailField);
 			formLayout.add(inputDataTypeCombo);
+			formLayout.add(cellTypeBranchCombo);
 			final Label datasetsLabel = new Label("Datasets:");
 			final VerticalLayout datasetsPanel = new VerticalLayout(datasetsLabel, datasetsCombo);
 			formLayout.add(datasetsPanel);
@@ -944,7 +945,7 @@ public class AnalyzeView extends VerticalLayout {
 			formLayout.add(scoringsPanel);
 			formLayout.add(minScoreField);
 			formLayout.add(minGenesCellsField);
-			formLayout.add(cellTypeBranchCombo);
+
 			formLayout.add(numPermutationsField);
 
 		} else {
