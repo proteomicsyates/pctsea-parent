@@ -1,7 +1,5 @@
 package edu.scripps.yates.pctsea.utils;
 
-import java.util.List;
-
 import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.model.CellTypeClassification;
 import edu.scripps.yates.pctsea.model.ScoringSchema;
@@ -59,7 +57,7 @@ public enum CellTypesOutputTableColumns {
 	}
 
 	public String getValue(CellTypeClassification cellType, int numSingleCells,
-			long numSingleCellsWithPositiveCorrelation, List<ScoringSchema> scoringSchemas) {
+			long numSingleCellsWithPositiveCorrelation, ScoringSchema scoringSchema) {
 		switch (this) {
 		case CELLTYPE:
 			return cellType.getName();
@@ -114,15 +112,9 @@ public enum CellTypesOutputTableColumns {
 		case UMAP_4:
 			return parseNullableNumber(cellType.getUmapClustering(3));
 		case GENES:
-			final StringBuilder sb = new StringBuilder();
-			for (final ScoringSchema scoringSchema : scoringSchemas) {
-				if ("".equals(sb.toString())) {
-					sb.append("\t");
-				}
-				sb.append(cellType
-						.getStringOfRankingOfGenesThatContributedToTheScore(scoringSchema.getScoringThreshold()));
-			}
-			return sb.toString();
+
+			return cellType.getStringOfRankingOfGenesThatContributedToTheScore(scoringSchema.getScoringThreshold());
+
 		default:
 			throw new IllegalArgumentException("Value for column " + this + " is not supported yet!");
 		}

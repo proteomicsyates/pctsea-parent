@@ -318,10 +318,12 @@ public class PCTSEA {
 			runLog.setNumInputGenes(interactorExpressions.getInteractorsGeneIDs().size());
 
 			log.info(singleCellList.size() + " cells");
-
+			log.info(sequentialScoringSchemas.size() + " scoring schemas");
 			// here we store the cell types from each round
 			final List<List<CellTypeClassification>> cellTypesPerRound = new ArrayList<List<CellTypeClassification>>();
 			for (final ScoringSchema scoringSchema : sequentialScoringSchemas) {
+				log.info("Scoring schema: " + scoringSchema.getScoringMethod().getScoreName() + " with threshold: "
+						+ scoringSchema.getScoringThreshold());
 				final ScoringMethod scoringMethod = scoringSchema.getScoringMethod();
 				final File zipOutputFile = getZipOutputFile(scoringMethod);
 				result.addResultsFile(zipOutputFile);
@@ -435,9 +437,11 @@ public class PCTSEA {
 
 			return result;
 		} catch (final IOException e) {
+			e.printStackTrace();
 			errorMessage = e;
 			throw new RuntimeException(e);
 		} catch (final RuntimeException e) {
+			e.printStackTrace();
 			errorMessage = e;
 			throw e;
 		} finally {
@@ -1969,7 +1973,7 @@ public class PCTSEA {
 			glossary.append("hyperG_p-value column:\tp-value obtained from performing an hypergeometric test\n");
 			glossary.append(
 					"log2_ratio column:\tRatio of ratios between the ratio of # cells of type passing correlation threshold and # all cells of type, divided by the ratio between all # cells of type and # total cells (log2((cells of type core "
-							+ sequentialScoringSchemas + "/cells core " + sequentialScoringSchemas
+							+ scoringSchema.getScoringThreshold() + "/cells core " + scoringSchema.getScoringThreshold()
 							+ ")/(cells of type/total cells))\n");
 //		glossary.append(
 //				"eus column:\tEnrichment Unweighted Score equal to the supremum of the differences between the unweigted cumulative distributions of the correlations of the cells of the cell type and the rest of the cells belonging to other cell types\n");
@@ -2018,8 +2022,9 @@ public class PCTSEA {
 					positiveScore = false;
 				}
 				for (final CellTypesOutputTableColumns column : CellTypesOutputTableColumns.values()) {
-					buffer.write(column.getValue(cellType, numSingleCells, numSingleCellsPassingThreshold,
-							sequentialScoringSchemas) + "\t");
+					buffer.write(
+							column.getValue(cellType, numSingleCells, numSingleCellsPassingThreshold, scoringSchema)
+									+ "\t");
 				}
 				buffer.write("\n");
 				buffer.flush();
