@@ -420,8 +420,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		}
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes,
 				cellTypeName + "_genes_per_cell_hist", prefix, scoringMethod);
-		final FileWriter fw = new FileWriter(outputTXTFile);
-		final BufferedWriter buffer = new BufferedWriter(fw);
+		final BufferedWriter buffer = new BufferedWriter(new FileWriter(outputTXTFile));
 		buffer.write("-\t# of genes with " + scoreName + " > threshold\t# cells\n");
 		for (final int numGenes : histogramOfNumGenes.keys()) {
 			final int frequency = histogramOfNumGenes.get(numGenes);
@@ -437,8 +436,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	private void writeScoreDistributionFile(String cellTypeName, TDoubleList scoresFromCellType) throws IOException {
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes, cellTypeName + "_corr",
 				prefix, scoringMethod);
-		final FileWriter fw = new FileWriter(outputTXTFile);
-		final BufferedWriter buffer = new BufferedWriter(fw);
+		final BufferedWriter buffer = new BufferedWriter(new FileWriter(outputTXTFile));
 		buffer.write(scoreName + "\n");
 		for (final double score : scoresFromCellType.toArray()) {
 			buffer.write(Double.valueOf(score) + "\n");

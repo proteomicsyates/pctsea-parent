@@ -33,7 +33,7 @@ createPlotWithUmap3D <- function(table, title){
         font = list(size = 10)
       ),
       scene = scene
-      
+
     )
 }
 
@@ -50,14 +50,14 @@ createPlotWithUmap4D <- function(table, title){
   colnames(table)[3] <- 'UMAP2'
   colnames(table)[4] <- 'UMAP3'
   colnames(table)[5] <- 'UMAP4'
-   
+
   scene = list(
     xaxis = axis3d("UMAP1"),
     yaxis = axis3d("UMAP2"),
     zaxis = axis3d("UMAP3")
   )
-  table %>% plot_ly(x = ~UMAP1, y = ~UMAP2, z = ~UMAP3, text = ~`cell type`, color =  ~UMAP4) %>% 
-    add_markers(size=3) %>% 
+  table %>% plot_ly(x = ~UMAP1, y = ~UMAP2, z = ~UMAP3, text = ~`cell type`, color =  ~UMAP4) %>%
+    add_markers(size=3) %>%
     hide_legend() %>%
     layout(
       scene = scene,
@@ -65,11 +65,12 @@ createPlotWithUmap4D <- function(table, title){
         text = title,
         font = list(size = 10)
       )
-      
+
     )
 }
 createPlotWithUmap2D <- function(table, title){
   req(table)
+  browser()
   colnames(table)[1] <- 'cell type'
   colnames(table)[2] <- 'x'
   colnames(table)[3] <- 'y'
@@ -79,7 +80,7 @@ createPlotWithUmap2D <- function(table, title){
     labs(x = 'UMAP 1', y = 'UMAP 2') +
     theme_classic() +
     theme(legend.position = 'none')
-  if(showLabels){ 
+  if(showLabels){
     plot <- plot + geom_text(size=3, aes(x = x, y = y, label = `cell type`),  nudge_y = 0.2)
   }
   ploty <- ggplotly(plot) %>%
@@ -94,7 +95,7 @@ createPlotWithUmap2D <- function(table, title){
         text = title,
         font = list(size = 10)
       )
-      
+
     )
   # if(showLabels){
   #   ploty %>% add_text(text = '', textposition = "top right")
@@ -116,7 +117,7 @@ observeEvent(rv$umap_all_file, {
   table = fread(rv$umap_all_file, header = TRUE, sep = "\t", showProgress = TRUE)
   umap_all_table(table)
 })
-observeEvent( 
+observeEvent(
   eventExpr = {
     umap_all_table()
     input$umapPlotDimensions
@@ -126,8 +127,8 @@ observeEvent(
     table <- umap_all_table()
     dimensions <- input$umapPlotDimensions
     output$umapAllPlot <- renderPlotly(
-      table %>% 
-        createPlotWithUmap(title = 'UMAP clustering of all cell types<br> (no sig threshold)', dimensions = dimensions) %>% 
+      table %>%
+        createPlotWithUmap(title = 'UMAP clustering of all cell types<br> (no sig threshold)', dimensions = dimensions) %>%
         layout(dragmode = 'select') # to make selection by defaul
     )
   })
@@ -143,15 +144,15 @@ observeEvent(rv$umap_hypG_file, {
   table = fread(rv$umap_hypG_file, header = TRUE, sep = "\t", showProgress = TRUE)
   umap_hypG_table(table)
 })
-observeEvent( 
+observeEvent(
   eventExpr = {
-    umap_hypG_table() 
+    umap_hypG_table()
     input$umapPlotDimensions
   }
   ,handlerExpr = {
     dimensions <- input$umapPlotDimensions
     output$umapHypGPlot <- renderPlotly({
-      umap_hypG_table() %>% 
+      umap_hypG_table() %>%
         createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> by hypergeometric test (p<0.05)', dimensions = dimensions)
     }
     )
@@ -171,7 +172,7 @@ observeEvent(
   handlerExpr = {
     dimensions <- input$umapPlotDimensions
     output$umapKSTestPlot <- renderPlotly(
-      umap_KStest_table() %>% 
+      umap_KStest_table() %>%
         createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> by K-S test', dimensions = dimensions)
     )
   })
@@ -190,7 +191,7 @@ observeEvent(
   handlerExpr = {
     dimensions <- input$umapPlotDimensions
     output$umapSig001Plot <- renderPlotly(
-      umap_sig001_table() %>% 
+      umap_sig001_table() %>%
         createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> (sig<0.01)', dimensions = dimensions)
     )
   })
@@ -207,9 +208,9 @@ observeEvent(
     input$umapPlotDimensions
   },
   handlerExpr = {
-    dimensions <- input$umapPlotDimensions 
+    dimensions <- input$umapPlotDimensions
     output$umapSig005Plot <- renderPlotly(
-      umap_sig005_table() %>% 
+      umap_sig005_table() %>%
         createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> (sig<0.05)', dimensions = dimensions)
     )
   })

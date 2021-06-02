@@ -737,12 +737,11 @@ public class PCTSEA {
 	private void printGenesInvolvedInScores(List<CellTypeClassification> cellTypeClassifications,
 			ScoringSchema scoringSchema) throws IOException {
 		final File outputFile = getGenesInvolvedInCorrelationsOutputFile(scoringSchema.getScoringMethod());
-		FileWriter fw = null;
+
 		BufferedWriter buffer = null;
 		try {
 			ConcurrentUtil.sleep(1L);
-			fw = new FileWriter(outputFile);
-			buffer = new BufferedWriter(fw);
+			buffer = new BufferedWriter(new FileWriter(outputFile));
 
 			// header
 			buffer.write("cell_type\tgene\tocurrence\tpct_occurrence\n");
@@ -821,7 +820,7 @@ public class PCTSEA {
 		try {
 			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(scoringMethod),
 					"suprema_hist", prefix, scoringMethod);
-			final FileWriter fw = new FileWriter(outputTXTFile);
+			final BufferedWriter fw = new BufferedWriter(new FileWriter(outputTXTFile));
 			fw.write("cell type\tsupremumX\n");
 			for (final CellTypeClassification cellType : cellTypes) {
 				final int supremumX = cellType.getSupremumX();
@@ -856,7 +855,7 @@ public class PCTSEA {
 		try {
 			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(scoringMethod),
 					"suprema_scatter", prefix, scoringMethod);
-			final FileWriter fw = new FileWriter(outputTXTFile);
+			final BufferedWriter fw = new BufferedWriter(new FileWriter(outputTXTFile));
 			fw.write("cell type\tSuprema position in ranked cell list\tsupremum size\n");
 			final TDoubleList supremaXs = new TDoubleArrayList();
 			for (final CellTypeClassification cellType : cellTypes) {
@@ -894,7 +893,7 @@ public class PCTSEA {
 			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(
 					getResultsSubfolderGeneral(scoringSchema.getScoringMethod()), "corr_rank_dist", prefix,
 					scoringSchema.getScoringMethod());
-			final FileWriter fw = new FileWriter(outputTXTFile);
+			final BufferedWriter fw = new BufferedWriter(new FileWriter(outputTXTFile));
 			fw.write("rank\tclass\t" + ScoringMethod.PEARSONS_CORRELATION.getScoreName() + "\n");
 			PCTSEAUtils.sortByScoreDescending(singleCellList);
 
@@ -939,7 +938,7 @@ public class PCTSEA {
 
 			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(scoringMethod),
 					"corr_rank_dist", prefix, scoringMethod);
-			final FileWriter fw = new FileWriter(outputTXTFile);
+			final BufferedWriter fw = new BufferedWriter(new FileWriter(outputTXTFile));
 			fw.write("rank\tclass\t" + scoringMethod.getScoreName() + "\n");
 			PCTSEAUtils.sortByScoreDescending(singleCellList);
 			int numCell = 1;
@@ -1056,8 +1055,7 @@ public class PCTSEA {
 		}
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(scoringMethod), "genes_hist",
 				prefix, scoringMethod);
-		final FileWriter fw = new FileWriter(outputTXTFile);
-		final BufferedWriter buffer = new BufferedWriter(fw);
+		final BufferedWriter buffer = new BufferedWriter(new FileWriter(outputTXTFile));
 
 		buffer.write("-\t# genes with " + scoringMethod.getScoreName() + " > threshold\t# cells\n");
 		for (final int numGenes : histogramOfNumGenes.keys()) {
@@ -1200,8 +1198,7 @@ public class PCTSEA {
 			List<CellTypeClassification> cellTypeClassifications, float[][] fitTransform, ScoringMethod scoringMethod)
 			throws IOException {
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolder, fileName, prefix2, scoringMethod);
-		final FileWriter fw = new FileWriter(outputTXTFile);
-		final BufferedWriter buffer = new BufferedWriter(fw);
+		final BufferedWriter buffer = new BufferedWriter(new FileWriter(outputTXTFile));
 
 		buffer.write("cell_type");
 		for (int umapDimension = 1; umapDimension <= fitTransform[0].length; umapDimension++) {
@@ -1213,7 +1210,7 @@ public class PCTSEA {
 			final float[] umapClustering = fitTransform[i];
 			buffer.write(cellType);
 			for (final float umapDimension : umapClustering) {
-				fw.write("\t" + umapDimension);
+				buffer.write("\t" + umapDimension);
 			}
 			buffer.write("\n");
 		}
@@ -1571,8 +1568,7 @@ public class PCTSEA {
 			TFloatList totalRealNormalizedScores, TFloatList totalRandomNormalizedScores, ScoringMethod scoringMethod)
 			throws IOException {
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolder, fileName, prefix2, scoringMethod);
-		final FileWriter fw = new FileWriter(outputTXTFile);
-		final BufferedWriter buffer = new BufferedWriter(fw);
+		final BufferedWriter buffer = new BufferedWriter(new FileWriter(outputTXTFile));
 		for (final float score : totalRealNormalizedScores.toArray()) {
 			buffer.write("Observed\t" + score + "\n");
 		}
@@ -1799,8 +1795,7 @@ public class PCTSEA {
 	 */
 	private void printToRandomDistributionFile(File randomScoresFile, List<CellTypeClassification> cellTypes)
 			throws IOException {
-		final FileWriter fw = new FileWriter(randomScoresFile);
-		final BufferedWriter buffer = new BufferedWriter(fw);
+		final BufferedWriter buffer = new BufferedWriter(new FileWriter(randomScoresFile));
 
 		// header
 		buffer.write("cell type\treal score\tdiff\tavg random score\tstd random score\trandom scores\n");
@@ -1951,13 +1946,12 @@ public class PCTSEA {
 		// print to file
 		final File parametersFile = getParametersOutputFile(scoringSchema.getScoringMethod());
 		final File cellTypesFile = getCellTypesOutputFile(scoringSchema.getScoringMethod());
-		FileWriter fw = null;
+
 		BufferedWriter buffer = null;
-		FileWriter fwParameters = null;
+		BufferedWriter fwParameters = null;
 		try {
-			fw = new FileWriter(cellTypesFile);
-			buffer = new BufferedWriter(fw);
-			fwParameters = new FileWriter(parametersFile);
+			buffer = new BufferedWriter(new FileWriter(cellTypesFile));
+			fwParameters = new BufferedWriter(new FileWriter(parametersFile));
 			/////////////////
 			// Header with parameters
 			String parameters = getParametersString();
@@ -2086,7 +2080,7 @@ public class PCTSEA {
 
 	private List<CellTypeClassification> calculateHyperGeometricStatistics(List<SingleCell> singleCellList,
 			ScoreThreshold scoreThreshold, ScoringMethod scoringMethod) {
-		PCTSEA.logStatus("Starting hyperG...");
+//		PCTSEA.logStatus("Starting hyperG...");
 		final List<Integer> celltypes = singleCellList.stream().map(sc -> sc.getCellTypeID())
 				.filter(ct -> !ct.equals(-1)).distinct().sorted().collect(Collectors.toList());
 		final String message = celltypes.size() + " different cell types with branch " + cellTypeBranch;
@@ -2096,11 +2090,10 @@ public class PCTSEA {
 
 		final int numSingleCells = singleCellList.size();
 
-		final List<SingleCell> singleCellsPassingThreshold = scoreThreshold
-				.getSingleCellsPassingThreshold(singleCellList);
-		final int numSingleCellsPassingThreshold = singleCellsPassingThreshold.size();
-		PCTSEA.logStatus(numSingleCellsPassingThreshold + " single cells with " + scoringMethod.getScoreName()
-				+ " passing threshold " + scoreThreshold);
+		final int numSingleCellsPassingThreshold = scoreThreshold.countSingleCellsPassingThreshold(singleCellList);
+//		final int numSingleCellsPassingThreshold = singleCellsPassingThreshold.size();
+//		PCTSEA.logStatus(numSingleCellsPassingThreshold + " single cells with " + scoringMethod.getScoreName()
+//				+ " passing threshold " + scoreThreshold);
 		PCTSEA.logStatus("Calculating hypergeometric statistics...");
 		//
 		int N; // population size
@@ -2211,11 +2204,12 @@ public class PCTSEA {
 			PCTSEA.logStatus("Calculating " + scoringMethod.getScoreName() + "...");
 		}
 		// output correlations
-		FileWriter scoreFileWriter = null;
+		BufferedWriter buffer = null;
+
 		try {
 			if (writeScoresFile) {
-				scoreFileWriter = new FileWriter(scoresOutputFile);
-				scoreFileWriter.write("cell ID\tcell_type\t" + scoringMethod.getScoreName()
+				buffer = new BufferedWriter(new FileWriter(scoresOutputFile));
+				buffer.write("cell ID\tcell_type\t" + scoringMethod.getScoreName()
 						+ "\tvalues_used\tgenes\tnum_genes\tgene_expression_variance_on_cell\n");
 			}
 			final Iterator<SingleCell> cellsIterator = singleCellList.iterator();
@@ -2287,7 +2281,7 @@ public class PCTSEA {
 					if (!"".equals(printIfNecessary)) {
 						logStatus(printIfNecessary);
 					}
-					scoreFileWriter.write(singleCell.getCellTypeID() + "\t" + singleCell.getCellType() + "\t"
+					buffer.write(singleCell.getCellTypeID() + "\t" + singleCell.getCellType() + "\t"
 							+ +singleCell.getScoreForRanking() + "\t" + singleCell.getExpressionsUsedForScore() + "\t"
 							+ singleCell.getGenesUsedForScoreString() + "\t" + singleCell.getGenesUsedForScore().size()
 							+ "\t" + singleCell.getGeneExpressionVariance() + "\n");
@@ -2303,7 +2297,7 @@ public class PCTSEA {
 			return numPassingThreshold;
 		} finally {
 			if (writeScoresFile) {
-				scoreFileWriter.close();
+				buffer.close();
 			}
 			if (outputToLog) {
 				if (!(scoreSchema.getScoringThreshold() instanceof NoThreshold)) {
@@ -2351,8 +2345,7 @@ public class PCTSEA {
 
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderGeneral, "corr_hist", prefix,
 				scoringMethod);
-		final FileWriter fw = new FileWriter(outputTXTFile);
-		final BufferedWriter buffer = new BufferedWriter(fw);
+		final BufferedWriter buffer = new BufferedWriter(new FileWriter(outputTXTFile));
 		buffer.write(scoringMethod.getScoreName() + "\n");
 		for (final double score : scores.toArray()) {
 			buffer.write(score + "\n");

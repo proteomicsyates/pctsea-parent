@@ -44,6 +44,16 @@ public class ScoreThreshold implements Serializable {
 		}
 	}
 
+	public int countSingleCellsPassingThreshold(Collection<SingleCell> singleCells) {
+		if (threshold >= 0.0) {
+			return Long.valueOf(singleCells.stream().filter(cell -> cell.getScoreForRanking() >= threshold).count())
+					.intValue();
+		} else {
+			return Long.valueOf(singleCells.stream().filter(cell -> cell.getScoreForRanking() < threshold).count())
+					.intValue();
+		}
+	}
+
 	public List<SingleCell> getSingleCellsPassingThresholdSortedByScore(Collection<SingleCell> singleCells) {
 		if (threshold >= 0.0) {
 			return singleCells.stream().filter(cell -> cell.getScoreForRanking() >= threshold)

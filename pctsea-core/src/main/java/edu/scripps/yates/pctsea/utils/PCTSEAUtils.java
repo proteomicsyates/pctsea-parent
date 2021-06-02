@@ -1,5 +1,6 @@
 package edu.scripps.yates.pctsea.utils;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -54,7 +55,7 @@ public class PCTSEAUtils {
 	private static File writeTXTFileForChart(JFreeChart chart, File resultsSubfolder, String prefix, String fileName,
 			ScoringMethod scoringMethod) throws IOException {
 		final File outputTXTFile = getOutputTXTFile(resultsSubfolder, fileName, prefix, scoringMethod);
-		final FileWriter fw = new FileWriter(outputTXTFile);
+		final BufferedWriter fw = new BufferedWriter(new FileWriter(outputTXTFile));
 
 		final Plot plot = chart.getPlot();
 		ConcurrentUtil.sleep(1L);

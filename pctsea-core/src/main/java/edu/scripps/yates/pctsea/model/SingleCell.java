@@ -641,26 +641,6 @@ public class SingleCell {
 		return id;
 	}
 
-//	public static void printCellTypeMapping(File outputFile) throws IOException {
-//		FileWriter fw = null;
-//		try {
-//			fw = new FileWriter(outputFile);
-//			fw.write("# original\tOriginal\t# mapped\tMapped\n");
-//			for (final String originalCellType : map.keySet()) {
-//				final int numOriginal = cellIDsByOriginalCellType.get(originalCellType).size();
-//				final String mappedCellType = map.get(originalCellType);
-//				int numMapped = 0;
-//				if (cellIDsByMappedCellType.containsKey(mappedCellType)) {
-//					numMapped = cellIDsByMappedCellType.get(mappedCellType).size();
-//				}
-//				fw.write(numOriginal + "\t" + originalCellType + "\t" + numMapped + "\t" + mappedCellType + "\n");
-//			}
-//		} finally {
-//			fw.close();
-//			System.out.println("Cell types mapping stored at: " + outputFile.getAbsolutePath());
-//		}
-//	}
-
 	public String getOriginalCellType() {
 		return originalCellType;
 	}
