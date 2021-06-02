@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import org.springframework.boot.logging.LogLevel;
 
 import edu.scripps.yates.pctsea.PCTSEA;
+import edu.scripps.yates.pctsea.db.Dataset;
 import edu.scripps.yates.pctsea.model.CellTypeClassification;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
@@ -38,9 +39,16 @@ public class EmailUtil {
 		body.append("<li>" + InputParameters.EEF + ": " + FilenameUtils.getName(inputParameters.getInputDataFile())
 				+ " </li> ");
 
-		body.append("<li>" + InputParameters.DATASETS + ": " + inputParameters.getDataset().getTag() + " ("
-				+ inputParameters.getDataset().getName() + " - " + inputParameters.getDataset().getReference() + ")"
-				+ "</li>");
+		body.append("<li>" + InputParameters.DATASETS + ":<ul>");
+		if (inputParameters.getDatasets() != null) {
+			for (final Dataset dataset : inputParameters.getDatasets()) {
+				body.append("<li>" + dataset.getTag() + " (" + dataset.getName() + " - " + dataset.getReference() + ")"
+						+ "</li>");
+			}
+		} else {
+			body.append("<li>All</li>");
+		}
+		body.append("</ul>");
 
 		body.append("<li>" + InputParameters.OUT + ": " + inputParameters.getOutputPrefix() + "</li>");
 		body.append("<li>" + InputParameters.PERM + ": " + inputParameters.getNumPermutations() + "</li>");

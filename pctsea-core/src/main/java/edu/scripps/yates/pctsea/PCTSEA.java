@@ -146,7 +146,7 @@ public class PCTSEA {
 
 	private String email;
 
-	private Dataset dataset;
+	private Set<Dataset> datasets;
 
 	private boolean writeScoresFile = false;
 
@@ -185,7 +185,7 @@ public class PCTSEA {
 		maxIterations = inputParameters.getNumPermutations();
 		writeScoresFile = inputParameters.isWriteScoresFile();
 		email = inputParameters.getEmail();
-		dataset = inputParameters.getDataset();
+		datasets = inputParameters.getDatasets();
 		uniprotRelease = inputParameters.getUniprotRelease();
 		inputDataType = inputParameters.getInputDataType();
 		// we check validity of prefix as file name
@@ -254,29 +254,32 @@ public class PCTSEA {
 
 		// check dataset input parameters
 		List<Dataset> datasetFromDB = null;
-		if (getInputParameters().getDataset() != null) {
-			final String tag = getInputParameters().getDataset().getTag();
-			logStatus("Looking for dataset in DB with tag '" + tag + "'...");
+		if (getInputParameters().getDatasets() != null) {
+			for (final Dataset dataset : getInputParameters().getDatasets()) {
 
-			datasetFromDB = datasetMongoRepo.findByTag(tag);
+				final String tag = dataset.getTag();
+				logStatus("Looking for dataset in DB with tag '" + tag + "'...");
 
-			if (datasetFromDB == null || datasetFromDB.isEmpty()) {
-				logStatus("Datasets in DB with tag'" + tag + "' are not found");
-				final List<Dataset> datasets = datasetMongoRepo.findAll();
-				final List<String> datasetTags = datasets.stream().map(dataset -> dataset.getTag()).sorted()
-						.collect(Collectors.toList());
-				final String datasetsString = StringUtils.getSortedSeparatedValueStringFromChars(datasetTags, ",");
-				throw new IllegalArgumentException(
-						"Dataset " + tag + " doesn't exist in DB. Available datasets are: " + datasetsString);
-			} else {
-				logStatus(datasetFromDB.get(0).getTag() + " dataset found in DB with tag'" + tag);
+				datasetFromDB = datasetMongoRepo.findByTag(tag);
+
+				if (datasetFromDB == null || datasetFromDB.isEmpty()) {
+					logStatus("Datasets in DB with tag'" + tag + "' are not found");
+					final List<Dataset> datasets = datasetMongoRepo.findAll();
+					final List<String> datasetTags = datasets.stream().map(dataset2 -> dataset2.getTag()).sorted()
+							.collect(Collectors.toList());
+					final String datasetsString = StringUtils.getSortedSeparatedValueStringFromChars(datasetTags, ",");
+					throw new IllegalArgumentException(
+							"Dataset " + tag + " doesn't exist in DB. Available datasets are: " + datasetsString);
+				} else {
+					logStatus(datasetFromDB.get(0).getTag() + " dataset found in DB with tag '" + tag + "'");
+				}
 			}
 		} else {
 			final List<String> datasetTags = datasetMongoRepo.findAll().stream().map(dataset -> dataset.getTag())
 					.sorted().collect(Collectors.toList());
 			final String datasetsString = StringUtils.getSortedSeparatedValueStringFromChars(datasetTags, ",");
-			throw new IllegalArgumentException(
-					"Dataset is not specified! Use '-datasets' option with any of these values: " + datasetsString);
+			logStatus("Using all datasets in database: " + datasetsString);
+
 		}
 
 		// first of all create a time stamp
@@ -308,10 +311,10 @@ public class PCTSEA {
 //			}
 			final int numGenes = (int) java.nio.file.Files.readAllLines(experimentExpressionFile.toPath()).stream()
 					.filter(f -> !"".equals(f.trim())).count();
-			final List<SingleCell> singleCellList = getSingleCellListFromDB(dataset, cellTypeBranch, numGenes);
+			final List<SingleCell> singleCellList = getSingleCellListFromDB(datasets, cellTypeBranch, numGenes);
 
 			interactorExpressions = new InteractorsExpressionsRetriever(mongoBaseService, experimentExpressionFile,
-					dataset, uniprotRelease, runLog, singleCellList);
+					datasets, uniprotRelease, runLog, singleCellList);
 
 			// log
 			runLog.setNumInputGenes(interactorExpressions.getInteractorsGeneIDs().size());
@@ -637,7 +640,7 @@ public class PCTSEA {
 		for (final ScoringSchema scoringSchema : sequentialScoringSchemas) {
 			inputParameters.addScoringSchema(scoringSchema);
 		}
-		inputParameters.setDataset(dataset);
+		inputParameters.setDatasets(datasets);
 		inputParameters.setNumPermutations(maxIterations);
 		inputParameters.setOutputPrefix(prefix);
 		inputParameters.setPlotNegativeEnriched(plotNegativeEnrichedCellTypes);
@@ -1225,7 +1228,7 @@ public class PCTSEA {
 	 *                       a maximum of that number of expressions
 	 * @return
 	 */
-	private List<SingleCell> getSingleCellListFromDB(Dataset dataset, CellTypeBranch cellTypeBranch,
+	private List<SingleCell> getSingleCellListFromDB(Set<Dataset> datasets, CellTypeBranch cellTypeBranch,
 			int numInputGenes) {
 
 		final long t0 = System.currentTimeMillis();
@@ -1234,10 +1237,10 @@ public class PCTSEA {
 
 		final List<SingleCell> ret = new ArrayList<SingleCell>();
 		final List<edu.scripps.yates.pctsea.db.SingleCell> singleCellsFromDB = new ArrayList<edu.scripps.yates.pctsea.db.SingleCell>();
-		if (dataset != null) {
-
-			singleCellsFromDB.addAll(singleCellMongoRepo.findByDatasetTag(dataset.getTag()));
-
+		if (datasets != null) {
+			for (final Dataset dataset : datasets) {
+				singleCellsFromDB.addAll(singleCellMongoRepo.findByDatasetTag(dataset.getTag()));
+			}
 		} else {
 			singleCellsFromDB.addAll(singleCellMongoRepo.findAll());
 		}
@@ -2693,8 +2696,8 @@ public class PCTSEA {
 		this.email = email;
 	}
 
-	public void setDataset(Dataset dataset2) {
-		dataset = dataset2;
+	public void setDatasets(Set<Dataset> datasets) {
+		this.datasets = datasets;
 	}
 
 	public boolean isWriteCorrelationsFile() {

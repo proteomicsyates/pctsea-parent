@@ -30,8 +30,12 @@ public class Dataset implements Serializable {
 		this.reference = reference;
 	}
 
+	public void setId(String id) {
+		this.id = id;
+	}
+
 	public String getId() {
-		return this.id;
+		return id;
 	}
 
 	public String getName() {

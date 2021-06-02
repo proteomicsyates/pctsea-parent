@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
@@ -333,13 +334,14 @@ public class MongoBaseService {
 		return getGenesByCellType(cellType, projectTags);
 	}
 
-	public void getExpressionByGenes(Collection<String> genes, Dataset dataset,
+	public void getExpressionByGenes(Collection<String> genes, Collection<Dataset> datasets,
 			DocumentCallbackHandler documentProcessor) {
 		final List<Expression> ret = new ArrayList<Expression>();
 
-		if (dataset != null) {
-			final Query query = Query.query(
-					Criteria.where("gene").in(genes).andOperator(Criteria.where("projectTag").is(dataset.getTag())));
+		if (datasets != null) {
+			final Set<String> datasetTags = datasets.stream().map(dt -> dt.getTag()).collect(Collectors.toSet());
+			final Query query = Query
+					.query(Criteria.where("gene").in(genes).andOperator(Criteria.where("projectTag").in(datasetTags)));
 			mongoTemplate.executeQuery(query, "expression", documentProcessor);
 
 		} else {

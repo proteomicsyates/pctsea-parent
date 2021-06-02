@@ -36,7 +36,6 @@ import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
@@ -51,6 +50,8 @@ import com.vaadin.flow.component.listbox.MultiSelectListBox;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
+import com.vaadin.flow.component.radiobutton.RadioGroupVariant;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.TabVariant;
 import com.vaadin.flow.component.tabs.Tabs;
@@ -62,6 +63,7 @@ import com.vaadin.flow.component.upload.Receiver;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.data.binder.Binder;
+import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.data.validator.EmailValidator;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -96,9 +98,13 @@ import gnu.trove.set.hash.THashSet;
 @CssImport("./styles/views/analyze/analyze-view.css")
 public class AnalyzeView extends VerticalLayout {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -2614242304318406941L;
 	private final TextField minScoreField = new TextField("Score threshold(s)", "0.1");
 	private final TextField minGenesCellsField = new TextField("Minimum number of proteins per cell", "5");
-	private final ComboBox<Dataset> datasetsCombo = new ComboBox<Dataset>("Single cells dataset to compare against");
+	private final MultiSelectListBox<Dataset> datasetsCombo = new MultiSelectListBox<Dataset>();
 	private final ComboBox<CellTypeBranch> cellTypeBranchCombo = new ComboBox<CellTypeBranch>(
 			"Level of cell type classification");
 	private final MultiSelectListBox<ScoringMethod> scoringMethodCombo = new MultiSelectListBox<ScoringMethod>();
@@ -115,9 +121,7 @@ public class AnalyzeView extends VerticalLayout {
 	private final TextArea statusArea = new TextArea("Progress status:");
 	private Binder<InputParameters> binder;
 	private File inputFile;
-	private final int defaultMinGenes = 4;
 
-	private final int defaultPermutations = 1000;
 	private Button showInputDataButton;
 	private VerticalLayout inputFileDataTabContent;
 	private Tab inputFileDataTab;
@@ -180,38 +184,99 @@ public class AnalyzeView extends VerticalLayout {
 		add(new H4("Input file"));
 		add(createUploadLayout());
 
-		// tabs
+		//
+		outputPrefixField.setHelperText("All output files will be named with that prefix on them");
+		//
+		minScoreField.setHelperText("Minimum Score to be considered in the cell type enrichment cell. If several "
+				+ InputParameters.SCORING_METHOD
+				+ " are provided, several values separated by commas must be provided for this parameter");
+		minGenesCellsField.setHelperText(
+				"Minimum number of proteins/genes that should have a non-zero expression value in a cell to be considered in the corresponding scoring."
+						+ " If several " + InputParameters.SCORING_METHOD
+						+ " are provided, several values separated by commas must be provided for this parameter");
+		numPermutationsField.setMin(10);
+		numPermutationsField.setHelperText(
+				"Number of permutations for calculating significance of the enrichment scores, being a value of 1000 reasonable. Minimum value: 10");
 
-		tabsToPages = new HashMap<Tab, Component>();
-		final Tab inputParametersTab = new Tab("Input parameters");
-		inputParametersTab.addThemeVariants(TabVariant.LUMO_ICON_ON_TOP);
-		inputParametersTabContent = new VerticalLayout(createFormLayout(), createButtonLayout());
-		tabsToPages.put(inputParametersTab, inputParametersTabContent);
+		datasetsCombo.setRenderer(
+				new ComponentRenderer<VerticalLayout, Dataset>(VerticalLayout::new, (container, dataset) -> {
+					final Label label = new Label(dataset.getTag());
+					label.getStyle().set("font-weight", "bold");
+					final HorizontalLayout tag = new HorizontalLayout(
+							// new Icon(VaadinIcon.DATABASE),
+							label);
+					final HorizontalLayout name = new HorizontalLayout(new Label(dataset.getName()));
+					container.add(tag, name);
+				}));
+		datasetsCombo.addValueChangeListener(event -> {
+			final Set<Dataset> datasets = event.getValue();
+			if (datasets != null) {
+				// TODO
+				// show information about it on other components
+			}
 
-		inputFileDataTab = new Tab("Input data");
-		inputFileDataTab.addThemeVariants(TabVariant.LUMO_ICON_ON_TOP);
-		inputFileDataTab.setEnabled(false);
-		inputFileDataTabContent = new VerticalLayout();
-		inputFileDataTabContent.setVisible(false);
-		tabsToPages.put(inputFileDataTab, inputFileDataTabContent);
+		});
+		// load cellTypeBranches
+		cellTypeBranchCombo.setItems(CellTypeBranch.values());
+		cellTypeBranchCombo.setAutoOpen(true);
+		cellTypeBranchCombo.setHelperText(
+				"Level of cell type classification according to the hierarchical structure of its classification. Consult the administrator to know more about it.");
+		cellTypeBranchCombo.setClearButtonVisible(true);
+		cellTypeBranchCombo.setItemLabelGenerator(new ItemLabelGenerator<CellTypeBranch>() {
 
-		tabs = new Tabs(inputParametersTab, inputFileDataTab);
-		tabs.getStyle().set("max-width", "100%");
-		final Div pages = new Div(inputParametersTabContent, inputFileDataTabContent);
-		add(tabs, pages);
-		tabs.addSelectedChangeListener(event -> {
-			showTabContent(tabs.getSelectedTab());
+			@Override
+			public String apply(CellTypeBranch item) {
+				return item.name();
+			}
+		});
+		cellTypeBranchCombo.setPlaceholder("Select level");
+		cellTypeBranchCombo.addValueChangeListener(event -> {
+			final CellTypeBranch value = event.getValue();
+			if (value != null) {
+				// TODO
+				// show information about it on other components
+			}
 
 		});
 
-		// load cellTypeBranches
-		cellTypeBranchCombo.setItems(CellTypeBranch.values());
 		// load scoring methods
 		scoringMethodCombo.setItems(ScoringMethod.values());
+		scoringMethodCombo.addValueChangeListener(event -> {
+			final Set<ScoringMethod> values = event.getValue();
+			if (values != null) {
+
+				if (values.stream().filter(sc -> !sc.isSupported()).findAny().isPresent()) {
+					final MyConfirmDialog dialog = new MyConfirmDialog("Scoring method not supported yet",
+							"Some of the selected scoring methods are not supported yet", "OK");
+					dialog.open();
+
+//					scoringMethodCombo.setValue(defaultScorings);
+
+				} else if (values.stream().filter(sc -> sc.isExperimental()).findAny().isPresent()) {
+					final MyConfirmDialog dialog = new MyConfirmDialog("Experimental scoring method",
+							"The selected scoring method is still experimental", "OK");
+					dialog.open();
+				}
+
+			}
+
+		});
+
+		scoringMethodCombo.setRenderer(new ComponentRenderer<VerticalLayout, ScoringMethod>(VerticalLayout::new,
+				(container, scoringMethod) -> {
+					final Label label = new Label(scoringMethod.getScoreName());
+					label.getStyle().set("font-weight", "bold");
+					final HorizontalLayout tag = new HorizontalLayout(
+							// new Icon(VaadinIcon.DATABASE),
+							label);
+					final HorizontalLayout name = new HorizontalLayout(new Label(scoringMethod.getDescription()));
+					container.add(tag, name);
+				}));
 
 		binder = new Binder<>(InputParameters.class);
 		final InputParameters inputParameters = new InputParameters();
 		binder.setBean(inputParameters);
+
 		binder.forField(outputPrefixField).asRequired("Required")
 				.withValidator(prefix -> !"".equals(prefix), "Prefix is required").withValidator(prefix -> {
 					final String tmp = FileUtils.checkInvalidCharacterNameForFileName(prefix);
@@ -235,15 +300,39 @@ public class AnalyzeView extends VerticalLayout {
 						"A cell type classification level must be selected.")
 				.bind(InputParameters::getCellTypeBranch, InputParameters::setCellTypeBranch);
 
-		binder.forField(datasetsCombo).asRequired("Required")
-				.withValidator(dataset -> dataset != null, "A dataset must be selected")
-				.bind(InputParameters::getDataset, InputParameters::setDataset);
+		binder.forField(datasetsCombo).withValidator(dataset -> dataset != null, "A dataset must be selected")
+				.bind(InputParameters::getDatasets, InputParameters::setDatasets);
 
 //		binder.forField(generatePDFCheckbox).bind(InputParameters::isGeneratePDFCharts,
 //				InputParameters::setGeneratePDFCharts);
 
 		// load datasets
 		loadDatasetsInComboList();
+
+		// tabs
+
+		tabsToPages = new HashMap<Tab, Component>();
+		final Tab inputParametersTab = new Tab("Input parameters");
+		inputParametersTab.addThemeVariants(TabVariant.LUMO_ICON_ON_TOP);
+		inputParametersTabContent = new VerticalLayout(defaultsParametersToggle(), createFormLayout(true),
+				createButtonLayout());
+		tabsToPages.put(inputParametersTab, inputParametersTabContent);
+
+		inputFileDataTab = new Tab("Input data");
+		inputFileDataTab.addThemeVariants(TabVariant.LUMO_ICON_ON_TOP);
+		inputFileDataTab.setEnabled(false);
+		inputFileDataTabContent = new VerticalLayout();
+		inputFileDataTabContent.setVisible(false);
+		tabsToPages.put(inputFileDataTab, inputFileDataTabContent);
+
+		tabs = new Tabs(inputParametersTab, inputFileDataTab);
+		tabs.getStyle().set("max-width", "100%");
+		final Div pages = new Div(inputParametersTabContent, inputFileDataTabContent);
+		add(tabs, pages);
+		tabs.addSelectedChangeListener(event -> {
+			showTabContent(tabs.getSelectedTab());
+
+		});
 
 		// buttons
 		clearButton.addClickListener(e -> clearForm());
@@ -278,11 +367,27 @@ public class AnalyzeView extends VerticalLayout {
 		add(footer);
 	}
 
+	private final static String USE_DEFAULT_PARAMETERS = "Use default parameters";
+
+	private Component defaultsParametersToggle() {
+		final RadioButtonGroup<String> radioGroup = new RadioButtonGroup<String>();
+		radioGroup.setLabel("Select one option:");
+		radioGroup.setItems(USE_DEFAULT_PARAMETERS, "Customize parameters (for advanced users)");
+		radioGroup.setValue(USE_DEFAULT_PARAMETERS);
+		radioGroup.setHelperText("We recomend to try with defaults parameters first");
+		radioGroup.addThemeVariants(RadioGroupVariant.LUMO_VERTICAL);
+		radioGroup.addValueChangeListener(event -> {
+			final String selected = event.getValue();
+			createFormLayout(USE_DEFAULT_PARAMETERS.equals(selected));
+		});
+
+		return radioGroup;
+	}
+
 	private void loadDatasetsInComboList() {
 		datasetsFromDB = dmr.findAll();
 
 		datasetsCombo.setItems(datasetsFromDB);
-
 	}
 
 	private void showTabContent(Tab selectedTab) {
@@ -518,101 +623,36 @@ public class AnalyzeView extends VerticalLayout {
 
 	private void initializeInputParamsToDefaults() {
 		//
-		outputPrefixField.setHelperText("All output files will be named with that prefix on them");
-		//
-		minScoreField.setHelperText("Minimum Score to be considered in the cell type enrichment cell. If several "
-				+ InputParameters.SCORING_METHOD
-				+ " are provided, several values separated by commas must be provided for this parameter");
-		minScoreField.setValue("0.1");
 
 		//
-		minGenesCellsField.setValue(String.valueOf(defaultMinGenes));
-		minGenesCellsField.setHelperText(
-				"Minimum number of proteins/genes that should have a non-zero expression value in a cell to be considered in the corresponding scoring."
-						+ " If several " + InputParameters.SCORING_METHOD
-						+ " are provided, several values separated by commas must be provided for this parameter");
-		//
-		numPermutationsField.setValue(defaultPermutations);
-		numPermutationsField.setMin(10);
-		numPermutationsField.setHelperText(
-				"Number of permutations for calculating significance of the enrichment scores, being a value of 1000 reasonable. Minimum value: 10");
-		//
-		datasetsCombo.setAutoOpen(true);
-		datasetsCombo.setHelperText(
-				"Datasets stored in the database that can be used to compare your data against. Select the one that is more appropiate to your input.");
-		datasetsCombo.setClearButtonVisible(true);
-		datasetsCombo.setItemLabelGenerator(new ItemLabelGenerator<Dataset>() {
 
-			@Override
-			public String apply(Dataset item) {
-				return item.getTag() + ": " + item.getName();
+		minScoreField.setValue("0,0.1");
+
+		//
+		minGenesCellsField.setValue("10,4");
+
+		//
+		numPermutationsField.setValue(1000);
+
+		//
+
+		// if there is only one item, select it
+		if (datasetsFromDB != null) {
+
+			if (datasetsFromDB.size() == 1) {
+				datasetsCombo.select(datasetsFromDB);
 			}
-		});
-		datasetsCombo.setPlaceholder("Select dataset");
-		datasetsCombo.addValueChangeListener(event -> {
-			final Dataset value = event.getValue();
-			if (value != null) {
-				// TODO
-				// show information about it on other components
-			}
-
-		});
-		// if there is onlly one item, select it
-		if (datasetsFromDB != null && datasetsFromDB.size() == 1) {
-			datasetsCombo.setValue(datasetsFromDB.get(0));
 		}
 
 		//
-		cellTypeBranchCombo.setAutoOpen(true);
-		cellTypeBranchCombo.setHelperText(
-				"Level of cell type classification according to the hierarchical structure of its classification. Consult the administrator to know more about it.");
-		cellTypeBranchCombo.setClearButtonVisible(true);
-		cellTypeBranchCombo.setItemLabelGenerator(new ItemLabelGenerator<CellTypeBranch>() {
 
-			@Override
-			public String apply(CellTypeBranch item) {
-				return item.name();
-			}
-		});
-		cellTypeBranchCombo.setPlaceholder("Select level");
-		cellTypeBranchCombo.addValueChangeListener(event -> {
-			final CellTypeBranch value = event.getValue();
-			if (value != null) {
-				// TODO
-				// show information about it on other components
-			}
-
-		});
 		cellTypeBranchCombo.setValue(CellTypeBranch.ORIGINAL);
 		//
 		//
 		scoringMethodCombo.setItems(ScoringMethod.values());
-//		ScoringMethod.scoringMethodHelperText);
 
-		final THashSet<ScoringMethod> defaultScorings = new THashSet<ScoringMethod>();
-		defaultScorings.add(ScoringMethod.SIMPLE_SCORE);
-		defaultScorings.add(ScoringMethod.PEARSONS_CORRELATION);
-		scoringMethodCombo.addValueChangeListener(event -> {
-			final Set<ScoringMethod> values = event.getValue();
-			if (values != null) {
+		scoringMethodCombo.select(ScoringMethod.SIMPLE_SCORE, ScoringMethod.PEARSONS_CORRELATION);
 
-				if (values.stream().filter(sc -> !sc.isSupported()).findAny().isPresent()) {
-					final ConfirmDialog dialog = new ConfirmDialog("Scoring method not supported yet",
-							"Some of the selected scoring methods are not supported yet", "OK", null);
-					dialog.open();
-
-					scoringMethodCombo.setValue(defaultScorings);
-
-				} else if (values.stream().filter(sc -> sc.isExperimental()).findAny().isPresent()) {
-					final ConfirmDialog dialog = new ConfirmDialog("Experimental scoring method",
-							"The selected scoring method is still experimental", "OK", null);
-					dialog.open();
-				}
-
-			}
-
-		});
-		scoringMethodCombo.setValue(defaultScorings);
 		//
 		//
 		upload.setMaxFiles(1);
@@ -743,6 +783,7 @@ public class AnalyzeView extends VerticalLayout {
 	}
 
 	private final DecimalFormat df = new DecimalFormat("#.#%");
+	private FormLayout formLayout;
 
 	private int getNumNotMapped(List<MappingRow> rows, String dataset) {
 		int ret = 0;
@@ -850,12 +891,15 @@ public class AnalyzeView extends VerticalLayout {
 
 	private void clearForm() {
 		final InputParameters bean = new InputParameters();
-		final ScoringSchema scoringSchema = new ScoringSchema(ScoringMethod.PEARSONS_CORRELATION,
-				new ScoreThreshold(0.1), defaultMinGenes);
+		final ScoringSchema scoringSchema = new ScoringSchema(ScoringMethod.SIMPLE_SCORE, new ScoreThreshold(0), 10);
+		final ScoringSchema scoringSchema2 = new ScoringSchema(ScoringMethod.PEARSONS_CORRELATION,
+				new ScoreThreshold(0.1), 4);
+
 		final List<ScoringSchema> scoringSchemas = new ArrayList<ScoringSchema>();
 		scoringSchemas.add(scoringSchema);
+		scoringSchemas.add(scoringSchema2);
 		bean.setScoringSchemas(scoringSchemas);
-		bean.setNumPermutations(defaultPermutations);
+		bean.setNumPermutations(1000);
 		bean.setCellTypeBranch(CellTypeBranch.ORIGINAL);
 		bean.setInputDataType(null);
 		bean.setEmail(null);
@@ -868,17 +912,30 @@ public class AnalyzeView extends VerticalLayout {
 		return new H3("PCTSEA input parameters");
 	}
 
-	private Component createFormLayout() {
-		final FormLayout formLayout = new FormLayout();
-//		email.setErrorMessage("Please enter a valid email address");
-		formLayout.add(datasetsCombo);
-		formLayout.add(cellTypeBranchCombo);
-		formLayout.add(scoringMethodCombo);
-		formLayout.add(minScoreField);
-		formLayout.add(minGenesCellsField);
-		formLayout.add(outputPrefixField);
-		formLayout.add(numPermutationsField);
-		formLayout.add(emailField);
+	private Component createFormLayout(boolean defaultParams) {
+		if (formLayout == null) {
+			formLayout = new FormLayout();
+		}
+		formLayout.removeAll();
+		if (!defaultParams) {
+			formLayout.add(outputPrefixField);
+			formLayout.add(emailField);
+			final Label datasetsLabel = new Label("Datasets:");
+			final VerticalLayout datasetsPanel = new VerticalLayout(datasetsLabel, datasetsCombo);
+			formLayout.add(datasetsPanel);
+			final VerticalLayout scoringsPanel = new VerticalLayout(new Label("Scoring Methods:"), scoringMethodCombo);
+			formLayout.add(scoringsPanel);
+			formLayout.add(minScoreField);
+			formLayout.add(minGenesCellsField);
+			formLayout.add(cellTypeBranchCombo);
+			formLayout.add(numPermutationsField);
+
+		} else {
+			formLayout.add(outputPrefixField);
+			formLayout.add(emailField);
+			// set default parameters
+			initializeInputParamsToDefaults();
+		}
 		return formLayout;
 	}
 

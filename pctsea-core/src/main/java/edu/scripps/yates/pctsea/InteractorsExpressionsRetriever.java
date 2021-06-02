@@ -58,7 +58,7 @@ public class InteractorsExpressionsRetriever {
 	private static final TObjectShortMap<String> geneIDsByGeneNameMap = new TObjectShortHashMap<String>();
 	private static final TShortObjectMap<String> geneNamesByGeneIDMap = new TShortObjectHashMap<String>();
 	private final MongoBaseService mongoBaseService;
-	private final Dataset dataset;
+	private final Set<Dataset> datasets;
 	private final String uniprotRelease;
 	private final PctseaRunLog runLog;
 	private final List<SingleCell> singleCellList;
@@ -76,7 +76,7 @@ public class InteractorsExpressionsRetriever {
 	 * @throws IOException
 	 */
 	public InteractorsExpressionsRetriever(MongoBaseService mongoBaseService, File experimentalExpressionsFile,
-			Dataset dataset, String uniprotRelease, PctseaRunLog runLog, List<SingleCell> singleCellList)
+			Set<Dataset> datasets, String uniprotRelease, PctseaRunLog runLog, List<SingleCell> singleCellList)
 			throws IOException {
 //		if (SingleCellsMetaInformationReader.singleCellIDsBySingleCellNameMap.isEmpty()) {
 //			throw new IllegalArgumentException(
@@ -86,7 +86,7 @@ public class InteractorsExpressionsRetriever {
 		geneIDsByGeneNameMap.clear();
 		geneNamesByGeneIDMap.clear();
 		this.runLog = runLog;
-		this.dataset = dataset;
+		this.datasets = datasets;
 		this.mongoBaseService = mongoBaseService;
 		this.uniprotRelease = uniprotRelease;
 		genes = readExperimentalExpressionsFile(experimentalExpressionsFile);
@@ -178,7 +178,7 @@ public class InteractorsExpressionsRetriever {
 			}
 		};
 		final long t0 = System.currentTimeMillis();
-		mongoBaseService.getExpressionByGenes(totalGenes, dataset, documentProcessor);
+		mongoBaseService.getExpressionByGenes(totalGenes, datasets, documentProcessor);
 
 		final long t1 = System.currentTimeMillis();
 		log.debug("Expressions retrieved in " + DatesUtil.getDescriptiveTimeFromMillisecs(t1 - t0));

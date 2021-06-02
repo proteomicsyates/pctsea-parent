@@ -22,6 +22,7 @@ import com.vaadin.flow.function.ValueProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
+import edu.scripps.yates.pctsea.db.Dataset;
 import edu.scripps.yates.pctsea.db.PctseaRunLog;
 import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.util.PCTSEAConfigurationException;
@@ -124,8 +125,15 @@ public class AboutView extends Div {
 
 			@Override
 			public String apply(PctseaRunLog run) {
-				if (run.getInputParameters() != null && run.getInputParameters().getDataset() != null) {
-					return run.getInputParameters().getDataset().getTag();
+				if (run.getInputParameters() != null && run.getInputParameters().getDatasets() != null) {
+					final StringBuilder sb = new StringBuilder();
+					for (final Dataset dataset : run.getInputParameters().getDatasets()) {
+						if (!"".equals(sb.toString())) {
+							sb.append(",");
+						}
+						sb.append(dataset.getTag());
+					}
+					return sb.toString();
 				}
 				return "";
 			}
@@ -154,8 +162,15 @@ public class AboutView extends Div {
 
 			@Override
 			public String apply(PctseaRunLog run) {
-				if (run.getInputParameters() != null && run.getInputParameters().getDataset() != null) {
-					return run.getInputParameters().getDataset().getTag();
+				if (run.getInputParameters() != null && run.getInputParameters().getDatasets() != null) {
+					final StringBuilder sb = new StringBuilder();
+					for (final Dataset dataset : run.getInputParameters().getDatasets()) {
+						if (!"".equals(sb.toString())) {
+							sb.append(",");
+						}
+						sb.append(dataset.getTag());
+					}
+					return sb.toString();
 				}
 				return "";
 			}

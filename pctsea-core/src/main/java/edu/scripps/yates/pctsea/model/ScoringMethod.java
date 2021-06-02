@@ -6,18 +6,22 @@ import java.util.List;
 import edu.scripps.yates.utilities.strings.StringUtils;
 
 public enum ScoringMethod {
-
+	SIMPLE_SCORE("simpleScore",
+			"simpleScore is the sum of the matching genes and the difference in normalized intensities", true, false), //
 	PEARSONS_CORRELATION("correlation",
 			"Pearson correlation between the abundances of the input list of proteins agains the expression of the same proteins on each single cell of the database",
 			true, false), //
-	SIMPLE_SCORE("simpleScore",
-			"simpleScore is the sum of the matching genes and the difference in normalized intensities", true, true), //
-	DOT_PRODUCT("dot-product", true, true), LIBRARY("library-Xcorr", false, true), //
+
+	DOT_PRODUCT("dot-product",
+			"Dot product between the array of input protein expressions and the gene expressions in the single cell",
+			true, true), //
+
 	QUICK_SCORE("quick_score",
 			"For each cell type it is the product of a factor for each gene expressed which is the "
 					+ "number of cells in which the gene is detected divided by the number of cells of that type",
-			true, true), //
-	MACHINE_LEARNING("ML-score", false, true); //
+			true, true);// , //
+//	LIBRARY("library-Xcorr", false, true), //
+//	MACHINE_LEARNING("ML-score", false, true); //
 
 	private final String scoreName;
 	private final String description;

@@ -1,7 +1,9 @@
 package edu.scripps.yates.pctsea.model;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.validation.constraints.NotNull;
 
@@ -26,9 +28,12 @@ public class InputParameters {
 				+ ", loadRandom=" + loadRandom + ", numPermutations=" + numPermutations + ", cellTypesClassification="
 				+ cellTypeBranch + ", plotNegativeEnriched=" + plotNegativeEnriched + ", uniprotRelease="
 				+ uniprotRelease + ", scoringSchemas=" + scoringSchemasString.toString() + ", inputDataType="
-				+ inputDataType + ", dataset=";
-		if (dataset != null) {
-			string += dataset.getTag();
+				+ inputDataType + ", datasets=";
+		if (datasets != null) {
+			for (final Dataset dataset : datasets) {
+				string += dataset.getTag() + "|";
+			}
+
 		} else {
 			string += "not specified";
 		}
@@ -57,7 +62,7 @@ public class InputParameters {
 	private int numPermutations;
 	private CellTypeBranch cellTypeBranch;
 	private boolean plotNegativeEnriched;
-	private Dataset dataset;
+	private Set<Dataset> datasets;
 	private boolean writeScoresFile;
 	private String uniprotRelease;
 	private List<ScoringSchema> scoringSchemas = new ArrayList<ScoringSchema>();
@@ -94,11 +99,11 @@ public class InputParameters {
 		}
 
 		final ScoringSchema schema = new ScoringSchema(scoringMethod, threshold, minNumberExpressedGenesInCell);
-		this.scoringSchemas.add(schema);
+		scoringSchemas.add(schema);
 	}
 
 	public void addScoringSchema(ScoringSchema scoringSchema) {
-		this.scoringSchemas.add(scoringSchema);
+		scoringSchemas.add(scoringSchema);
 	}
 
 	public String getOutputPrefix() {
@@ -149,12 +154,19 @@ public class InputParameters {
 		this.email = email;
 	}
 
-	public Dataset getDataset() {
-		return dataset;
+	public Set<Dataset> getDatasets() {
+		return datasets;
 	}
 
-	public void setDataset(Dataset dataset) {
-		this.dataset = dataset;
+	public void setDatasets(Set<Dataset> datasets) {
+		this.datasets = datasets;
+	}
+
+	public void addDataset(Dataset dataset) {
+		if (datasets == null) {
+			datasets = new HashSet<Dataset>();
+		}
+		datasets.add(dataset);
 	}
 
 	public boolean isWriteScoresFile() {
@@ -186,7 +198,7 @@ public class InputParameters {
 	}
 
 	public void setScoringSchemas(List<ScoringSchema> scoringSchemas2) {
-		this.scoringSchemas = scoringSchemas2;
+		scoringSchemas = scoringSchemas2;
 
 	}
 

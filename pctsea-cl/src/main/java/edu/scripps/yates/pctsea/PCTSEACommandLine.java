@@ -2,7 +2,9 @@ package edu.scripps.yates.pctsea;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -45,7 +47,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private int maxIterations;
 	private CellTypeBranch cellTypeBranch;
 	private boolean plotNegativeEnrichedCellTypes;
-	private Dataset datasets;
+	private Set<Dataset> datasets;
 	private boolean writeCorrelationsFile;
 	private String uniprotRelease;
 	private List<ScoringMethod> scoringMethodsPerRound;
@@ -83,7 +85,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			pctsea.setMaxIterations(maxIterations);
 			pctsea.setCellTypesBranch(cellTypeBranch);
 			pctsea.setPlotNegativeEnrichedCellTypes(plotNegativeEnrichedCellTypes);
-			pctsea.setDataset(datasets);
+			pctsea.setDatasets(datasets);
 			pctsea.setWriteCorrelationsFile(writeCorrelationsFile);
 			pctsea.setUniprotRelease(uniprotRelease);
 
@@ -223,10 +225,18 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		}
 
 		//
-		if (cmd.hasOption(InputParameters.DATASETS)) {
-			final String optionValue = cmd.getOptionValue(InputParameters.DATASETS).trim();
-			datasets = new Dataset(optionValue, optionValue, null);
 
+		if (cmd.hasOption(InputParameters.DATASETS)) {
+			datasets = new HashSet<Dataset>();
+			final String optionValue = cmd.getOptionValue(InputParameters.DATASETS).trim();
+			if (optionValue.contains(",")) {
+				final String[] split = optionValue.split(",");
+				for (final String datasetTag : split) {
+					datasets.add(new Dataset(datasetTag.trim(), datasetTag.trim(), null));
+				}
+			} else {
+				datasets.add(new Dataset(optionValue, optionValue, null));
+			}
 		} else {
 			// considering to use all datasets
 		}
@@ -353,8 +363,8 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		options.add(email);
 		//
 		final Option datasets = new Option(InputParameters.DATASETS, true,
-				"Comma separated values of the dataset against you want to analyze your data.");
-		datasets.setRequired(true);
+				"Comma separated values of the datasets against you want to analyze your data. If empty, all datasets will be used.");
+//		datasets.setRequired(true);
 		options.add(datasets);
 
 		final Option writeCorrelationsFileOpton = new Option(InputParameters.WRITE_SCORES, false,
