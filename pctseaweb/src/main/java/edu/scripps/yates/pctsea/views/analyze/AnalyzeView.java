@@ -78,6 +78,7 @@ import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
+import edu.scripps.yates.pctsea.model.InputDataType;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.pctsea.model.ScoringMethod;
@@ -107,6 +108,7 @@ public class AnalyzeView extends VerticalLayout {
 	private final MultiSelectListBox<Dataset> datasetsCombo = new MultiSelectListBox<Dataset>();
 	private final ComboBox<CellTypeBranch> cellTypeBranchCombo = new ComboBox<CellTypeBranch>(
 			"Level of cell type classification");
+	private final ComboBox<InputDataType> inputDataTypeCombo = new ComboBox<InputDataType>("Type of input data");
 	private final MultiSelectListBox<ScoringMethod> scoringMethodCombo = new MultiSelectListBox<ScoringMethod>();
 	private final TextField outputPrefixField = new TextField("Prefix for all output files", "experiment1");
 	private final EmailField emailField = new EmailField("Email", "your_email@domain.com");
@@ -272,7 +274,27 @@ public class AnalyzeView extends VerticalLayout {
 					final HorizontalLayout name = new HorizontalLayout(new Label(scoringMethod.getDescription()));
 					container.add(tag, name);
 				}));
+//
+		inputDataTypeCombo.setItems(InputDataType.values());
+		inputDataTypeCombo.setHelperText("For statistics use only");
+		inputDataTypeCombo.setItemLabelGenerator(new ItemLabelGenerator<InputDataType>() {
 
+			@Override
+			public String apply(InputDataType item) {
+				return item.name();
+			}
+		});
+		inputDataTypeCombo.addValueChangeListener(event -> {
+			final InputDataType dataType = event.getValue();
+			if (dataType == null) {
+				inputDataTypeCombo.setHelperText("For statistics use only");
+			} else {
+				inputDataTypeCombo.setHelperText(dataType.getDescription());
+			}
+		});
+		emailField.setHelperText(
+				"Include your email in case the analysis take more than a few minutes. You will get notified with the results by email.");
+		//
 		binder = new Binder<>(InputParameters.class);
 		final InputParameters inputParameters = new InputParameters();
 		binder.setBean(inputParameters);
@@ -302,7 +324,8 @@ public class AnalyzeView extends VerticalLayout {
 
 		binder.forField(datasetsCombo).withValidator(dataset -> dataset != null, "A dataset must be selected")
 				.bind(InputParameters::getDatasets, InputParameters::setDatasets);
-
+		binder.forField(inputDataTypeCombo).asRequired("Required").bind(InputParameters::getInputDataType,
+				InputParameters::setInputDataType);
 //		binder.forField(generatePDFCheckbox).bind(InputParameters::isGeneratePDFCharts,
 //				InputParameters::setGeneratePDFCharts);
 
@@ -365,6 +388,77 @@ public class AnalyzeView extends VerticalLayout {
 		add(statusArea);
 		final Div footer = new Div();
 		add(footer);
+
+		upload.setMaxFiles(1);
+		upload.setMinWidth("25em");
+		upload.setDropAllowed(true);
+
+		upload.addFileRejectedListener(event -> {
+			VaadinUtil.showErrorDialog(event.getErrorMessage());
+		});
+
+		upload.addFinishedListener(event -> {
+
+			try {
+				// save input File to the results folder using PCTSEALocalConfiguration:
+				final String fileName = event.getFileName();
+				final File pctseaResultsFolder = PCTSEALocalConfiguration.getPCTSEAResultsFolder();
+				if (pctseaResultsFolder != null) {
+					if (!pctseaResultsFolder.exists()) {
+						pctseaResultsFolder.mkdirs();
+					}
+					inputFile = new File(pctseaResultsFolder.getAbsolutePath() + File.separator + fileName);
+				} else {
+					inputFile = Files.createTempFile("pctsea", "upload.txt").toFile();
+				}
+
+				//////////////////////////////////////
+				// make sure the input file is unique:
+				File tmpFile = inputFile;
+				int version = 0;
+				while (tmpFile.exists()) {
+					version++;
+					tmpFile = new File(inputFile.getParent() + File.separator
+							+ FilenameUtils.getBaseName(inputFile.getAbsolutePath()) + "_" + version + "."
+							+ FilenameUtils.getExtension(inputFile.getAbsolutePath()));
+				}
+				inputFile = tmpFile;
+				//////////////////////////////////////
+				final FileOutputStream outputStream = new FileOutputStream(inputFile);
+				IOUtils.copy(buffer.getInputStream(), outputStream);
+				outputStream.close();
+				final List<MappingRow> rows = validateInputFile(inputFile);
+				enableInputFileDataTab(rows);
+				outputDiv.removeAll();
+				int numNotMapped = 0;
+				for (final Dataset dataset : datasetsFromDB) {
+					numNotMapped += getNumNotMapped(rows, dataset.getTag());
+
+				}
+				if (numNotMapped == 0) {
+					outputDiv.add(rows.size()
+							+ " genes/proteins read successfully from input file. You can review the input data in the 'Input data' tab below:");
+				} else {
+					outputDiv.add(rows.size()
+							+ " genes/proteins read from input file. However, some of them were not found in some of the datasets. You can review the mapping in the 'Input data' tab below:");
+				}
+				showInputDataButton.setEnabled(true);
+
+			} catch (final Exception e) {
+				e.printStackTrace();
+				VaadinUtil.showErrorDialog("Error validating input file: " + e.getMessage());
+				inputFile = null;
+			}
+		});
+		upload.addFileRemoveListener(event -> {
+			outputDiv.removeAll();
+			inputFileDataTabContent.removeAll();
+			if (inputFile != null && inputFile.exists()) {
+				inputFile.delete();
+			}
+			inputFile = null;
+			showInputDataButton.setEnabled(false);
+		});
 	}
 
 	private final static String USE_DEFAULT_PARAMETERS = "Use default parameters";
@@ -649,85 +743,15 @@ public class AnalyzeView extends VerticalLayout {
 		cellTypeBranchCombo.setValue(CellTypeBranch.ORIGINAL);
 		//
 		//
-		scoringMethodCombo.setItems(ScoringMethod.values());
 
 		scoringMethodCombo.select(ScoringMethod.SIMPLE_SCORE, ScoringMethod.PEARSONS_CORRELATION);
 
 		//
+		inputDataTypeCombo.setValue(null);
 		//
-		upload.setMaxFiles(1);
-		upload.setMinWidth("25em");
-		upload.setDropAllowed(true);
 
-		upload.addFileRejectedListener(event -> {
-			VaadinUtil.showErrorDialog(event.getErrorMessage());
-		});
-
-		upload.addFinishedListener(event -> {
-
-			try {
-				// save input File to the results folder using PCTSEALocalConfiguration:
-				final String fileName = event.getFileName();
-				final File pctseaResultsFolder = PCTSEALocalConfiguration.getPCTSEAResultsFolder();
-				if (pctseaResultsFolder != null) {
-					if (!pctseaResultsFolder.exists()) {
-						pctseaResultsFolder.mkdirs();
-					}
-					inputFile = new File(pctseaResultsFolder.getAbsolutePath() + File.separator + fileName);
-				} else {
-					inputFile = Files.createTempFile("pctsea", "upload.txt").toFile();
-				}
-
-				//////////////////////////////////////
-				// make sure the input file is unique:
-				File tmpFile = inputFile;
-				int version = 0;
-				while (tmpFile.exists()) {
-					version++;
-					tmpFile = new File(inputFile.getParent() + File.separator
-							+ FilenameUtils.getBaseName(inputFile.getAbsolutePath()) + "_" + version + "."
-							+ FilenameUtils.getExtension(inputFile.getAbsolutePath()));
-				}
-				inputFile = tmpFile;
-				//////////////////////////////////////
-				final FileOutputStream outputStream = new FileOutputStream(inputFile);
-				IOUtils.copy(buffer.getInputStream(), outputStream);
-				outputStream.close();
-				final List<MappingRow> rows = validateInputFile(inputFile);
-				enableInputFileDataTab(rows);
-				outputDiv.removeAll();
-				int numNotMapped = 0;
-				for (final Dataset dataset : datasetsFromDB) {
-					numNotMapped += getNumNotMapped(rows, dataset.getTag());
-
-				}
-				if (numNotMapped == 0) {
-					outputDiv.add(rows.size()
-							+ " genes/proteins read successfully from input file. You can review the input data in the 'Input data' tab below:");
-				} else {
-					outputDiv.add(rows.size()
-							+ " genes/proteins read from input file. However, some of them were not found in some of the datasets. You can review the mapping in the 'Input data' tab below:");
-				}
-				showInputDataButton.setEnabled(true);
-
-			} catch (final Exception e) {
-				e.printStackTrace();
-				VaadinUtil.showErrorDialog("Error validating input file: " + e.getMessage());
-				inputFile = null;
-			}
-		});
-		upload.addFileRemoveListener(event -> {
-			outputDiv.removeAll();
-			inputFileDataTabContent.removeAll();
-			if (inputFile != null && inputFile.exists()) {
-				inputFile.delete();
-			}
-			inputFile = null;
-			showInputDataButton.setEnabled(false);
-		});
 		//
-		emailField.setHelperText(
-				"Include your email in case the analysis take more than a few minutes. You will get notified with the results by email.");
+
 //		upload.addSucceededListener(event -> {
 //			final Component component = VaadinUtil.createComponent(event.getMIMEType(), event.getFileName(),
 //					buffer.getInputStream());
@@ -920,6 +944,7 @@ public class AnalyzeView extends VerticalLayout {
 		if (!defaultParams) {
 			formLayout.add(outputPrefixField);
 			formLayout.add(emailField);
+			formLayout.add(inputDataTypeCombo);
 			final Label datasetsLabel = new Label("Datasets:");
 			final VerticalLayout datasetsPanel = new VerticalLayout(datasetsLabel, datasetsCombo);
 			formLayout.add(datasetsPanel);
@@ -933,6 +958,7 @@ public class AnalyzeView extends VerticalLayout {
 		} else {
 			formLayout.add(outputPrefixField);
 			formLayout.add(emailField);
+			formLayout.add(inputDataTypeCombo);
 			// set default parameters
 			initializeInputParamsToDefaults();
 		}
