@@ -22,7 +22,6 @@ import com.vaadin.flow.function.ValueProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
-import edu.scripps.yates.pctsea.db.Dataset;
 import edu.scripps.yates.pctsea.db.PctseaRunLog;
 import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.util.PCTSEAConfigurationException;
@@ -121,29 +120,29 @@ public class AboutView extends Div {
 				return "";
 			}
 		}).setHeader("Running time");
-		gridFinishedRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
-
-			@Override
-			public String apply(PctseaRunLog run) {
-				if (run.getInputParameters() != null && run.getInputParameters().getDatasets() != null) {
-					final StringBuilder sb = new StringBuilder();
-					for (final Dataset dataset : run.getInputParameters().getDatasets()) {
-						if (!"".equals(sb.toString())) {
-							sb.append(",");
-						}
-						sb.append(dataset.getTag());
-					}
-					return sb.toString();
-				}
-				return "";
-			}
-		}).setHeader("Dataset");
+//		gridFinishedRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
+//
+//			@Override
+//			public String apply(PctseaRunLog run) {
+//				if (run.getInputParameters() != null && run.getInputParameters().getDatasets() != null) {
+//					final StringBuilder sb = new StringBuilder();
+//					for (final Dataset dataset : run.getInputParameters().getDatasets()) {
+//						if (!"".equals(sb.toString())) {
+//							sb.append(",");
+//						}
+//						sb.append(dataset.getTag());
+//					}
+//					return sb.toString();
+//				}
+//				return "";
+//			}
+//		}).setHeader("Dataset");
 		gridFinishedRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
 
 			@Override
 			public String apply(PctseaRunLog run) {
 				if (run.getInputParameters() != null && run.getInputParameters().getEmail() != null) {
-					return anonymazeEmail(run.getInputParameters().getEmail());
+					return anonymizeEmail(run.getInputParameters().getEmail());
 				}
 				return "";
 			}
@@ -158,29 +157,13 @@ public class AboutView extends Div {
 		detailsRunsFailed.setSummaryText("Failed runs: " + failedRuns.size());
 		gridFailingRuns.setItems(failedRuns);
 		gridFailingRuns.addColumn(PctseaRunLog::getTimeStamp).setHeader("Time Stamp");
-		gridFailingRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
 
-			@Override
-			public String apply(PctseaRunLog run) {
-				if (run.getInputParameters() != null && run.getInputParameters().getDatasets() != null) {
-					final StringBuilder sb = new StringBuilder();
-					for (final Dataset dataset : run.getInputParameters().getDatasets()) {
-						if (!"".equals(sb.toString())) {
-							sb.append(",");
-						}
-						sb.append(dataset.getTag());
-					}
-					return sb.toString();
-				}
-				return "";
-			}
-		}).setHeader("Dataset");
 		gridFailingRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
 
 			@Override
 			public String apply(PctseaRunLog run) {
 				if (run.getInputParameters() != null && run.getInputParameters().getEmail() != null) {
-					return anonymazeEmail(run.getInputParameters().getEmail());
+					return anonymizeEmail(run.getInputParameters().getEmail());
 				}
 				return "";
 			}
@@ -190,7 +173,7 @@ public class AboutView extends Div {
 
 	}
 
-	protected String anonymazeEmail(String email) {
+	protected String anonymizeEmail(String email) {
 		if (email.contains("@")) {
 			final String[] split = email.split("@");
 			final String userName = split[0];

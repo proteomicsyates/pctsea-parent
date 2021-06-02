@@ -14,6 +14,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -1228,7 +1229,7 @@ public class PCTSEA {
 	 *                       a maximum of that number of expressions
 	 * @return
 	 */
-	private List<SingleCell> getSingleCellListFromDB(Set<Dataset> datasets, CellTypeBranch cellTypeBranch,
+	private List<SingleCell> getSingleCellListFromDB(Collection<Dataset> datasets, CellTypeBranch cellTypeBranch,
 			int numInputGenes) {
 
 		final long t0 = System.currentTimeMillis();

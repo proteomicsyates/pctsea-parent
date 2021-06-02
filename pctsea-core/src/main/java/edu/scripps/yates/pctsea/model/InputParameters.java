@@ -1,7 +1,6 @@
 package edu.scripps.yates.pctsea.model;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -163,9 +162,6 @@ public class InputParameters {
 	}
 
 	public void addDataset(Dataset dataset) {
-		if (datasets == null) {
-			datasets = new HashSet<Dataset>();
-		}
 		datasets.add(dataset);
 	}
 

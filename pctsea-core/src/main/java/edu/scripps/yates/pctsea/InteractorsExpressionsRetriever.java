@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -58,7 +59,7 @@ public class InteractorsExpressionsRetriever {
 	private static final TObjectShortMap<String> geneIDsByGeneNameMap = new TObjectShortHashMap<String>();
 	private static final TShortObjectMap<String> geneNamesByGeneIDMap = new TShortObjectHashMap<String>();
 	private final MongoBaseService mongoBaseService;
-	private final Set<Dataset> datasets;
+	private final List<Dataset> datasets = new ArrayList<Dataset>();
 	private final String uniprotRelease;
 	private final PctseaRunLog runLog;
 	private final List<SingleCell> singleCellList;
@@ -76,7 +77,7 @@ public class InteractorsExpressionsRetriever {
 	 * @throws IOException
 	 */
 	public InteractorsExpressionsRetriever(MongoBaseService mongoBaseService, File experimentalExpressionsFile,
-			Set<Dataset> datasets, String uniprotRelease, PctseaRunLog runLog, List<SingleCell> singleCellList)
+			Collection<Dataset> datasets, String uniprotRelease, PctseaRunLog runLog, List<SingleCell> singleCellList)
 			throws IOException {
 //		if (SingleCellsMetaInformationReader.singleCellIDsBySingleCellNameMap.isEmpty()) {
 //			throw new IllegalArgumentException(
@@ -86,7 +87,7 @@ public class InteractorsExpressionsRetriever {
 		geneIDsByGeneNameMap.clear();
 		geneNamesByGeneIDMap.clear();
 		this.runLog = runLog;
-		this.datasets = datasets;
+		this.datasets.addAll(datasets);
 		this.mongoBaseService = mongoBaseService;
 		this.uniprotRelease = uniprotRelease;
 		genes = readExperimentalExpressionsFile(experimentalExpressionsFile);
