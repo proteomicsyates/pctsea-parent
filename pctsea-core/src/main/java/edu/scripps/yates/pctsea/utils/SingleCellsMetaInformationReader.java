@@ -97,7 +97,7 @@ public class SingleCellsMetaInformationReader {
 //			}
 //		} finally {
 //			reader.close();
-//			final String message = "Information from " + singleCellList.size() + " single cells readed";
+//			final String message = "Information from " + singleCellList.size() + " single cells read";
 //			PCTSEA.logStatus(message);
 ////			System.out.println(message);
 //		}
@@ -201,7 +201,7 @@ public class SingleCellsMetaInformationReader {
 				}
 			} finally {
 				reader.close();
-				final String message = "Information from " + singleCellList.size() + " single cells readed";
+				final String message = "Information from " + singleCellList.size() + " single cells read";
 				PCTSEA.logStatus(message);
 				PCTSEA.logStatus("Cells not found in DB: " + cellsNotFound);
 				counter.increment(metadataFile.length());
@@ -279,8 +279,10 @@ public class SingleCellsMetaInformationReader {
 	 * @return
 	 */
 	public static int getSingleCellIDBySingleCellName(String name) {
-		if (singleCellIDsBySingleCellNameMap.containsKey(name)) {
-			return singleCellIDsBySingleCellNameMap.get(name);
+		final int id = singleCellIDsBySingleCellNameMap.get(name);
+		if (id > 0) {
+
+			return id;
 		} else {
 			// if it is not found it is because that single cell has not been classified,
 			// doesnt have a type and was ignored from the database, therefore, we return

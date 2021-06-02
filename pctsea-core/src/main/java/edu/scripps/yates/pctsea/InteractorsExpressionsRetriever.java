@@ -181,14 +181,14 @@ public class InteractorsExpressionsRetriever {
 		mongoBaseService.getExpressionByGenes(totalGenes, dataset, documentProcessor);
 
 		final long t1 = System.currentTimeMillis();
-		System.out.println("Expressions retrieved in " + DatesUtil.getDescriptiveTimeFromMillisecs(t1 - t0));
+		log.debug("Expressions retrieved in " + DatesUtil.getDescriptiveTimeFromMillisecs(t1 - t0));
 
 		// discard the cells that don't have expression for the input proteins
 		int numDiscarded = 0;
 		final Iterator<SingleCell> iterator = singleCellList.iterator();
 		while (iterator.hasNext()) {
 			final SingleCell cell = iterator.next();
-			if (!singleCellIDs.contains(cell.getCellTypeID())) {
+			if (!singleCellIDs.contains(cell.getId())) {
 				iterator.remove();
 				numDiscarded++;
 			}
@@ -203,10 +203,6 @@ public class InteractorsExpressionsRetriever {
 		for (final SingleCell cell : singleCellList) {
 			cell.setName(null);
 		}
-
-//		final List<Expression> totalExpressions = mongoBaseService.getExpressionByGenes(totalGenes, dataset);
-//		final long t2 = System.currentTimeMillis();
-//		System.out.println(totalExpressions.size() + " in " + DatesUtil.getDescriptiveTimeFromMillisecs(t2 - t1));
 
 		// in foundGeneNames we have all the genes found...lets see if we have all
 		// inputEntries
@@ -368,7 +364,7 @@ public class InteractorsExpressionsRetriever {
 
 			}
 			final String message = "Information from " + interactorExpressionsInOurExperiment.size()
-					+ " genes/proteins readed";
+					+ " genes/proteins read";
 			PCTSEA.logStatus(message);
 		} catch (final Exception e) {
 			e.printStackTrace();
