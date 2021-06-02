@@ -14,6 +14,7 @@ import org.springframework.boot.logging.LogLevel;
 
 import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.model.CellTypeClassification;
+import edu.scripps.yates.pctsea.model.ScoringMethod;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.pctsea.utils.PCTSEAUtils;
 import edu.scripps.yates.utilities.pi.ParIterator;
@@ -38,11 +39,12 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	private final File resultsSubfolderForCellTypes;
 	private final String prefix;
 	private final boolean compensateWithNegativeSupremum;
+	private final ScoringMethod scoringMethod;
 
 	public EnrichmentWeigthedScoreParallel(ParIterator<CellTypeClassification> iterator, int numCore,
 			List<SingleCell> singleCellList, boolean permutatedData, boolean plotNegativeEnrichedCellTypes,
-			String scoreName, File resultsSubfolderForCellTypes, String prefix,
-			boolean compensateWithNegativeSupremum) {
+			String scoreName, File resultsSubfolderForCellTypes, String prefix, boolean compensateWithNegativeSupremum,
+			ScoringMethod scoringMethod) {
 		this.iterator = iterator;
 		this.singleCellList.addAll(singleCellList);
 
@@ -52,6 +54,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		this.resultsSubfolderForCellTypes = resultsSubfolderForCellTypes;
 		this.prefix = prefix;
 		this.compensateWithNegativeSupremum = compensateWithNegativeSupremum;
+		this.scoringMethod = scoringMethod;
 	}
 
 	private class XYPoint {
@@ -350,7 +353,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			List<XYPoint> scoreSeriesOtherType, List<XYPoint> supremumLineSeries,
 			List<XYPoint> secondarySupremumLineSeries) throws IOException {
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes, cellTypeName + "_ews",
-				prefix);
+				prefix, scoringMethod);
 		final BufferedWriter buffer = Files.newBufferedWriter(outputTXTFile.toPath(), Charset.forName("UTF-8"));
 		buffer.write("-\tcell #\tCumulative Probability [Fn(X)]\n");
 		XYPoint previousDataItem = null;
@@ -416,7 +419,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			histogramOfNumGenesAccumulative.put(keys.get(i), accumulativeNumGenes);
 		}
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes,
-				cellTypeName + "_genes_per_cell_hist", prefix);
+				cellTypeName + "_genes_per_cell_hist", prefix, scoringMethod);
 		final FileWriter fw = new FileWriter(outputTXTFile);
 		final BufferedWriter buffer = new BufferedWriter(fw);
 		buffer.write("-\t# of genes with " + scoreName + " > threshold\t# cells\n");
@@ -433,7 +436,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 
 	private void writeScoreDistributionFile(String cellTypeName, TDoubleList scoresFromCellType) throws IOException {
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes, cellTypeName + "_corr",
-				prefix);
+				prefix, scoringMethod);
 		final FileWriter fw = new FileWriter(outputTXTFile);
 		final BufferedWriter buffer = new BufferedWriter(fw);
 		buffer.write(scoreName + "\n");

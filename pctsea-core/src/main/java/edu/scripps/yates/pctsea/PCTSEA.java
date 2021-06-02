@@ -820,7 +820,7 @@ public class PCTSEA {
 				.collect(Collectors.toList());
 		try {
 			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(scoringMethod),
-					"suprema_hist", prefix);
+					"suprema_hist", prefix, scoringMethod);
 			final FileWriter fw = new FileWriter(outputTXTFile);
 			fw.write("cell type\tsupremumX\n");
 			for (final CellTypeClassification cellType : cellTypes) {
@@ -855,7 +855,7 @@ public class PCTSEA {
 				.collect(Collectors.toList());
 		try {
 			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(scoringMethod),
-					"suprema_scatter", prefix);
+					"suprema_scatter", prefix, scoringMethod);
 			final FileWriter fw = new FileWriter(outputTXTFile);
 			fw.write("cell type\tSuprema position in ranked cell list\tsupremum size\n");
 			final TDoubleList supremaXs = new TDoubleArrayList();
@@ -892,7 +892,8 @@ public class PCTSEA {
 				throw new IllegalArgumentException("This function is only for pearsons correlation method");
 			}
 			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(
-					getResultsSubfolderGeneral(scoringSchema.getScoringMethod()), "corr_rank_dist", prefix);
+					getResultsSubfolderGeneral(scoringSchema.getScoringMethod()), "corr_rank_dist", prefix,
+					scoringSchema.getScoringMethod());
 			final FileWriter fw = new FileWriter(outputTXTFile);
 			fw.write("rank\tclass\t" + ScoringMethod.PEARSONS_CORRELATION.getScoreName() + "\n");
 			PCTSEAUtils.sortByScoreDescending(singleCellList);
@@ -937,7 +938,7 @@ public class PCTSEA {
 		try {
 
 			final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(scoringMethod),
-					"corr_rank_dist", prefix);
+					"corr_rank_dist", prefix, scoringMethod);
 			final FileWriter fw = new FileWriter(outputTXTFile);
 			fw.write("rank\tclass\t" + scoringMethod.getScoreName() + "\n");
 			PCTSEAUtils.sortByScoreDescending(singleCellList);
@@ -1054,7 +1055,7 @@ public class PCTSEA {
 			histogramOfNumGenesAccumulative.put(keys.get(i), accumulativeNumGenes);
 		}
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(getResultsSubfolderGeneral(scoringMethod), "genes_hist",
-				prefix);
+				prefix, scoringMethod);
 		final FileWriter fw = new FileWriter(outputTXTFile);
 		final BufferedWriter buffer = new BufferedWriter(fw);
 
@@ -1179,7 +1180,7 @@ public class PCTSEA {
 		try {
 			final String fileName = "umap_" + labelChartFile + "_scatter";
 			writeGlobalUMAPDimensionsChart(getResultsSubfolderGeneral(scoringSchema.getScoringMethod()), prefix,
-					fileName, cellTypeClassifications, fitTransform);
+					fileName, cellTypeClassifications, fitTransform, scoringSchema.getScoringMethod());
 //			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
 //			if (generatePDFCharts) {
 //				final File chartFile = PCTSEAUtils.getChartPDFFile(getResultsSubfolderGeneral(), fileName, prefix);
@@ -1196,8 +1197,9 @@ public class PCTSEA {
 	}
 
 	private void writeGlobalUMAPDimensionsChart(File resultsSubfolder, String prefix2, String fileName,
-			List<CellTypeClassification> cellTypeClassifications, float[][] fitTransform) throws IOException {
-		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolder, fileName, prefix2);
+			List<CellTypeClassification> cellTypeClassifications, float[][] fitTransform, ScoringMethod scoringMethod)
+			throws IOException {
+		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolder, fileName, prefix2, scoringMethod);
 		final FileWriter fw = new FileWriter(outputTXTFile);
 		final BufferedWriter buffer = new BufferedWriter(fw);
 
@@ -1554,7 +1556,7 @@ public class PCTSEA {
 			final String fileName = "ews_obs_null_hist";
 //			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
 			writeGlobalFDRCalculationChart(getResultsSubfolderGeneral(scoringMethod), prefix, fileName,
-					totalRealNormalizedScores, totalRandomNormalizedScores);
+					totalRealNormalizedScores, totalRandomNormalizedScores, scoringMethod);
 
 		} catch (final IOException e) {
 			e.printStackTrace();
@@ -1566,8 +1568,9 @@ public class PCTSEA {
 	}
 
 	private void writeGlobalFDRCalculationChart(File resultsSubfolder, String prefix2, String fileName,
-			TFloatList totalRealNormalizedScores, TFloatList totalRandomNormalizedScores) throws IOException {
-		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolder, fileName, prefix2);
+			TFloatList totalRealNormalizedScores, TFloatList totalRandomNormalizedScores, ScoringMethod scoringMethod)
+			throws IOException {
+		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolder, fileName, prefix2, scoringMethod);
 		final FileWriter fw = new FileWriter(outputTXTFile);
 		final BufferedWriter buffer = new BufferedWriter(fw);
 		for (final float score : totalRealNormalizedScores.toArray()) {
@@ -1830,7 +1833,8 @@ public class PCTSEA {
 	}
 
 	private File getRandomScoresFile(ScoringMethod scoringMethod) {
-		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_" + maxIterations + "_random_scores.txt");
+		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_" + scoringMethod.getScoreName() + "_"
+				+ maxIterations + "_random_scores.txt");
 	}
 
 	/**
@@ -2345,7 +2349,8 @@ public class PCTSEA {
 	private void writeGlobalScoreDistributionChart(TDoubleList scores, ScoringMethod scoringMethod) throws IOException {
 		final File resultsSubfolderGeneral = getResultsSubfolderGeneral(scoringMethod);
 
-		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderGeneral, "corr_hist", prefix);
+		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderGeneral, "corr_hist", prefix,
+				scoringMethod);
 		final FileWriter fw = new FileWriter(outputTXTFile);
 		final BufferedWriter buffer = new BufferedWriter(fw);
 		buffer.write(scoringMethod.getScoreName() + "\n");
@@ -2418,7 +2423,7 @@ public class PCTSEA {
 			// take current DB session
 			final EnrichmentWeigthedScoreParallel runner = new EnrichmentWeigthedScoreParallel(iterator, numCore,
 					singleCellList, permutatedData, plotNegativeEnrichedCellTypes, scoreMethod.getScoreName(),
-					getResultsSubfolderForCellTypes(scoreMethod), prefix, true);
+					getResultsSubfolderForCellTypes(scoreMethod), prefix, true, scoreMethod);
 			runners.add(runner);
 			runner.start();
 		}
@@ -2578,27 +2583,31 @@ public class PCTSEA {
 	}
 
 	private File getGenesInvolvedInCorrelationsOutputFile(ScoringMethod scoringMethod) {
-		return new File(
-				getCurrentTimeStampPath(scoringMethod) + prefix + "_" + scoringMethod.getScoreName() + "_genes.txt");
+		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_" + scoringMethod.getScoreName() + "_"
+				+ scoringMethod.getScoreName() + "_genes.txt");
 	}
 
 	private File getCellTypesOutputFile(ScoringMethod scoringMethod) {
-		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_cell_types_enrichment.txt");
+		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_" + scoringMethod.getScoreName()
+				+ "_cell_types_enrichment.txt");
 	}
 
 	private File getParametersOutputFile(ScoringMethod scoringMethod) {
-		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_parameters.txt");
+		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_" + scoringMethod.getScoreName()
+				+ "_parameters.txt");
 	}
 
 	private File getScoresOutputFile(ScoringMethod scoringMethod) {
 		final String scoreName = scoringMethod.getScoreName();
-		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_single_cell_" + scoreName + ".txt");
+		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_" + scoringMethod.getScoreName()
+				+ "_single_cell_" + scoreName + ".txt");
 	}
 
 	private File getGeneExpressionOutputFile(String geneName, ScoreThreshold scoreThreshold2,
 			ScoringMethod scoringMethod) {
-		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_" + geneName + "_expressions_with_"
-				+ scoringMethod.getScoreName() + "_" + scoreThreshold2.getThresholdValue() + ".txt");
+		return new File(getCurrentTimeStampPath(scoringMethod) + prefix + "_" + scoringMethod.getScoreName() + "_"
+				+ geneName + "_expressions_with_" + scoringMethod.getScoreName() + "_"
+				+ scoreThreshold2.getThresholdValue() + ".txt");
 	}
 
 	public void setPrefix(String prefix) {

@@ -14,6 +14,7 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.xy.XYDataset;
 
+import edu.scripps.yates.pctsea.model.ScoringMethod;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.utilities.files.FileUtils;
 import edu.scripps.yates.utilities.pi.ConcurrentUtil;
@@ -50,9 +51,9 @@ public class PCTSEAUtils {
 
 	}
 
-	private static File writeTXTFileForChart(JFreeChart chart, File resultsSubfolder, String prefix, String fileName)
-			throws IOException {
-		final File outputTXTFile = getOutputTXTFile(resultsSubfolder, fileName, prefix);
+	private static File writeTXTFileForChart(JFreeChart chart, File resultsSubfolder, String prefix, String fileName,
+			ScoringMethod scoringMethod) throws IOException {
+		final File outputTXTFile = getOutputTXTFile(resultsSubfolder, fileName, prefix, scoringMethod);
 		final FileWriter fw = new FileWriter(outputTXTFile);
 
 		final Plot plot = chart.getPlot();
@@ -104,9 +105,10 @@ public class PCTSEAUtils {
 //		return new File(folder.getAbsolutePath() + File.separator + fullfileName);
 //	}
 
-	public static File getOutputTXTFile(File folder, String fileName, String prefix) {
-		final String correctedFileName = FileUtils
-				.checkInvalidCharacterNameForFileName(prefix + "_" + fileName + ".txt");
-		return new File(folder.getAbsolutePath() + File.separator + correctedFileName);
+	public static File getOutputTXTFile(File folder, String fileName, String prefix, ScoringMethod scoringMethod) {
+		final String correctedFileName = FileUtils.checkInvalidCharacterNameForFileName(
+				prefix + "_" + scoringMethod.getScoreName() + "_" + fileName + ".txt");
+		final File file = new File(folder.getAbsolutePath() + File.separator + correctedFileName);
+		return file;
 	}
 }
