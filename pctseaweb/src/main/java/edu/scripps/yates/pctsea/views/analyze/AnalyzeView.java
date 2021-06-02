@@ -281,17 +281,10 @@ public class AnalyzeView extends VerticalLayout {
 
 			@Override
 			public String apply(InputDataType item) {
-				return item.name();
+				return item.getDescription();
 			}
 		});
-		inputDataTypeCombo.addValueChangeListener(event -> {
-			final InputDataType dataType = event.getValue();
-			if (dataType == null) {
-				inputDataTypeCombo.setHelperText("For statistics use only");
-			} else {
-				inputDataTypeCombo.setHelperText(dataType.getDescription());
-			}
-		});
+
 		emailField.setHelperText(
 				"Include your email in case the analysis take more than a few minutes. You will get notified with the results by email.");
 		//
@@ -322,8 +315,7 @@ public class AnalyzeView extends VerticalLayout {
 						"A cell type classification level must be selected.")
 				.bind(InputParameters::getCellTypeBranch, InputParameters::setCellTypeBranch);
 
-		binder.forField(datasetsCombo).withValidator(dataset -> dataset != null, "A dataset must be selected")
-				.bind(InputParameters::getDatasets, InputParameters::setDatasets);
+		binder.forField(datasetsCombo).bind(InputParameters::getDatasets, InputParameters::setDatasets);
 		binder.forField(inputDataTypeCombo).asRequired("Required").bind(InputParameters::getInputDataType,
 				InputParameters::setInputDataType);
 //		binder.forField(generatePDFCheckbox).bind(InputParameters::isGeneratePDFCharts,
