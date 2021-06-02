@@ -433,7 +433,7 @@ public class PCTSEA {
 			}
 			// now we get the cell types that are significant in all rounds
 			final List<CellTypeClassification> cellTypeClassifications = getIntersection(cellTypesPerRound);
-
+			result.setSignificantTypes(cellTypeClassifications);
 			return result;
 		} catch (final IOException e) {
 			e.printStackTrace();
