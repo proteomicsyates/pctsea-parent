@@ -22,8 +22,10 @@ import com.vaadin.flow.function.ValueProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
+import edu.scripps.yates.pctsea.db.Dataset;
 import edu.scripps.yates.pctsea.db.PctseaRunLog;
 import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
+import edu.scripps.yates.pctsea.model.ScoringSchema;
 import edu.scripps.yates.pctsea.util.PCTSEAConfigurationException;
 import edu.scripps.yates.pctsea.util.PCTSEALocalConfiguration;
 import edu.scripps.yates.pctsea.views.main.MainView;
@@ -120,23 +122,40 @@ public class AboutView extends Div {
 				return "";
 			}
 		}).setHeader("Running time");
-//		gridFinishedRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
-//
-//			@Override
-//			public String apply(PctseaRunLog run) {
-//				if (run.getInputParameters() != null && run.getInputParameters().getDatasets() != null) {
-//					final StringBuilder sb = new StringBuilder();
-//					for (final Dataset dataset : run.getInputParameters().getDatasets()) {
-//						if (!"".equals(sb.toString())) {
-//							sb.append(",");
-//						}
-//						sb.append(dataset.getTag());
-//					}
-//					return sb.toString();
-//				}
-//				return "";
-//			}
-//		}).setHeader("Dataset");
+		gridFinishedRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
+
+			@Override
+			public String apply(PctseaRunLog run) {
+				if (run.getInputParameters() != null && run.getInputParameters().getDatasets() != null) {
+					final StringBuilder sb = new StringBuilder();
+					for (final Dataset dataset : run.getInputParameters().getDatasets()) {
+						if (!"".equals(sb.toString())) {
+							sb.append(",");
+						}
+						sb.append(dataset.getTag());
+					}
+					return sb.toString();
+				}
+				return "";
+			}
+		}).setHeader("Datasets");
+		gridFinishedRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
+
+			@Override
+			public String apply(PctseaRunLog run) {
+				if (run.getInputParameters() != null && run.getInputParameters().getScoringSchemas() != null) {
+					final StringBuilder sb = new StringBuilder();
+					for (final ScoringSchema scoringSchema : run.getInputParameters().getScoringSchemas()) {
+						if (!"".equals(sb.toString())) {
+							sb.append(",");
+						}
+						sb.append(scoringSchema.getScoringMethod().getScoreName());
+					}
+					return sb.toString();
+				}
+				return "";
+			}
+		}).setHeader("Scoring");
 		gridFinishedRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
 
 			@Override

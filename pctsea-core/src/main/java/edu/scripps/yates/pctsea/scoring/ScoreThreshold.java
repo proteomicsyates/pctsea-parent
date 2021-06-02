@@ -1,5 +1,6 @@
 package edu.scripps.yates.pctsea.scoring;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -9,27 +10,43 @@ import java.util.stream.Stream;
 
 import edu.scripps.yates.pctsea.model.SingleCell;
 
-public class ScoreThreshold {
+public class ScoreThreshold implements Serializable {
 
-	private final double correlationThresholdValue;
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -1813446153437834176L;
+	private double threshold;
+
+	public ScoreThreshold() {
+
+	}
 
 	public ScoreThreshold(double correlationThresholdValue) {
-		this.correlationThresholdValue = correlationThresholdValue;
+		threshold = correlationThresholdValue;
+	}
+
+	public double getThreshold() {
+		return threshold;
+	}
+
+	public void setThreshold(double threshold) {
+		this.threshold = threshold;
 	}
 
 	public List<SingleCell> getSingleCellsPassingThreshold(Collection<SingleCell> singleCells) {
-		if (correlationThresholdValue >= 0.0) {
-			return singleCells.stream().filter(cell -> cell.getScoreForRanking() >= correlationThresholdValue)
+		if (threshold >= 0.0) {
+			return singleCells.stream().filter(cell -> cell.getScoreForRanking() >= threshold)
 					.collect(Collectors.toList());
 		} else {
-			return singleCells.stream().filter(cell -> cell.getScoreForRanking() < correlationThresholdValue)
+			return singleCells.stream().filter(cell -> cell.getScoreForRanking() < threshold)
 					.collect(Collectors.toList());
 		}
 	}
 
 	public List<SingleCell> getSingleCellsPassingThresholdSortedByScore(Collection<SingleCell> singleCells) {
-		if (correlationThresholdValue >= 0.0) {
-			return singleCells.stream().filter(cell -> cell.getScoreForRanking() >= correlationThresholdValue)
+		if (threshold >= 0.0) {
+			return singleCells.stream().filter(cell -> cell.getScoreForRanking() >= threshold)
 					.sorted(new Comparator<SingleCell>() {
 						@Override
 						public int compare(SingleCell o1, SingleCell o2) {
@@ -37,7 +54,7 @@ public class ScoreThreshold {
 						}
 					}).collect(Collectors.toList());
 		} else {
-			return singleCells.stream().filter(cell -> cell.getScoreForRanking() < correlationThresholdValue)
+			return singleCells.stream().filter(cell -> cell.getScoreForRanking() < threshold)
 					.sorted(new Comparator<SingleCell>() {
 						@Override
 						public int compare(SingleCell o1, SingleCell o2) {
@@ -48,36 +65,36 @@ public class ScoreThreshold {
 	}
 
 	public long getCountSingleCellsPassingThreshold(Collection<SingleCell> singleCellList) {
-		if (correlationThresholdValue >= 0.0) {
+		if (threshold >= 0.0) {
 			final Stream<SingleCell> filter = singleCellList.stream()
-					.filter(sc -> sc.getScoreForRanking() >= correlationThresholdValue);
+					.filter(sc -> sc.getScoreForRanking() >= threshold);
 			final int ret = filter.collect(Collectors.toSet()).size();
 //			ret= filter.count();
 			return ret;
 		} else {
-			return singleCellList.stream().filter(sc -> sc.getScoreForRanking() < correlationThresholdValue).count();
+			return singleCellList.stream().filter(sc -> sc.getScoreForRanking() < threshold).count();
 		}
 	}
 
 	@Override
 	public String toString() {
 		String sign = ">";
-		if (correlationThresholdValue < 0.0) {
+		if (threshold < 0.0) {
 			sign = "<";
 		}
-		return sign + " " + correlationThresholdValue;
+		return sign + " " + threshold;
 	}
 
 	public boolean passThreshold(SingleCell singleCell) {
-		if (correlationThresholdValue >= 0.0) {
-			return singleCell.getScoreForRanking() >= correlationThresholdValue;
+		if (threshold >= 0.0) {
+			return singleCell.getScoreForRanking() >= threshold;
 		} else {
-			return singleCell.getScoreForRanking() < correlationThresholdValue;
+			return singleCell.getScoreForRanking() < threshold;
 		}
 	}
 
 	public double getThresholdValue() {
-		return correlationThresholdValue;
+		return threshold;
 	}
 
 	/**
@@ -96,7 +113,7 @@ public class ScoreThreshold {
 			public int compare(SingleCell o1, SingleCell o2) {
 				// sort by correlation from higher to lower
 
-				if (correlationThresholdValue >= 0.0) {
+				if (threshold >= 0.0) {
 					final double corr1 = Double.isNaN(o1.getScoreForRanking()) ? -Double.MAX_VALUE
 							: o1.getScoreForRanking();
 					final double corr2 = Double.isNaN(o2.getScoreForRanking()) ? -Double.MAX_VALUE

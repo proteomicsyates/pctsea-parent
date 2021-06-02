@@ -1,5 +1,7 @@
 package edu.scripps.yates.pctsea.model;
 
+import java.io.Serializable;
+
 import edu.scripps.yates.pctsea.scoring.ScoreThreshold;
 
 /**
@@ -9,14 +11,22 @@ import edu.scripps.yates.pctsea.scoring.ScoreThreshold;
  * @author salvador
  *
  */
-public class ScoringSchema {
-	private final ScoringMethod scoringMethod;
-	private final ScoreThreshold scoringThreshold;
-	private final int minNumberExpressedGenesInCell;
+public class ScoringSchema implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2747351373269915643L;
+	private ScoringMethod scoringMethod;
+	private ScoreThreshold scoringThreshold;
+	private int minNumberExpressedGenesInCell;
+
+	public ScoringSchema() {
+
+	}
 
 	public ScoringSchema(ScoringMethod scoringMethod, ScoreThreshold threshold, int minNumberExpressedGenesInCell) {
 		this.scoringMethod = scoringMethod;
-		this.scoringThreshold = threshold;
+		scoringThreshold = threshold;
 		this.minNumberExpressedGenesInCell = minNumberExpressedGenesInCell;
 	}
 
@@ -30,6 +40,18 @@ public class ScoringSchema {
 
 	public int getMinNumberExpressedGenesInCell() {
 		return minNumberExpressedGenesInCell;
+	}
+
+	public void setScoringMethod(ScoringMethod scoringMethod) {
+		this.scoringMethod = scoringMethod;
+	}
+
+	public void setScoringThreshold(ScoreThreshold scoringThreshold) {
+		this.scoringThreshold = scoringThreshold;
+	}
+
+	public void setMinNumberExpressedGenesInCell(int minNumberExpressedGenesInCell) {
+		this.minNumberExpressedGenesInCell = minNumberExpressedGenesInCell;
 	}
 
 }
