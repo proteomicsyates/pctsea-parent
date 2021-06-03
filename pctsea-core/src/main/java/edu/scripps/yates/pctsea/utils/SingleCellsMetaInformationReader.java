@@ -315,10 +315,13 @@ public class SingleCellsMetaInformationReader {
 		return totalNumCellsForDataset;
 	}
 
-	public static void clearInformation() {
+	public static void clearInformation(boolean clearTotalNumber) {
 		singleCellIDsBySingleCellNameMap.clear();
 		singleCellList.clear();
 		singleCellsByCellID.clear();
+		if (clearTotalNumber) {
+			totalNumCellsForDataset = 0;
+		}
 	}
 
 }

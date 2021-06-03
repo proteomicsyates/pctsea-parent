@@ -1247,6 +1247,7 @@ public class PCTSEA {
 		logStatus(singleCellsFromDB.size() + " cells retrieved");
 		logStatus("Processing information from cells...");
 		int cellID = 0;
+		SingleCellsMetaInformationReader.clearInformation(true);
 		final ProgressCounter counter = new ProgressCounter(singleCellsFromDB.size(),
 				ProgressPrintingType.PERCENTAGE_STEPS, 0, true);
 		for (final edu.scripps.yates.pctsea.db.SingleCell singleCelldb : singleCellsFromDB) {

@@ -199,7 +199,7 @@ public class InteractorsExpressionsRetriever {
 		// now we can discard the static single cells from the
 		// SingleCellsMetaInformationReader because the cells that are in the list are
 		// the ones that we want
-		SingleCellsMetaInformationReader.clearInformation();
+		SingleCellsMetaInformationReader.clearInformation(false);
 		// and remove the names from the single cells
 		for (final SingleCell cell : singleCellList) {
 			cell.setName(null);
