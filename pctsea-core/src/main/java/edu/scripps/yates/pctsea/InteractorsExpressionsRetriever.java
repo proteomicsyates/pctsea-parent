@@ -142,7 +142,7 @@ public class InteractorsExpressionsRetriever {
 				final Object cellTypeObj = doc.get("cellType");
 				if (cellTypeObj == null) {
 					// ignore it if it doesnt have a type
-//					return;
+					return;
 				}
 				final String cellNameObj = (String) doc.get("cellName");
 				String cellName = null;
