@@ -481,9 +481,6 @@ public class CellTypeClassification {
 	}
 
 	public void setName(String name) {
-		if (name.trim().equals("astrocyte")) {
-			System.out.println(name);
-		}
 		this.name = name.trim();
 		try {
 			Double.valueOf(this.name);

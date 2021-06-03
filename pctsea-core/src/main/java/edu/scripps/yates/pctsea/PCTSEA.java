@@ -497,28 +497,30 @@ public class PCTSEA {
 
 	private List<CellTypeClassification> getIntersection(List<List<CellTypeClassification>> cellTypesPerRound) {
 		final List<CellTypeClassification> validCellTypes = new ArrayList<CellTypeClassification>();
-		final Set<String> cellTypeNames = new THashSet<String>();
+		final Set<String> cellTypeNamesInFirstRound = new THashSet<String>();
 		// first I store the names of the first list
 		final List<CellTypeClassification> cellTypesFirstRound = cellTypesPerRound.get(0);
 		cellTypesFirstRound.stream()
 				.filter(cellType -> cellType.getEnrichmentFDR() <= CELL_TYPE_FDR_SIGNIFICANCE_THRESHOLD)
-				.forEach(cellType -> cellTypeNames.add(cellType.getName()));
+				.forEach(cellType -> cellTypeNamesInFirstRound.add(cellType.getName()));
 		// now we keep removing the ones that are not in the set for the subsequent
 		// rounds
 		for (int i = 1; i < cellTypesPerRound.size(); i++) {
 			final List<CellTypeClassification> cellTypesNextRound = cellTypesPerRound.get(i);
 			for (final CellTypeClassification cellType : cellTypesNextRound) {
 				if (cellType.getEnrichmentFDR() <= CELL_TYPE_FDR_SIGNIFICANCE_THRESHOLD) {
-					if (!cellTypeNames.contains(cellType.getName())) {
-						cellTypeNames.remove(cellType.getName());
+					if (!cellTypeNamesInFirstRound.contains(cellType.getName())) {
+						cellTypeNamesInFirstRound.remove(cellType.getName());
 					}
+				} else {
+					cellTypeNamesInFirstRound.remove(cellType.getName());
 				}
 			}
 		}
 
-		// now we keep the ones rom the first round that have the name
+		// now we keep the ones from the second round that have the name
 		for (final CellTypeClassification cellType : cellTypesFirstRound) {
-			if (cellTypeNames.contains(cellType.getName())) {
+			if (cellTypeNamesInFirstRound.contains(cellType.getName())) {
 				validCellTypes.add(cellType);
 			}
 		}
@@ -2303,7 +2305,9 @@ public class PCTSEA {
 			if (outputToLog) {
 				if (!(scoreSchema.getScoringThreshold() instanceof NoThreshold)) {
 					logStatus(numPassingThreshold + " cells pass the score threshold ("
-							+ scoreSchema.getScoringThreshold() + ") out of " + originalNumCells);
+							+ scoreSchema.getScoringThreshold() + ") and expressing at least "
+							+ scoreSchema.getMinNumberExpressedGenesInCell() + " genes from the input list, out of "
+							+ originalNumCells);
 				}
 				if (writeScoresFile) {
 					logStatus("File with " + scoringMethod.getScoreName() + " created at: "

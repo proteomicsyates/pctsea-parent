@@ -97,9 +97,11 @@ public class ScoreThreshold implements Serializable {
 
 	public boolean passThreshold(SingleCell singleCell) {
 		if (threshold >= 0.0) {
-			return singleCell.getScoreForRanking() >= threshold;
+			final boolean ret = singleCell.getScoreForRanking() >= threshold;
+			return ret;
 		} else {
-			return singleCell.getScoreForRanking() < threshold;
+			final boolean ret2 = singleCell.getScoreForRanking() < threshold;
+			return ret2;
 		}
 	}
 

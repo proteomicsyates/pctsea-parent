@@ -58,6 +58,7 @@ public class InteractorsExpressionsRetriever {
 	private final List<String> genes;
 	private static final TObjectShortMap<String> geneIDsByGeneNameMap = new TObjectShortHashMap<String>();
 	private static final TShortObjectMap<String> geneNamesByGeneIDMap = new TShortObjectHashMap<String>();
+	private static final int MIN_NUM_MAPPED_GENES = 20;
 	private final MongoBaseService mongoBaseService;
 	private final List<Dataset> datasets = new ArrayList<Dataset>();
 	private final String uniprotRelease;
@@ -87,7 +88,9 @@ public class InteractorsExpressionsRetriever {
 		geneIDsByGeneNameMap.clear();
 		geneNamesByGeneIDMap.clear();
 		this.runLog = runLog;
-		this.datasets.addAll(datasets);
+		if (datasets != null) {
+			this.datasets.addAll(datasets);
+		}
 		this.mongoBaseService = mongoBaseService;
 		this.uniprotRelease = uniprotRelease;
 		genes = readExperimentalExpressionsFile(experimentalExpressionsFile);
@@ -139,7 +142,7 @@ public class InteractorsExpressionsRetriever {
 				final Object cellTypeObj = doc.get("cellType");
 				if (cellTypeObj == null) {
 					// ignore it if it doesnt have a type
-					return;
+//					return;
 				}
 				final String cellNameObj = (String) doc.get("cellName");
 				String cellName = null;
@@ -231,6 +234,10 @@ public class InteractorsExpressionsRetriever {
 					+ " input entries were found in the database. Expression values from " + notFoundInputEntries.size()
 					+ " genes were NOT found in the single cells dataset: " + sb.toString();
 			PCTSEA.logStatus(message2);
+			if (foundInputEntries.size() < MIN_NUM_MAPPED_GENES) {
+				throw new IllegalArgumentException("Minimum number of input entries not satisfied: " + message2
+						+ " Minimum number is " + MIN_NUM_MAPPED_GENES);
+			}
 		}
 
 		geneIDs.addAll(geneIDsSet);

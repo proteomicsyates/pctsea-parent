@@ -336,9 +336,8 @@ public class MongoBaseService {
 
 	public void getExpressionByGenes(Collection<String> genes, Collection<Dataset> datasets,
 			DocumentCallbackHandler documentProcessor) {
-		final List<Expression> ret = new ArrayList<Expression>();
 
-		if (datasets != null) {
+		if (datasets != null && !datasets.isEmpty()) {
 			final Set<String> datasetTags = datasets.stream().map(dt -> dt.getTag()).collect(Collectors.toSet());
 			final Query query = Query
 					.query(Criteria.where("gene").in(genes).andOperator(Criteria.where("projectTag").in(datasetTags)));
@@ -346,8 +345,7 @@ public class MongoBaseService {
 
 		} else {
 			final Query query = Query.query(Criteria.where("gene").in(genes));
-			final List<Expression> expressions = mongoTemplate.find(query, Expression.class);
-			ret.addAll(expressions);
+			mongoTemplate.executeQuery(query, "expression", documentProcessor);
 		}
 
 	}

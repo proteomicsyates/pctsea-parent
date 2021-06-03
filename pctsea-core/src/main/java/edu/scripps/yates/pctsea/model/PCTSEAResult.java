@@ -61,7 +61,4 @@ public class PCTSEAResult {
 		this.significantTypes = significantTypes;
 	}
 
-	public List<CellTypeClassification> getSignificantCellTypes() {
-		return significantTypes;
-	}
 }

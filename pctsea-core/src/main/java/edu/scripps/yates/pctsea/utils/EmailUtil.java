@@ -75,7 +75,7 @@ public class EmailUtil {
 		body.append("</ul>");
 		body.append("<br><br>");
 		// results
-		final List<CellTypeClassification> cellTypes = result.getSignificantCellTypes();
+		final List<CellTypeClassification> cellTypes = result.getSignificantTypes();
 		if (cellTypes == null || cellTypes.isEmpty()) {
 			body.append("There is no significantly enriched cell types in your data<br>");
 		} else {

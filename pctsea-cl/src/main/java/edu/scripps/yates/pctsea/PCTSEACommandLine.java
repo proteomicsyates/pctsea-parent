@@ -19,6 +19,7 @@ import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
+import edu.scripps.yates.pctsea.model.CellTypeClassification;
 import edu.scripps.yates.pctsea.model.InputDataType;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
@@ -93,7 +94,20 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			// to make log go to the textarea when calling to the status listener
 			pctsea.setStatusListener(this);
 			final PCTSEAResult result = pctsea.run();
-
+			final List<CellTypeClassification> significantTypes = result.getSignificantTypes();
+			if (significantTypes == null || significantTypes.isEmpty()) {
+				this.onStatusUpdate("PCTSEA didn't find any significant cell type");
+			} else {
+				final StringBuilder sb = new StringBuilder();
+				for (final CellTypeClassification cellType : significantTypes) {
+					if (!"".equals(sb.toString())) {
+						sb.append(",");
+					}
+					sb.append(cellType.getName());
+				}
+				this.onStatusUpdate(
+						"PCTSEA found " + significantTypes.size() + " significant cell types: " + sb.toString());
+			}
 		} catch (final Exception e) {
 			e.printStackTrace();
 			log.error("Error in PCTSEA:", e);
