@@ -1,8 +1,6 @@
 package edu.scripps.yates.pctsea.model;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -219,19 +217,19 @@ public class CellTypes {
 		}
 		final CellTypeBranched cellTypeBranched = cellTypeByOriginalCellType.get(originalType);
 		if (cellTypeBranched == null) {
-			try {
-				if (!notFound.contains(originalType)) {
-					final FileWriter fw = new FileWriter(new File(
-							"D:\\Salva\\git_projects\\pctsea-parent\\pctsea-core\\src\\main\\resources\\cell_types_not_found_in_table.txt"),
-							true);
-					fw.write(originalType + "\n");
-					fw.close();
-					notFound.add(originalType);
-//					log.debug(originalType);
-				}
-			} catch (final IOException e) {
-				e.printStackTrace();
-			}
+//			try {
+//				if (!notFound.contains(originalType)) {
+//					final FileWriter fw = new FileWriter(new File(
+//							"D:\\Salva\\git_projects\\pctsea-parent\\pctsea-core\\src\\main\\resources\\cell_types_not_found_in_table.txt"),
+//							true);
+//					fw.write(originalType + "\n");
+//					fw.close();
+//					notFound.add(originalType);
+////					log.debug(originalType);
+//				}
+//			} catch (final IOException e) {
+//				e.printStackTrace();
+//			}
 
 		}
 		return cellTypeBranched;
