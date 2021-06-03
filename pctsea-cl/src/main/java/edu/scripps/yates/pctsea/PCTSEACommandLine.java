@@ -96,7 +96,9 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			final PCTSEAResult result = pctsea.run();
 			final List<CellTypeClassification> significantTypes = result.getSignificantTypes();
 			if (significantTypes == null || significantTypes.isEmpty()) {
-				this.onStatusUpdate("PCTSEA didn't find any significant cell type");
+				final String statusMessage = "PCTSEA didn't find any significant cell type";
+				this.onStatusUpdate(statusMessage);
+				log.info(statusMessage);
 			} else {
 				final StringBuilder sb = new StringBuilder();
 				for (final CellTypeClassification cellType : significantTypes) {
@@ -105,8 +107,10 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 					}
 					sb.append(cellType.getName());
 				}
-				this.onStatusUpdate(
-						"PCTSEA found " + significantTypes.size() + " significant cell types: " + sb.toString());
+				final String statusMessage = "PCTSEA found " + significantTypes.size() + " significant cell types: "
+						+ sb.toString();
+				this.onStatusUpdate(statusMessage);
+				log.info(statusMessage);
 			}
 		} catch (final Exception e) {
 			e.printStackTrace();
