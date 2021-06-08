@@ -2092,7 +2092,8 @@ public class PCTSEA {
 			ScoreThreshold scoreThreshold, ScoringMethod scoringMethod) {
 //		PCTSEA.logStatus("Starting hyperG...");
 		final List<Integer> celltypes = singleCellList.stream().map(sc -> sc.getCellTypeID())
-				.filter(ct -> !ct.equals(-1)).distinct().sorted().collect(Collectors.toList());
+				.filter(ct -> !ct.equals(-1)) // discard cell types that are unknown (-1)
+				.distinct().sorted().collect(Collectors.toList());
 		final String message = celltypes.size() + " different cell types with branch " + cellTypeBranch;
 		PCTSEA.logStatus(message);
 
@@ -2241,7 +2242,7 @@ public class PCTSEA {
 							scoreSchema.getMinNumberExpressedGenesInCell(), getExpressionsUsedForScore);
 					break;
 				case SIMPLE_SCORE:
-					singleCell.calculateSimpleScore(interactorExpressions, takeZerosForCorrelation,
+					singleCell.calculateSimpleScore(interactorExpressions,
 							scoreSchema.getMinNumberExpressedGenesInCell(), getExpressionsUsedForScore);
 					break;
 				case DOT_PRODUCT:
