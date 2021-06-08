@@ -173,8 +173,19 @@ public class InteractorsExpressionsRetriever {
 				}
 
 				final int singleCellID = SingleCellsMetaInformationReader.getSingleCellIDBySingleCellName(cellName);
-				singleCellIDs.add(singleCellID);
+
 				final SingleCell cell = SingleCellsMetaInformationReader.getSingleCellByCellID(singleCellID);
+				if (cell == null) {
+					// this can be if PCTSEA.SINGLE_CELL_TYPE_FOR_DEBUGGING is enabled and only
+					// cells from a certain cell type are available and the rest are missing.
+					return;
+				}
+				if (PCTSEA.SINGLE_CELL_TYPE_FOR_DEBUGGING != null) {
+					if (!PCTSEA.SINGLE_CELL_TYPE_FOR_DEBUGGING.equals(cell.getCellType())) {
+						return;
+					}
+				}
+				singleCellIDs.add(singleCellID);
 				cell.addGeneExpressionValue(geneID, expression);
 				final String cellTypeName = cell.getCellType();
 				final Gene gene = getExpressionsOfGene(geneID);
