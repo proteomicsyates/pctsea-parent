@@ -164,6 +164,10 @@ public class PCTSEA {
 	private String resultsViewerURL;
 	private static final double CELL_TYPE_FDR_SIGNIFICANCE_THRESHOLD = 0.05;
 	private static final int MAX_SINGLE_CELLS_FOR_SCORE = 60000;
+	public static final FastDateFormat dateFormatter = FastDateFormat.getInstance("yyyy-MM-dd_HH-mm-ss");
+	public static final String NEGATIVE_EWS_FROM_HERE = "------------------------- Negative ews from here -------------------------";
+	public static final int UMAP_DIMENSIONS = 4;
+	public static final String SINGLE_CELL_TYPE_FOR_DEBUGGING = null;// "pericyte";
 
 	public PCTSEA(InputParameters inputParameters, ExpressionMongoRepository expressionMongoRepo,
 			SingleCellMongoRepository singleCellMongoRepo, PctseaRunLogRepository runLogsRepo,
@@ -347,7 +351,8 @@ public class PCTSEA {
 					// note that we still have all single cells in singleCellList also with the ones
 					// that dont pass the threshold
 
-					if (numCellsPassingScoreThreshold < MIN_CELLS_PASSING_SCORE_TRESHOLD) {
+					if (PCTSEA.SINGLE_CELL_TYPE_FOR_DEBUGGING == null
+							&& numCellsPassingScoreThreshold < MIN_CELLS_PASSING_SCORE_TRESHOLD) {
 						throw new IllegalArgumentException(
 								"There is not enough cells passing the " + scoringMethod.getScoreName() + " threshold:"
 										+ scoreThreshold + " (minimum is " + MIN_CELLS_PASSING_SCORE_TRESHOLD + ")");
@@ -360,7 +365,7 @@ public class PCTSEA {
 
 							final SingleCell cell = iterator.next();
 							if (cell.getScoreForRanking() < 0) {
-								iterator.remove();
+//								iterator.remove();
 							}
 						}
 						ConcurrentUtil.sleep(1L);
@@ -649,10 +654,6 @@ public class PCTSEA {
 		inputParameters.setPlotNegativeEnriched(plotNegativeEnrichedCellTypes);
 		return inputParameters;
 	}
-
-	public static final FastDateFormat dateFormatter = FastDateFormat.getInstance("yyyy-MM-dd_HH-mm-ss");
-	public static final String NEGATIVE_EWS_FROM_HERE = "------------------------- Negative ews from here -------------------------";
-	public static final int UMAP_DIMENSIONS = 4;
 
 	private String createTimeStamp(String prefix) {
 		return FileUtils.checkInvalidCharacterNameForFileName(dateFormatter.format(new Date()) + "_" + prefix);
@@ -1273,6 +1274,12 @@ public class PCTSEA {
 //				continue;
 //			}
 			cellID++;
+
+			if (SINGLE_CELL_TYPE_FOR_DEBUGGING != null) {
+				if (!SINGLE_CELL_TYPE_FOR_DEBUGGING.equals(singleCelldb.getType())) {
+					continue;
+				}
+			}
 
 			final SingleCell sc = new SingleCell(cellID, singleCelldb.getName(), Double.NaN, numInputGenes);
 
@@ -2230,7 +2237,7 @@ public class PCTSEA {
 
 				switch (scoringMethod) {
 				case PEARSONS_CORRELATION:
-					singleCell.calculateCorrelation(interactorExpressions, takeZerosForCorrelation,
+					singleCell.calculateCorrelation(interactorExpressions,
 							scoreSchema.getMinNumberExpressedGenesInCell(), getExpressionsUsedForScore);
 					break;
 				case SIMPLE_SCORE:
