@@ -18,16 +18,15 @@ public class ScoringSchema implements Serializable {
 	private static final long serialVersionUID = 2747351373269915643L;
 	private ScoringMethod scoringMethod;
 	private ScoreThreshold scoringThreshold;
-	private int minNumberExpressedGenesInCell;
 
 	public ScoringSchema() {
 
 	}
 
-	public ScoringSchema(ScoringMethod scoringMethod, ScoreThreshold threshold, int minNumberExpressedGenesInCell) {
+	public ScoringSchema(ScoringMethod scoringMethod, ScoreThreshold threshold) {
 		this.scoringMethod = scoringMethod;
 		scoringThreshold = threshold;
-		this.minNumberExpressedGenesInCell = minNumberExpressedGenesInCell;
+
 	}
 
 	public ScoringMethod getScoringMethod() {
@@ -38,20 +37,12 @@ public class ScoringSchema implements Serializable {
 		return scoringThreshold;
 	}
 
-	public int getMinNumberExpressedGenesInCell() {
-		return minNumberExpressedGenesInCell;
-	}
-
 	public void setScoringMethod(ScoringMethod scoringMethod) {
 		this.scoringMethod = scoringMethod;
 	}
 
 	public void setScoringThreshold(ScoreThreshold scoringThreshold) {
 		this.scoringThreshold = scoringThreshold;
-	}
-
-	public void setMinNumberExpressedGenesInCell(int minNumberExpressedGenesInCell) {
-		this.minNumberExpressedGenesInCell = minNumberExpressedGenesInCell;
 	}
 
 }

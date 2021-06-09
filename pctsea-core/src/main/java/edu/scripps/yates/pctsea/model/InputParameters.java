@@ -11,6 +11,7 @@ import edu.scripps.yates.pctsea.scoring.NoThreshold;
 import edu.scripps.yates.pctsea.scoring.ScoreThreshold;
 
 public class InputParameters {
+
 	@Override
 	public String toString() {
 		final StringBuilder scoringSchemasString = new StringBuilder();
@@ -23,11 +24,11 @@ public class InputParameters {
 		}
 
 		String string = "InputParameters [writeScoresFile=" + writeScoresFile + ", email=" + email + ", inputDataFile="
-				+ inputDataFile + ", minGenesCells=" + minGenesCells + ", outputPrefix=" + outputPrefix
-				+ ", loadRandom=" + loadRandom + ", numPermutations=" + numPermutations + ", cellTypesClassification="
-				+ cellTypeBranch + ", plotNegativeEnriched=" + plotNegativeEnriched + ", uniprotRelease="
-				+ uniprotRelease + ", scoringSchemas=" + scoringSchemasString.toString() + ", inputDataType="
-				+ inputDataType + ", datasets=";
+				+ inputDataFile + ", minGenesCells=" + minGenesCells + ", discard_neg_corr=" + minCorr
+				+ ", outputPrefix=" + outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations="
+				+ numPermutations + ", cellTypesClassification=" + cellTypeBranch + ", plotNegativeEnriched="
+				+ plotNegativeEnriched + ", uniprotRelease=" + uniprotRelease + ", scoringSchemas="
+				+ scoringSchemasString.toString() + ", inputDataType=" + inputDataType + ", datasets=";
 		if (datasets != null) {
 			for (final Dataset dataset : datasets) {
 				string += dataset.getTag() + "|";
@@ -55,11 +56,14 @@ public class InputParameters {
 	private String email;
 	private String inputDataFile;
 	private int minGenesCells;
+
 	@NotNull
 	private String outputPrefix;
 	private boolean loadRandom;
 	private int numPermutations;
 	private CellTypeBranch cellTypeBranch;
+	private Double minCorr;
+
 	private boolean plotNegativeEnriched;
 	private Set<Dataset> datasets;
 	private boolean writeScoresFile;
@@ -80,6 +84,7 @@ public class InputParameters {
 	public static final String UNIPROT_RELEASE = "uniprot_release";
 	public static final String SCORING_METHOD = "scoring_method";
 	public static final String INPUT_DATA_TYPE = "input_data_type";
+	public static final String MINIMUM_CORRELATION = "min_corr";
 
 	public String getInputDataFile() {
 		return inputDataFile;
@@ -89,7 +94,7 @@ public class InputParameters {
 		this.inputDataFile = inputDataFile;
 	}
 
-	public void addScoringSchema(ScoringMethod scoringMethod, double minScore, int minNumberExpressedGenesInCell) {
+	public void addScoringSchema(ScoringMethod scoringMethod, double minScore) {
 		ScoreThreshold threshold = null;
 		if (scoringMethod == ScoringMethod.QUICK_SCORE) {
 			threshold = new NoThreshold();
@@ -97,7 +102,7 @@ public class InputParameters {
 			threshold = new ScoreThreshold(minScore);
 		}
 
-		final ScoringSchema schema = new ScoringSchema(scoringMethod, threshold, minNumberExpressedGenesInCell);
+		final ScoringSchema schema = new ScoringSchema(scoringMethod, threshold);
 		scoringSchemas.add(schema);
 	}
 
@@ -198,4 +203,19 @@ public class InputParameters {
 
 	}
 
+	public Double getMinCorr() {
+		return minCorr;
+	}
+
+	public void setMinCorr(Double minCorr) {
+		this.minCorr = minCorr;
+	}
+
+	public int getMinGenesCells() {
+		return minGenesCells;
+	}
+
+	public void setMinGenesCells(int minGenesCells) {
+		this.minGenesCells = minGenesCells;
+	}
 }

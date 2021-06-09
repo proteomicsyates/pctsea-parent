@@ -31,9 +31,7 @@ import edu.scripps.yates.utilities.swing.CommandLineProgramGuiEnclosable;
 import edu.scripps.yates.utilities.swing.DoNotInvokeRunMethod;
 import edu.scripps.yates.utilities.swing.SomeErrorInParametersOcurred;
 import gnu.trove.list.TDoubleList;
-import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TDoubleArrayList;
-import gnu.trove.list.array.TIntArrayList;
 
 public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private final PCTSEA pctsea;
@@ -43,7 +41,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private String email;
 	private File experimentExpressionFile;
 	private TDoubleList scoresPerRound;
-	private TIntList minNumberExpressedGenesInCellPerRound;
+	private int minNumberExpressedGenes;
 	private boolean loadRandomDistributionsIfExist;
 	private int maxIterations;
 	private CellTypeBranch cellTypeBranch;
@@ -53,6 +51,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private String uniprotRelease;
 	private List<ScoringMethod> scoringMethodsPerRound;
 	private InputDataType inputDataType;
+	private double minCorr;
 
 	public PCTSEACommandLine(String[] args, DatasetMongoRepository dmr, ExpressionMongoRepository emr,
 			SingleCellMongoRepository scmr, PctseaRunLogRepository runLog, CellTypeAndGeneMongoRepository ctgmr,
@@ -69,16 +68,15 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			pctsea.setPrefix(prefix);
 			pctsea.setEmail(email);
 			pctsea.setExperimentExpressionFile(experimentExpressionFile);
+			pctsea.setMinNumberExpressedGenesInCells(minNumberExpressedGenes);
 			for (int i = 0; i < scoringMethodsPerRound.size(); i++) {
 
 				final ScoringMethod scoringMethod = scoringMethodsPerRound.get(i);
-				final int minNumberExpressedGenesInCell = minNumberExpressedGenesInCellPerRound.get(i);
+
 				if (scoringMethod == ScoringMethod.QUICK_SCORE) {
-					pctsea.addScoreSchema(
-							new ScoringSchema(scoringMethod, new NoThreshold(), minNumberExpressedGenesInCell));
+					pctsea.addScoreSchema(new ScoringSchema(scoringMethod, new NoThreshold()));
 				} else {
-					pctsea.addScoreSchema(new ScoringSchema(scoringMethod, new ScoreThreshold(scoresPerRound.get(i)),
-							minNumberExpressedGenesInCell));
+					pctsea.addScoreSchema(new ScoringSchema(scoringMethod, new ScoreThreshold(scoresPerRound.get(i))));
 				}
 			}
 
@@ -89,7 +87,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			pctsea.setDatasets(datasets);
 			pctsea.setWriteCorrelationsFile(writeCorrelationsFile);
 			pctsea.setUniprotRelease(uniprotRelease);
-
+			pctsea.setMinimumCorrelation(minCorr);
 			pctsea.setInputDataType(inputDataType);
 			// to make log go to the textarea when calling to the status listener
 			pctsea.setStatusListener(this);
@@ -181,26 +179,18 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			scoresPerRound.add(0.1);
 		}
 
-		minNumberExpressedGenesInCellPerRound = new TIntArrayList();
+		minNumberExpressedGenes = 4;
 		if (cmd.hasOption(InputParameters.MIN_GENES_CELLS)) {
 			final String mgcString = cmd.getOptionValue(InputParameters.MIN_GENES_CELLS);
 			try {
-				if (mgcString.contains(",")) {
-					final String[] split = mgcString.split(",");
-					for (final String string : split) {
-						final int minNumberExpressedGenesInCellNumber = Integer.valueOf(string);
-						minNumberExpressedGenesInCellPerRound.add(minNumberExpressedGenesInCellNumber);
-					}
-				} else {
-					final int minNumberExpressedGenesInCellNumber = Integer.valueOf(mgcString);
-					minNumberExpressedGenesInCellPerRound.add(minNumberExpressedGenesInCellNumber);
-				}
+
+				minNumberExpressedGenes = Integer.valueOf(mgcString);
 
 			} catch (final Exception e) {
 				e.printStackTrace();
 				errorInParameters("option '" + InputParameters.MIN_GENES_CELLS + "' ('"
 						+ cmd.getOptionValue(InputParameters.MIN_GENES_CELLS)
-						+ "') is not valid. Valid values are positive integers.");
+						+ "') is not valid. Valid value is a positive integers.");
 			}
 		}
 
@@ -268,6 +258,17 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			uniprotRelease = cmd.getOptionValue(InputParameters.UNIPROT_RELEASE).trim();
 		}
 
+		// discard by correlation
+		minCorr = -1.0;
+		if (cmd.hasOption(InputParameters.MINIMUM_CORRELATION)) {
+			try {
+				minCorr = Double.valueOf(cmd.getOptionValue(InputParameters.MINIMUM_CORRELATION).trim());
+			} catch (final NumberFormatException e) {
+				errorInParameters("Error in value for option '-" + InputParameters.MINIMUM_CORRELATION
+						+ "'. It must be a real number");
+			}
+		}
+
 		//
 		scoringMethodsPerRound = new ArrayList<ScoringMethod>();
 		if (cmd.hasOption(InputParameters.SCORING_METHOD)) {
@@ -277,10 +278,16 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 					final String[] split = scoringMethodString.split(",");
 					for (final String string : split) {
 						final ScoringMethod scoringMethod = ScoringMethod.getByScoreName(string.trim());
+						if (scoringMethod == null) {
+							throw new IllegalArgumentException();
+						}
 						scoringMethodsPerRound.add(scoringMethod);
 					}
 				} else {
 					final ScoringMethod scoringMethod = ScoringMethod.getByScoreName(scoringMethodString.trim());
+					if (scoringMethod == null) {
+						throw new IllegalArgumentException();
+					}
 					scoringMethodsPerRound.add(scoringMethod);
 				}
 
@@ -307,8 +314,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		}
 
 		// check the number of parameters regarding the scoring schema
-		final boolean valid = minNumberExpressedGenesInCellPerRound.size() == scoresPerRound.size()
-				&& scoresPerRound.size() == scoringMethodsPerRound.size();
+		final boolean valid = scoresPerRound.size() == scoringMethodsPerRound.size();
 		if (!valid) {
 			errorInParameters(
 					"The number of parameters (separated by commas if more than one) of the following parameters must be the same:"
@@ -406,6 +412,12 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		inputDataTypeOption.setRequired(true);
 		options.add(inputDataTypeOption);
 
+		final Option discardNegCorrOption = new Option(InputParameters.MINIMUM_CORRELATION, true,
+				"Filter cells that have lower pearson's correlation than this threshold. Only applicable for "
+						+ ScoringMethod.PEARSONS_CORRELATION.getScoreName() + " and "
+						+ ScoringMethod.SIMPLE_SCORE.getScoreName() + " scoring methods.");
+		discardNegCorrOption.setRequired(false);
+		options.add(discardNegCorrOption);
 		return options;
 	}
 

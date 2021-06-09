@@ -204,8 +204,11 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 				final float sqrt = Double.valueOf(Math.sqrt((sizea * sizeb * 1d) / (1d * (sizea + sizeb))))
 						.floatValue();
 				final float dStatistic = supremum * sqrt;
-				final double ksPvalue = ksPValue(supremum, sizea, sizeb);
+
 				if (!permutatedData) {
+//					final double ksPvalue = ksPValue(supremum, sizea, sizeb);
+					final double ksPvalue = test.kolmogorovSmirnovStatistic(scoresFromCellType.toArray(),
+							scoresForOtherCellTypes.toArray());
 					cellType.setSizeA(sizea);
 					cellType.setSizeB(sizeb);
 					final double normalizedSupremumX = 1d * supremumX / singleCellList.size();
@@ -471,8 +474,9 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 			return test.exactP(dStatistic, a, b, strict);
 		}
 		if (lengthProduct < LARGE_SAMPLE_PRODUCT) {
+			final double exactP = test.exactP(dStatistic, a, b, strict);
 			final double monteCarloP = test.monteCarloP(dStatistic, a, b, strict, MONTE_CARLO_ITERATIONS);
-
+			final double approximatedP = test.approximateP(dStatistic, a, b);
 			return monteCarloP;
 		}
 		return test.approximateP(dStatistic, a, b);

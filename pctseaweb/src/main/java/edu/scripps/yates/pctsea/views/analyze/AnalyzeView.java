@@ -57,6 +57,7 @@ import com.vaadin.flow.component.tabs.TabVariant;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.IntegerField;
+import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.Receiver;
@@ -104,11 +105,12 @@ public class AnalyzeView extends VerticalLayout {
 	 */
 	private static final long serialVersionUID = -2614242304318406941L;
 	private final TextField minScoreField = new TextField("Score threshold(s)", "0.1");
-	private final TextField minGenesCellsField = new TextField("Minimum number of proteins per cell", "5");
+	private final IntegerField minGenesCellsField = new IntegerField("Minimum number of proteins per cell");
 	private final MultiSelectListBox<Dataset> datasetsCombo = new MultiSelectListBox<Dataset>();
 	private final ComboBox<CellTypeBranch> cellTypeBranchCombo = new ComboBox<CellTypeBranch>(
 			"Level of cell type classification");
 	private final ComboBox<InputDataType> inputDataTypeCombo = new ComboBox<InputDataType>("Type of input data");
+	private final NumberField minimumCorrelationBox = new NumberField("Minimum Pearson's correlation", "0");
 	private final MultiSelectListBox<ScoringMethod> scoringMethodCombo = new MultiSelectListBox<ScoringMethod>();
 	private final TextField outputPrefixField = new TextField("Prefix for all output files", "experiment1");
 	private final EmailField emailField = new EmailField("Email", "your_email@domain.com");
@@ -193,13 +195,12 @@ public class AnalyzeView extends VerticalLayout {
 				+ InputParameters.SCORING_METHOD
 				+ " are provided, several values separated by commas must be provided for this parameter");
 		minGenesCellsField.setHelperText(
-				"Minimum number of proteins/genes that should have a non-zero expression value in a cell to be considered in the corresponding scoring."
-						+ " If several " + InputParameters.SCORING_METHOD
-						+ " are provided, several values separated by commas must be provided for this parameter");
+				"Minimum number of proteins/genes that should have a non-zero expression value in each cell to be considered in the analysis.");
 		numPermutationsField.setMin(10);
 		numPermutationsField.setHelperText(
 				"Number of permutations for calculating significance of the enrichment scores, being a value of 1000 reasonable. Minimum value: 10");
 
+		//
 		datasetsCombo.setRenderer(
 				new ComponentRenderer<VerticalLayout, Dataset>(VerticalLayout::new, (container, dataset) -> {
 					final Label label = new Label(dataset.getTag());
@@ -260,6 +261,12 @@ public class AnalyzeView extends VerticalLayout {
 					dialog.open();
 				}
 
+				if (!values.contains(ScoringMethod.PEARSONS_CORRELATION)
+						&& !values.contains(ScoringMethod.SIMPLE_SCORE)) {
+					minimumCorrelationBox.setEnabled(false);
+				} else {
+					minimumCorrelationBox.setEnabled(true);
+				}
 			}
 
 		});
@@ -318,6 +325,10 @@ public class AnalyzeView extends VerticalLayout {
 		binder.forField(datasetsCombo).bind(InputParameters::getDatasets, InputParameters::setDatasets);
 		binder.forField(inputDataTypeCombo).asRequired("Required").bind(InputParameters::getInputDataType,
 				InputParameters::setInputDataType);
+		binder.forField(minGenesCellsField).asRequired("Required")
+				.withValidator(num -> num > 0.0, "It must be a positive number")
+				.bind(InputParameters::getMinGenesCells, InputParameters::setMinGenesCells);
+
 //		binder.forField(generatePDFCheckbox).bind(InputParameters::isGeneratePDFCharts,
 //				InputParameters::setGeneratePDFCharts);
 
@@ -500,6 +511,24 @@ public class AnalyzeView extends VerticalLayout {
 		inputParameters.setPlotNegativeEnriched(false);
 		inputParameters.setInputDataFile(inputFile.getAbsolutePath());
 		inputParameters.setWriteScoresFile(false);
+
+		int minGenesCells = 0;
+		try {
+			minGenesCells = minGenesCellsField.getValue();
+			if (minGenesCells < 0.0) {
+				throw new NumberFormatException();
+			}
+		} catch (final NumberFormatException e) {
+			VaadinUtil.showErrorDialog(
+					"Error entering minimum proteins per cell. Only positive integer numbers are allowed.");
+			return;
+		}
+		inputParameters.setMinGenesCells(minGenesCells);
+
+		if (minimumCorrelationBox.isEnabled()) { // if it is not enabled is because we have a scoring method that
+													// doesn't use that
+			inputParameters.setMinCorr(minimumCorrelationBox.getValue());
+		}
 		final Set<ScoringMethod> scoringMethods = scoringMethodCombo.getValue();
 		if (scoringMethods.size() > 1) {
 			try {
@@ -516,22 +545,12 @@ public class AnalyzeView extends VerticalLayout {
 				if (minScoreFieldSplit.length != 2) {
 					throw new IllegalArgumentException();
 				}
-				if (!minGenesCellsField.getValue().contains(",")) {
-					throw new IllegalArgumentException(
-							"You should state 2 numbers in the minimum proteins per cell field.");
-				}
-				final String[] minProteinsPerCellFieldSplit = minGenesCellsField.getValue().split(",");
-				if (minProteinsPerCellFieldSplit.length != 2) {
-					throw new IllegalArgumentException(
-							"Only 2 numbers allowed in the minimum proteins per cell field.");
-				}
+
 				final ScoringSchema scoringSchema1 = new ScoringSchema(ScoringMethod.SIMPLE_SCORE,
-						new ScoreThreshold(Double.valueOf(minScoreFieldSplit[0])),
-						Integer.valueOf(minProteinsPerCellFieldSplit[0]));
+						new ScoreThreshold(Double.valueOf(minScoreFieldSplit[0])));
 				inputParameters.addScoringSchema(scoringSchema1);
 				final ScoringSchema scoringSchema2 = new ScoringSchema(ScoringMethod.PEARSONS_CORRELATION,
-						new ScoreThreshold(Double.valueOf(minScoreFieldSplit[1])),
-						Integer.valueOf(minProteinsPerCellFieldSplit[1]));
+						new ScoreThreshold(Double.valueOf(minScoreFieldSplit[1])));
 				inputParameters.addScoringSchema(scoringSchema2);
 
 			} catch (final Exception e) {
@@ -551,19 +570,8 @@ public class AnalyzeView extends VerticalLayout {
 				VaadinUtil.showErrorDialog("Error entering minimum score. Only positive real numbers are allowed.");
 				return;
 			}
-			Integer minGenesCells = null;
-			try {
-				minGenesCells = Integer.valueOf(minGenesCellsField.getValue());
-				if (minGenesCells < 0.0) {
-					throw new NumberFormatException();
-				}
-			} catch (final NumberFormatException e) {
-				VaadinUtil.showErrorDialog(
-						"Error entering minimum proteins per cell. Only positive integer numbers are allowed.");
-				return;
-			}
-			final ScoringSchema scoringSchema = new ScoringSchema(scoringMethods.iterator().next(), scoreThreshold,
-					minGenesCells);
+
+			final ScoringSchema scoringSchema = new ScoringSchema(scoringMethods.iterator().next(), scoreThreshold);
 			inputParameters.addScoringSchema(scoringSchema);
 
 		}
@@ -715,7 +723,7 @@ public class AnalyzeView extends VerticalLayout {
 		minScoreField.setValue("0,0.1");
 
 		//
-		minGenesCellsField.setValue("10,4");
+		minGenesCellsField.setValue(4);
 
 		//
 		numPermutationsField.setValue(1000);
@@ -907,9 +915,9 @@ public class AnalyzeView extends VerticalLayout {
 
 	private void clearForm() {
 		final InputParameters bean = new InputParameters();
-		final ScoringSchema scoringSchema = new ScoringSchema(ScoringMethod.SIMPLE_SCORE, new ScoreThreshold(0), 10);
+		final ScoringSchema scoringSchema = new ScoringSchema(ScoringMethod.SIMPLE_SCORE, new ScoreThreshold(0));
 		final ScoringSchema scoringSchema2 = new ScoringSchema(ScoringMethod.PEARSONS_CORRELATION,
-				new ScoreThreshold(0.1), 4);
+				new ScoreThreshold(0.1));
 
 		final List<ScoringSchema> scoringSchemas = new ArrayList<ScoringSchema>();
 		scoringSchemas.add(scoringSchema);
@@ -945,7 +953,7 @@ public class AnalyzeView extends VerticalLayout {
 			formLayout.add(scoringsPanel);
 			formLayout.add(minScoreField);
 			formLayout.add(minGenesCellsField);
-
+			formLayout.add(minimumCorrelationBox);
 			formLayout.add(numPermutationsField);
 
 		} else {

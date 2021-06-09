@@ -323,16 +323,49 @@ public class SingleCell {
 	/**
 	 * 
 	 * @param interactorExpressions
-	 * 
-	 * @param minNumInteractorsForCorrelation
 	 * @param getExpressionsUsedForCorrelation
-	 * 
+	 * @param minCorr                          minimum correlation
 	 * @return
 	 */
 	public double calculateCorrelation(InteractorsExpressionsRetriever interactorExpressions,
-			int minNumInteractorsForCorrelation, boolean getExpressionsUsedForCorrelation) {
-		return calculateCorrelation(interactorExpressions, minNumInteractorsForCorrelation,
-				getExpressionsUsedForCorrelation, false);
+			boolean getExpressionsUsedForCorrelation, Double minCorr) {
+		return calculateCorrelation(interactorExpressions, getExpressionsUsedForCorrelation, false, minCorr);
+	}
+
+	/**
+	 * Returns false when the cell doesn't have the minimum number of genes with a
+	 * expression > 0
+	 * 
+	 * @param interactorExpressions
+	 * @param minNumExpressedGenes
+	 * @return
+	 */
+	public boolean hasMinNumberOfExpressedGenes(InteractorsExpressionsRetriever interactorExpressions,
+			int minNumExpressedGenes) {
+
+		final TShortList geneIDs = interactorExpressions.getInteractorsGeneIDs();
+		if (minNumExpressedGenes > geneIDs.size()) {
+			throw new IllegalArgumentException(
+					"Minimum number of genes to be expressed in the cell lines (" + minNumExpressedGenes
+							+ ") is higher than the actual number of genes in the experimental input data ("
+							+ geneIDs.size() + ")");
+		}
+		int singleCellNonZero = 0;
+		for (final short geneID : geneIDs.toArray()) {
+
+			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID);
+//			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID)interactorExpressions.getExpressionsOfGene(geneID)
+//					.getSingleCellExpression(this.getId());
+			final float interactorExpression = interactorExpressions.getInteractionExpressionInOurExperiment(geneID);
+			// get only pairs of values when both values are > 0.0
+			if (geneExpressionInSingleCell > 0.0f && interactorExpression > 0.0f) {
+				singleCellNonZero++;
+			}
+		}
+		if (singleCellNonZero < minNumExpressedGenes) {
+			return false;
+		}
+		return true;
 	}
 
 	/**
@@ -345,8 +378,7 @@ public class SingleCell {
 	 * @return
 	 */
 	private double calculateCorrelation(InteractorsExpressionsRetriever interactorExpressions,
-			int minNumInteractorsForCorrelation, boolean getExpressionsUsedForCorrelation,
-			boolean makeCorrelationAsSimpleScore) {
+			boolean getExpressionsUsedForCorrelation, boolean makeCorrelationAsSimpleScore, Double minCorr) {
 //		// in case of having a percentage
 //		if (minNumInteractorsForCorrelation <= 1.0) {
 //			final int numInteractors = interactorExpressions.getInteractorsGeneIDs().size();
@@ -354,12 +386,6 @@ public class SingleCell {
 //		}
 
 		final TShortList geneIDs = interactorExpressions.getInteractorsGeneIDs();
-		if (minNumInteractorsForCorrelation > geneIDs.size()) {
-			throw new IllegalArgumentException(
-					"Minimum number of genes to be expressed in the cell lines (" + minNumInteractorsForCorrelation
-							+ ") is higher than the actual number of genes in the experimental input data ("
-							+ geneIDs.size() + ")");
-		}
 
 		final TDoubleList interactorsExpressionsToCorrelate = new TDoubleArrayList();
 		final TDoubleList genesExpressionsToCorrelate = new TDoubleArrayList();
@@ -403,65 +429,62 @@ public class SingleCell {
 		// check variance of gene expressions to correlate
 		geneExpressionVariance = Maths.var(genesExpressionsToCorrelate.toArray());
 		final double interactorsExpressionVariance = Maths.var(interactorsExpressionsToCorrelate.toArray());
-		if (singleCellNonZero < Math.max(2, minNumInteractorsForCorrelation)) {
-			setScore(Double.NaN);
-		} else {
-			if (Double.compare(geneExpressionVariance, 0.0) == 0) {
 
-				// we need to include some variance
-				for (int i = 0; i < genesExpressionsToCorrelate.size(); i++) {
-					final double delta = Math.random() / 1000000;
-					genesExpressionsToCorrelate.set(i, genesExpressionsToCorrelate.get(i) + delta);
-				}
-			}
-			if (Double.compare(interactorsExpressionVariance, 0.0) == 0) {
+		if (Double.compare(geneExpressionVariance, 0.0) == 0) {
 
-				// we need to include some variance
-				for (int i = 0; i < interactorsExpressionsToCorrelate.size(); i++) {
-					final double delta = Math.random() / 1000000;
-					interactorsExpressionsToCorrelate.set(i, interactorsExpressionsToCorrelate.get(i) + delta);
-				}
+			// we need to include some variance
+			for (int i = 0; i < genesExpressionsToCorrelate.size(); i++) {
+				final double delta = Math.random() / 1000000;
+				genesExpressionsToCorrelate.set(i, genesExpressionsToCorrelate.get(i) + delta);
 			}
-			double score = correlationCalculator.correlation(interactorsExpressionsToCorrelate.toArray(),
-					genesExpressionsToCorrelate.toArray());
-			if (!Double.isNaN(score)) {
+		}
+		if (Double.compare(interactorsExpressionVariance, 0.0) == 0) {
+
+			// we need to include some variance
+			for (int i = 0; i < interactorsExpressionsToCorrelate.size(); i++) {
+				final double delta = Math.random() / 1000000;
+				interactorsExpressionsToCorrelate.set(i, interactorsExpressionsToCorrelate.get(i) + delta);
+			}
+		}
+		double score = correlationCalculator.correlation(interactorsExpressionsToCorrelate.toArray(),
+				genesExpressionsToCorrelate.toArray());
+		if (!Double.isNaN(score)) {
 //				System.out.println("Correlations in cell " + getId() + " before was " + correlation + " and now is "
 //						+ correlation2);
-			}
-			if (makeCorrelationAsSimpleScore) {
-				score += singleCellNonZero;
-			}
-			setScore(score);
 		}
+		if (minCorr != null && score < minCorr) {
+			score = Double.NaN;
+		} else if (makeCorrelationAsSimpleScore) {
+			score += singleCellNonZero;
+		}
+		setScore(score);
+
 		return score;
 	}
 
 	/**
 	 * 
 	 * @param interactorExpressions
-	 * @param minNumberExpressedGenesInCell
 	 * @param getExpressionsUsedForCorrelation
+	 * @param minCorr
 	 * 
 	 * @return
 	 */
 	public double calculateSimpleScore(InteractorsExpressionsRetriever interactorExpressions,
-			int minNumberExpressedGenesInCell, boolean getExpressionsUsedForCorrelation) {
-		return calculateCorrelation(interactorExpressions, minNumberExpressedGenesInCell,
-				getExpressionsUsedForCorrelation, true);
+			boolean getExpressionsUsedForCorrelation, Double minCorr) {
+		return calculateCorrelation(interactorExpressions, getExpressionsUsedForCorrelation, true, minCorr);
 	}
 
 	/**
 	 * 
 	 * @param interactorExpressions
 	 * @param takeZerosInCorrelation
-	 * @param minNumberExpressedGenesInCell
 	 * @param getExpressionsUsedForCorrelation
 	 * 
 	 * @return
 	 */
 	public double calculateDotProductScore(InteractorsExpressionsRetriever interactorExpressions,
-			boolean takeZerosInCorrelation, int minNumberExpressedGenesInCell,
-			boolean getExpressionsUsedForCorrelation) {
+			boolean takeZerosInCorrelation, boolean getExpressionsUsedForCorrelation) {
 //		// in case of having a percentage
 //		if (minNumInteractorsForCorrelation <= 1.0) {
 //			final int numInteractors = interactorExpressions.getInteractorsGeneIDs().size();
@@ -498,11 +521,7 @@ public class SingleCell {
 
 			}
 		}
-		if (nonZeroSingleCellGenesExpressionsToUse.size() < minNumberExpressedGenesInCell) {
-			// we dont have the minimum number of genes in the cell that match the input
-			setScore(Double.NaN);
-			return Double.NaN;
-		}
+
 		for (final String gene : genesUsedForScore) {
 			if (!"".equals(description.toString())) {
 				description.append(",");

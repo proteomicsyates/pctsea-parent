@@ -57,7 +57,7 @@ public class EmailUtil {
 		body.append("<li>" + InputParameters.LOAD_RANDOM + ": " + inputParameters.isLoadRandom() + "</li>");
 		body.append("<li>" + InputParameters.WRITE_SCORES + ": " + inputParameters.isWriteScoresFile() + "</li>");
 		body.append("<li>" + InputParameters.UNIPROT_RELEASE + ": " + inputParameters.getUniprotRelease() + "</li>");
-
+		body.append("<li>" + InputParameters.MIN_GENES_CELLS + ": " + inputParameters.getMinGenesCells() + "</li>");
 		int round = 1;
 		for (final ScoringSchema scoringSchemas : inputParameters.getScoringSchemas()) {
 			if (inputParameters.getScoringSchemas().size() > 1) {
@@ -67,8 +67,7 @@ public class EmailUtil {
 					+ scoringSchemas.getScoringMethod().getScoreName() + "</li>");
 			body.append("<li>" + InputParameters.MIN_SCORE + ": "
 					+ scoringSchemas.getScoringThreshold().getThresholdValue() + "</li>");
-			body.append("<li>" + InputParameters.MIN_GENES_CELLS + ": "
-					+ scoringSchemas.getMinNumberExpressedGenesInCell() + "</li>");
+
 			body.append("</ul></li>");
 			round++;
 		}
