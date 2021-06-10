@@ -165,7 +165,7 @@ public class PCTSEA {
 	private Double minCorr;
 	private int minNumberExpressedGenesInCells;
 	private static final double CELL_TYPE_FDR_SIGNIFICANCE_THRESHOLD = 0.05;
-	private static final int MAX_SINGLE_CELLS_FOR_SCORE = 60000;
+	private static final int MAX_SINGLE_CELLS_FOR_SCORE = Integer.MAX_VALUE;// 60000;
 	public static final FastDateFormat dateFormatter = FastDateFormat.getInstance("yyyy-MM-dd_HH-mm-ss");
 	public static final String NEGATIVE_EWS_FROM_HERE = "------------------------- Negative ews from here -------------------------";
 	public static final int UMAP_DIMENSIONS = 4;

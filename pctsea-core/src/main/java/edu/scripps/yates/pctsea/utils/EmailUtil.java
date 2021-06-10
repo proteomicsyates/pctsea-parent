@@ -58,6 +58,7 @@ public class EmailUtil {
 		body.append("<li>" + InputParameters.WRITE_SCORES + ": " + inputParameters.isWriteScoresFile() + "</li>");
 		body.append("<li>" + InputParameters.UNIPROT_RELEASE + ": " + inputParameters.getUniprotRelease() + "</li>");
 		body.append("<li>" + InputParameters.MIN_GENES_CELLS + ": " + inputParameters.getMinGenesCells() + "</li>");
+		body.append("<li>" + InputParameters.MINIMUM_CORRELATION + ": " + inputParameters.getMinCorr() + "</li>");
 		int round = 1;
 		for (final ScoringSchema scoringSchemas : inputParameters.getScoringSchemas()) {
 			if (inputParameters.getScoringSchemas().size() > 1) {

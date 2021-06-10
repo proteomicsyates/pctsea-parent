@@ -24,11 +24,11 @@ public class InputParameters {
 		}
 
 		String string = "InputParameters [writeScoresFile=" + writeScoresFile + ", email=" + email + ", inputDataFile="
-				+ inputDataFile + ", minGenesCells=" + minGenesCells + ", discard_neg_corr=" + minCorr
-				+ ", outputPrefix=" + outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations="
-				+ numPermutations + ", cellTypesClassification=" + cellTypeBranch + ", plotNegativeEnriched="
-				+ plotNegativeEnriched + ", uniprotRelease=" + uniprotRelease + ", scoringSchemas="
-				+ scoringSchemasString.toString() + ", inputDataType=" + inputDataType + ", datasets=";
+				+ inputDataFile + ", minGenesCells=" + minGenesCells + ", min_corr=" + minCorr + ", outputPrefix="
+				+ outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations=" + numPermutations
+				+ ", cellTypesClassification=" + cellTypeBranch + ", plotNegativeEnriched=" + plotNegativeEnriched
+				+ ", uniprotRelease=" + uniprotRelease + ", scoringSchemas=" + scoringSchemasString.toString()
+				+ ", inputDataType=" + inputDataType + ", datasets=";
 		if (datasets != null) {
 			for (final Dataset dataset : datasets) {
 				string += dataset.getTag() + "|";
