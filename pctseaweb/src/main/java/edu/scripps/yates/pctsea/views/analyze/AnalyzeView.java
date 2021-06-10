@@ -280,7 +280,12 @@ public class AnalyzeView extends VerticalLayout {
 			}
 
 		});
-
+//
+		minimumCorrelationBox
+				.setHelperText("Minimum Pearson's correlation to be considered for Scoring methods such as "
+						+ ScoringMethod.PEARSONS_CORRELATION.getScoreName() + " or "
+						+ ScoringMethod.SIMPLE_SCORE.getScoreName());
+		//
 		scoringMethodCombo.setRenderer(new ComponentRenderer<VerticalLayout, ScoringMethod>(VerticalLayout::new,
 				(container, scoringMethod) -> {
 					final Label label = new Label(scoringMethod.getScoreName());

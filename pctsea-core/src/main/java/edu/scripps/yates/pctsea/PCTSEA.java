@@ -455,6 +455,7 @@ public class PCTSEA {
 					writeGZipOutputFile(zipOutputFile, scoringSchema);
 				}
 				currentTimeStampFolderCreated = false;
+				resultsSubFolderGeneral = null;
 				resultsSubFolderForCellTypes = null;
 			}
 			// now we get the cell types that are significant in all rounds
