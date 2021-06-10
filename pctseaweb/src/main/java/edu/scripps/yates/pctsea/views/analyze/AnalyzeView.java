@@ -329,6 +329,10 @@ public class AnalyzeView extends VerticalLayout {
 				.withValidator(num -> num > 0.0, "It must be a positive number")
 				.bind(InputParameters::getMinGenesCells, InputParameters::setMinGenesCells);
 
+		binder.forField(minimumCorrelationBox).asRequired("Required")
+				.withValidator(num -> num >= -1 && num <= 1,
+						"Pearson's correlation should be a real number between -1 and 1")
+				.bind(InputParameters::getMinCorr, InputParameters::setMinCorr);
 //		binder.forField(generatePDFCheckbox).bind(InputParameters::isGeneratePDFCharts,
 //				InputParameters::setGeneratePDFCharts);
 
@@ -523,11 +527,10 @@ public class AnalyzeView extends VerticalLayout {
 					"Error entering minimum proteins per cell. Only positive integer numbers are allowed.");
 			return;
 		}
-		inputParameters.setMinGenesCells(minGenesCells);
 
-		if (minimumCorrelationBox.isEnabled()) { // if it is not enabled is because we have a scoring method that
+		if (!minimumCorrelationBox.isEnabled()) { // if it is not enabled is because we have a scoring method that
 													// doesn't use that
-			inputParameters.setMinCorr(minimumCorrelationBox.getValue());
+			inputParameters.setMinCorr(null);
 		}
 		final Set<ScoringMethod> scoringMethods = scoringMethodCombo.getValue();
 		if (scoringMethods.size() > 1) {

@@ -703,6 +703,8 @@ public class PCTSEA {
 		inputParameters.setNumPermutations(maxIterations);
 		inputParameters.setOutputPrefix(prefix);
 		inputParameters.setPlotNegativeEnriched(plotNegativeEnrichedCellTypes);
+		inputParameters.setMinCorr(minCorr);
+		inputParameters.setMinGenesCells(minNumberExpressedGenesInCells);
 		return inputParameters;
 	}
 
