@@ -57,18 +57,18 @@ public class EmailUtil {
 		body.append("<li>" + InputParameters.LOAD_RANDOM + ": " + inputParameters.isLoadRandom() + "</li>");
 		body.append("<li>" + InputParameters.WRITE_SCORES + ": " + inputParameters.isWriteScoresFile() + "</li>");
 		body.append("<li>" + InputParameters.UNIPROT_RELEASE + ": " + inputParameters.getUniprotRelease() + "</li>");
-		body.append("<li>" + InputParameters.MIN_GENES_CELLS + ": " + inputParameters.getMinGenesCells() + "</li>");
+
 		body.append("<li>" + InputParameters.MINIMUM_CORRELATION + ": " + inputParameters.getMinCorr() + "</li>");
 		int round = 1;
-		for (final ScoringSchema scoringSchemas : inputParameters.getScoringSchemas()) {
+		for (final ScoringSchema scoringSchema : inputParameters.getScoringSchemas()) {
 			if (inputParameters.getScoringSchemas().size() > 1) {
 				body.append("<li>Round " + round + ":<ul>");
 			}
-			body.append("<li>" + InputParameters.SCORING_METHOD + ": "
-					+ scoringSchemas.getScoringMethod().getScoreName() + "</li>");
+			body.append("<li>" + InputParameters.SCORING_METHOD + ": " + scoringSchema.getScoringMethod().getScoreName()
+					+ "</li>");
 			body.append("<li>" + InputParameters.MIN_SCORE + ": "
-					+ scoringSchemas.getScoringThreshold().getThresholdValue() + "</li>");
-
+					+ scoringSchema.getScoringThreshold().getThresholdValue() + "</li>");
+			body.append("<li>" + InputParameters.MIN_GENES_CELLS + ": " + scoringSchema.getMinGenesCells() + "</li>");
 			body.append("</ul></li>");
 			round++;
 		}

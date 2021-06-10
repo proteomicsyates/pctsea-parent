@@ -31,7 +31,9 @@ import edu.scripps.yates.utilities.swing.CommandLineProgramGuiEnclosable;
 import edu.scripps.yates.utilities.swing.DoNotInvokeRunMethod;
 import edu.scripps.yates.utilities.swing.SomeErrorInParametersOcurred;
 import gnu.trove.list.TDoubleList;
+import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TDoubleArrayList;
+import gnu.trove.list.array.TIntArrayList;
 
 public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private final PCTSEA pctsea;
@@ -41,7 +43,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private String email;
 	private File experimentExpressionFile;
 	private TDoubleList scoresPerRound;
-	private int minNumberExpressedGenes;
+	private TIntList minNumberExpressedGenes;
 	private boolean loadRandomDistributionsIfExist;
 	private int maxIterations;
 	private CellTypeBranch cellTypeBranch;
@@ -52,6 +54,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 	private List<ScoringMethod> scoringMethodsPerRound;
 	private InputDataType inputDataType;
 	private double minCorr;
+	private boolean createZipFile;
 
 	public PCTSEACommandLine(String[] args, DatasetMongoRepository dmr, ExpressionMongoRepository emr,
 			SingleCellMongoRepository scmr, PctseaRunLogRepository runLog, CellTypeAndGeneMongoRepository ctgmr,
@@ -68,15 +71,17 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			pctsea.setPrefix(prefix);
 			pctsea.setEmail(email);
 			pctsea.setExperimentExpressionFile(experimentExpressionFile);
-			pctsea.setMinNumberExpressedGenesInCells(minNumberExpressedGenes);
+
 			for (int i = 0; i < scoringMethodsPerRound.size(); i++) {
 
 				final ScoringMethod scoringMethod = scoringMethodsPerRound.get(i);
 
 				if (scoringMethod == ScoringMethod.QUICK_SCORE) {
-					pctsea.addScoreSchema(new ScoringSchema(scoringMethod, new NoThreshold()));
+					pctsea.addScoreSchema(
+							new ScoringSchema(scoringMethod, new NoThreshold(), minNumberExpressedGenes.get(i)));
 				} else {
-					pctsea.addScoreSchema(new ScoringSchema(scoringMethod, new ScoreThreshold(scoresPerRound.get(i))));
+					pctsea.addScoreSchema(new ScoringSchema(scoringMethod, new ScoreThreshold(scoresPerRound.get(i)),
+							minNumberExpressedGenes.get(i)));
 				}
 			}
 
@@ -89,6 +94,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			pctsea.setUniprotRelease(uniprotRelease);
 			pctsea.setMinimumCorrelation(minCorr);
 			pctsea.setInputDataType(inputDataType);
+			pctsea.setCreateZipFile(createZipFile);
 			// to make log go to the textarea when calling to the status listener
 			pctsea.setStatusListener(this);
 			final PCTSEAResult result = pctsea.run();
@@ -179,13 +185,18 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 			scoresPerRound.add(0.1);
 		}
 
-		minNumberExpressedGenes = 4;
+		minNumberExpressedGenes = new TIntArrayList();
 		if (cmd.hasOption(InputParameters.MIN_GENES_CELLS)) {
 			final String mgcString = cmd.getOptionValue(InputParameters.MIN_GENES_CELLS);
 			try {
-
-				minNumberExpressedGenes = Integer.valueOf(mgcString);
-
+				if (mgcString.contains(",")) {
+					final String[] split = mgcString.split(",");
+					for (final String string : split) {
+						minNumberExpressedGenes.add(Integer.valueOf(string.trim()));
+					}
+				} else {
+					minNumberExpressedGenes.add(Integer.valueOf(mgcString.trim()));
+				}
 			} catch (final Exception e) {
 				e.printStackTrace();
 				errorInParameters("option '" + InputParameters.MIN_GENES_CELLS + "' ('"
@@ -301,9 +312,7 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 					+ " is missing. Valid values are real numbers between -1 and 1");
 		}
 		//
-		if (cmd.hasOption(InputParameters.INPUT_DATA_TYPE))
-
-		{
+		if (cmd.hasOption(InputParameters.INPUT_DATA_TYPE)) {
 			try {
 				inputDataType = InputDataType.valueOf(cmd.getOptionValue(InputParameters.INPUT_DATA_TYPE).trim());
 			} catch (final Exception e) {
@@ -314,13 +323,27 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		}
 
 		// check the number of parameters regarding the scoring schema
-		final boolean valid = scoresPerRound.size() == scoringMethodsPerRound.size();
+		final boolean valid = scoresPerRound.size() == scoringMethodsPerRound.size()
+				&& scoringMethodsPerRound.size() == minNumberExpressedGenes.size();
 		if (!valid) {
 			errorInParameters(
-					"The number of parameters (separated by commas if more than one) of the following parameters must be the same:"
-							+ InputParameters.MIN_GENES_CELLS + "-" + InputParameters.MIN_SCORE + "_"
+					"The number of parameters (separated by commas if more than one) of the following parameters must be the same: "
+							+ InputParameters.MIN_GENES_CELLS + " - " + InputParameters.MIN_SCORE + " - "
 							+ InputParameters.SCORING_METHOD);
 		}
+
+		//
+		createZipFile = true; // by default is true
+		if (cmd.hasOption(InputParameters.CREATE_ZIP_FILE)) {
+			try {
+				createZipFile = Boolean.valueOf(cmd.getOptionValue(InputParameters.CREATE_ZIP_FILE).trim());
+			} catch (final Exception e) {
+				errorInParameters("Error in value for option '-" + InputParameters.CREATE_ZIP_FILE + "'. Value '"
+						+ cmd.getOptionValue(InputParameters.CREATE_ZIP_FILE).trim()
+						+ "' not recognized as true or false.");
+			}
+		}
+
 	}
 
 	@Override
@@ -412,12 +435,17 @@ public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
 		inputDataTypeOption.setRequired(true);
 		options.add(inputDataTypeOption);
 
-		final Option discardNegCorrOption = new Option(InputParameters.MINIMUM_CORRELATION, true,
+		final Option minCorrelationOption = new Option(InputParameters.MINIMUM_CORRELATION, true,
 				"Filter cells that have lower pearson's correlation than this threshold. Only applicable for "
 						+ ScoringMethod.PEARSONS_CORRELATION.getScoreName() + " and "
 						+ ScoringMethod.SIMPLE_SCORE.getScoreName() + " scoring methods.");
-		discardNegCorrOption.setRequired(false);
-		options.add(discardNegCorrOption);
+		minCorrelationOption.setRequired(false);
+		options.add(minCorrelationOption);
+
+		final Option writeZipOption = new Option(InputParameters.CREATE_ZIP_FILE, true,
+				"Creates a zip file compating all generated files. If not provided, the zip file will be created.");
+		writeZipOption.setRequired(false);
+		options.add(writeZipOption);
 		return options;
 	}
 

@@ -11,34 +11,10 @@ import edu.scripps.yates.pctsea.scoring.NoThreshold;
 import edu.scripps.yates.pctsea.scoring.ScoreThreshold;
 
 public class InputParameters {
-
-	@Override
-	public String toString() {
-		final StringBuilder scoringSchemasString = new StringBuilder();
-		for (final ScoringSchema scoringSchema : scoringSchemas) {
-			if (!"".equals(scoringSchemasString.toString())) {
-				scoringSchemasString.append("|");
-			}
-			scoringSchemasString.append(scoringSchema.getScoringMethod() + "-minScore="
-					+ scoringSchema.getScoringThreshold().getThresholdValue());
-		}
-
-		String string = "InputParameters [writeScoresFile=" + writeScoresFile + ", email=" + email + ", inputDataFile="
-				+ inputDataFile + ", minGenesCells=" + minGenesCells + ", min_corr=" + minCorr + ", outputPrefix="
-				+ outputPrefix + ", loadRandom=" + loadRandom + ", numPermutations=" + numPermutations
-				+ ", cellTypesClassification=" + cellTypeBranch + ", plotNegativeEnriched=" + plotNegativeEnriched
-				+ ", uniprotRelease=" + uniprotRelease + ", scoringSchemas=" + scoringSchemasString.toString()
-				+ ", inputDataType=" + inputDataType + ", datasets=";
-		if (datasets != null) {
-			for (final Dataset dataset : datasets) {
-				string += dataset.getTag() + "|";
-			}
-
-		} else {
-			string += "not specified";
-		}
-		return string + "]";
-	}
+	public static final double DEFAULT_MIN_SCORE_SIMPLE_SCORE = 0;
+	public static final double DEFAULT_MIN_SCORE_PEARSON = 0.2;
+	public static final int DEFAULT_MIN_GENES_CELLS_SIMPLE_SCORE = 10;
+	public static final int DEFAULT_MIN_GENES_CELLS_PEARSON = 4;
 
 //	private String getSeparatedValueString(Set<String> datasets2, String separator) {
 //		final StringBuilder sb = new StringBuilder();
@@ -55,7 +31,6 @@ public class InputParameters {
 
 	private String email;
 	private String inputDataFile;
-	private int minGenesCells;
 
 	@NotNull
 	private String outputPrefix;
@@ -67,6 +42,7 @@ public class InputParameters {
 	private boolean plotNegativeEnriched;
 	private Set<Dataset> datasets;
 	private boolean writeScoresFile;
+	private boolean createZipFile;
 	private String uniprotRelease;
 	private List<ScoringSchema> scoringSchemas = new ArrayList<ScoringSchema>();
 	private InputDataType inputDataType;
@@ -85,6 +61,7 @@ public class InputParameters {
 	public static final String SCORING_METHOD = "scoring_method";
 	public static final String INPUT_DATA_TYPE = "input_data_type";
 	public static final String MINIMUM_CORRELATION = "min_corr";
+	public static final String CREATE_ZIP_FILE = "create_zip";
 
 	public String getInputDataFile() {
 		return inputDataFile;
@@ -94,7 +71,7 @@ public class InputParameters {
 		this.inputDataFile = inputDataFile;
 	}
 
-	public void addScoringSchema(ScoringMethod scoringMethod, double minScore) {
+	public void addScoringSchema(ScoringMethod scoringMethod, double minScore, int minGenesCells) {
 		ScoreThreshold threshold = null;
 		if (scoringMethod == ScoringMethod.QUICK_SCORE) {
 			threshold = new NoThreshold();
@@ -102,7 +79,7 @@ public class InputParameters {
 			threshold = new ScoreThreshold(minScore);
 		}
 
-		final ScoringSchema schema = new ScoringSchema(scoringMethod, threshold);
+		final ScoringSchema schema = new ScoringSchema(scoringMethod, threshold, minGenesCells);
 		scoringSchemas.add(schema);
 	}
 
@@ -211,11 +188,40 @@ public class InputParameters {
 		this.minCorr = minCorr;
 	}
 
-	public int getMinGenesCells() {
-		return minGenesCells;
+	public boolean isCreateZipFile() {
+		return createZipFile;
 	}
 
-	public void setMinGenesCells(int minGenesCells) {
-		this.minGenesCells = minGenesCells;
+	public void setCreateZipFile(boolean createZipFile) {
+		this.createZipFile = createZipFile;
+	}
+
+	@Override
+	public String toString() {
+		final StringBuilder scoringSchemasString = new StringBuilder();
+		for (final ScoringSchema scoringSchema : scoringSchemas) {
+			if (!"".equals(scoringSchemasString.toString())) {
+				scoringSchemasString.append("|");
+			}
+			scoringSchemasString.append(scoringSchema.getScoringMethod() + "-minScore="
+					+ scoringSchema.getScoringThreshold().getThresholdValue() + "-minGenesCells="
+					+ scoringSchema.getMinGenesCells());
+		}
+
+		String string = "InputParameters [writeScoresFile=" + writeScoresFile + ", email=" + email + ", inputDataFile="
+				+ inputDataFile + ", min_corr=" + minCorr + ", outputPrefix=" + outputPrefix + ", createZipFile="
+				+ createZipFile + ", loadRandom=" + loadRandom + ", numPermutations=" + numPermutations
+				+ ", cellTypesClassification=" + cellTypeBranch + ", plotNegativeEnriched=" + plotNegativeEnriched
+				+ ", uniprotRelease=" + uniprotRelease + ", scoringSchemas=" + scoringSchemasString.toString()
+				+ ", inputDataType=" + inputDataType + ", datasets=";
+		if (datasets != null) {
+			for (final Dataset dataset : datasets) {
+				string += dataset.getTag() + "|";
+			}
+
+		} else {
+			string += "not specified";
+		}
+		return string + "]";
 	}
 }

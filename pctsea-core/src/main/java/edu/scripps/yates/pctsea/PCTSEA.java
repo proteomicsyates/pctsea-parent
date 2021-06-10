@@ -150,7 +150,7 @@ public class PCTSEA {
 	private Set<Dataset> datasets;
 
 	private boolean writeScoresFile = false;
-
+	private boolean createZipFile = true;
 	private String fromEmail;
 	private String uniprotRelease;
 	/**
@@ -163,7 +163,6 @@ public class PCTSEA {
 	private File resultsSubFolderGeneral;
 	private String resultsViewerURL;
 	private Double minCorr;
-	private int minNumberExpressedGenesInCells;
 	private static final double CELL_TYPE_FDR_SIGNIFICANCE_THRESHOLD = 0.05;
 	private static final int MAX_SINGLE_CELLS_FOR_SCORE = Integer.MAX_VALUE;// 60000;
 	public static final FastDateFormat dateFormatter = FastDateFormat.getInstance("yyyy-MM-dd_HH-mm-ss");
@@ -186,7 +185,6 @@ public class PCTSEA {
 		cellTypeBranch = inputParameters.getCellTypeBranch();
 
 		sequentialScoringSchemas.addAll(inputParameters.getScoringSchemas());
-		minNumberExpressedGenesInCells = inputParameters.getMinGenesCells();
 		experimentExpressionFile = new File(inputParameters.getInputDataFile());
 		loadRandomDistributionsIfExist = inputParameters.isLoadRandom();
 		maxIterations = inputParameters.getNumPermutations();
@@ -329,10 +327,6 @@ public class PCTSEA {
 			interactorExpressions.getInteractorsGeneIDs();
 			// we keep the number of cells that express the input genes
 			final int totalNumCellsInDB = singleCellList.size();
-			// filter by the minimum number of genes expressed in each cell
-			// this will remove the cells from the list that don't pass the filter
-			filterByMinimumNumberOfGenesExpressedInEachCell(singleCellList, interactorExpressions,
-					minNumberExpressedGenesInCells);
 
 			// log
 			runLog.setNumInputGenes(interactorExpressions.getInteractorsGeneIDs().size());
@@ -344,6 +338,12 @@ public class PCTSEA {
 			for (final ScoringSchema scoringSchema : sequentialScoringSchemas) {
 				log.info("Scoring schema: " + scoringSchema.getScoringMethod().getScoreName() + " with threshold: "
 						+ scoringSchema.getScoringThreshold());
+
+				// filter by the minimum number of genes expressed in each cell
+				// this will remove the cells from the list that don't pass the filter
+				final List<SingleCell> singleCellListForThisRound = filterByMinimumNumberOfGenesExpressedInEachCell(
+						singleCellList, interactorExpressions, scoringSchema.getMinGenesCells());
+
 				final ScoringMethod scoringMethod = scoringSchema.getScoringMethod();
 				final File zipOutputFile = getZipOutputFile(scoringMethod);
 				result.addResultsFile(zipOutputFile);
@@ -357,9 +357,9 @@ public class PCTSEA {
 				if (scoringMethod != ScoringMethod.QUICK_SCORE) {
 
 					// calculate correlations
-					final int numCellsPassingScoreThreshold = calculateScoresToRankSingleCells(singleCellList,
-							interactorExpressions, scoringSchema, writeScoresFile, true, true, takeZerosForCorrelation,
-							minCorr);
+					final int numCellsPassingScoreThreshold = calculateScoresToRankSingleCells(
+							singleCellListForThisRound, interactorExpressions, scoringSchema, writeScoresFile, true,
+							true, takeZerosForCorrelation, minCorr);
 					// log
 					runLog.setNumCellsPassingScoreThreshold(numCellsPassingScoreThreshold);
 					// note that we still have all single cells in singleCellList also with the ones
@@ -372,41 +372,41 @@ public class PCTSEA {
 										+ scoreThreshold + " (minimum is " + MIN_CELLS_PASSING_SCORE_TRESHOLD + ")");
 					}
 
-					// discard single cells that have negative correlation if scoring is correlation
-					if (scoringMethod == ScoringMethod.PEARSONS_CORRELATION) {
-						final Iterator<SingleCell> iterator = singleCellList.iterator();
-						while (iterator.hasNext()) {
-
-							final SingleCell cell = iterator.next();
-							if (cell.getScoreForRanking() < 0) {
-//								iterator.remove();
-							}
-						}
-						ConcurrentUtil.sleep(1L);
-						PCTSEA.logStatus(singleCellList.size() + " single cells have positive correlations (> 0)");
-					}
+//					// discard single cells that have negative correlation if scoring is correlation
+//					if (scoringMethod == ScoringMethod.PEARSONS_CORRELATION) {
+//						final Iterator<SingleCell> iterator = singleCellListForThisRound.iterator();
+//						while (iterator.hasNext()) {
+//
+//							final SingleCell cell = iterator.next();
+//							if (cell.getScoreForRanking() < 0) {
+////								iterator.remove();
+//							}
+//						}
+//						ConcurrentUtil.sleep(1L);
+//						PCTSEA.logStatus(singleCellList.size() + " single cells have positive correlations (> 0)");
+//					}
 					// make a chart with the histogram of number of genes used to correlate for each
 					// cells with and without the threshold
-					createHistogramOfCorrelatingGenes(singleCellList, null, scoringMethod);
-					createHistogramOfCorrelatingGenes(singleCellList, scoreThreshold.getThresholdValue(),
+					createHistogramOfCorrelatingGenes(singleCellListForThisRound, null, scoringMethod);
+					createHistogramOfCorrelatingGenes(singleCellListForThisRound, scoreThreshold.getThresholdValue(),
 							scoringMethod);
 					// make a chart with the distribution of correlations over the ranked list of
 					// cells
 					if (scoringMethod == ScoringMethod.PEARSONS_CORRELATION) {
-						createDistributionChartOfCorrelationsOverRankedCells(singleCellList, scoringSchema);
+						createDistributionChartOfCorrelationsOverRankedCells(singleCellListForThisRound, scoringSchema);
 					} else {
-						createDistributionChartOfScoresOverRankedCells(singleCellList, scoringSchema);
+						createDistributionChartOfScoresOverRankedCells(singleCellListForThisRound, scoringSchema);
 					}
 					ConcurrentUtil.sleep(1L);
 				}
 				// calculate hypergeometric statistics
 				// this creates the cell types that are part of the output
 				final List<CellTypeClassification> cellTypeClassificationsInRound = calculateHyperGeometricStatistics(
-						singleCellList, scoreThreshold, scoringMethod);
+						singleCellListForThisRound, scoreThreshold, scoringMethod);
 
 				// calculate enrichment scores with the Kolmogorov-Smirnov test
 				List<SingleCell> singleCellsPassingScoreThreshold = scoreThreshold
-						.getSingleCellsPassingThresholdSortedByScore(singleCellList);
+						.getSingleCellsPassingThresholdSortedByScore(singleCellListForThisRound);
 				singleCellsPassingScoreThreshold = singleCellsPassingScoreThreshold.subList(0,
 						Math.min(singleCellsPassingScoreThreshold.size() - 1, MAX_SINGLE_CELLS_FOR_SCORE));
 				if (scoringMethod != ScoringMethod.QUICK_SCORE) {
@@ -440,8 +440,7 @@ public class PCTSEA {
 				// with no filtering
 
 				// export to output: Prints cell type classifications into a table in a file
-				printCellTypeClassifications(cellTypeClassificationsInRound, singleCellList, scoringSchema,
-						minNumberExpressedGenesInCells);
+				printCellTypeClassifications(cellTypeClassificationsInRound, singleCellListForThisRound, scoringSchema);
 
 				// plots about suprema
 				createScatterPlotOfSuprema(cellTypeClassificationsInRound, plotNegativeEnrichedCellTypes,
@@ -452,8 +451,11 @@ public class PCTSEA {
 				// export file with genes involved in the correlations per cell type
 				printGenesInvolvedInScores(cellTypeClassificationsInRound, scoringSchema);
 
-				writeGZipOutputFile(zipOutputFile, scoringSchema);
+				if (createZipFile) {
+					writeGZipOutputFile(zipOutputFile, scoringSchema);
+				}
 				currentTimeStampFolderCreated = false;
+				resultsSubFolderForCellTypes = null;
 			}
 			// now we get the cell types that are significant in all rounds
 			final List<CellTypeClassification> cellTypeClassifications = getIntersection(cellTypesPerRound);
@@ -516,18 +518,18 @@ public class PCTSEA {
 	}
 
 	/**
-	 * It will remove the cells from the list that dont have enough genes expressed
-	 * from the input list
+	 * It will create a new list that will not have the cells that don't have enough
+	 * genes expressed from the input list
 	 * 
 	 * @param singleCellList
 	 * @param interactorExpressions
 	 * @param minNumberExpressedGenesInCells2
 	 */
-	private void filterByMinimumNumberOfGenesExpressedInEachCell(List<SingleCell> singleCellList,
+	private List<SingleCell> filterByMinimumNumberOfGenesExpressedInEachCell(List<SingleCell> singleCellList,
 			InteractorsExpressionsRetriever interactorExpressions, int minNumberExpressedGenesInCells) {
 		PCTSEA.logStatus("Filtering by minimum number of genes expressed in each cell ("
 				+ minNumberExpressedGenesInCells + ")...");
-
+		final List<SingleCell> ret = new ArrayList<SingleCell>();
 		final ProgressCounter counter = new ProgressCounter(singleCellList.size(),
 				ProgressPrintingType.PERCENTAGE_STEPS, 0, true);
 		counter.setSuffix("filtering by minimum number of genes (" + minNumberExpressedGenesInCells + ")...");
@@ -542,13 +544,15 @@ public class PCTSEA {
 			final SingleCell cell = iterator.next();
 			final boolean hasMinimumGenes = cell.hasMinNumberOfExpressedGenes(interactorExpressions,
 					minNumberExpressedGenesInCells);
-			if (!hasMinimumGenes) {
-				iterator.remove();
+			if (hasMinimumGenes) {
+				ret.add(cell);
+			} else {
 				numFiltered++;
 			}
 		}
-		PCTSEA.logStatus(singleCellList.size() + " single cells expressing the minimum number of genes (" + numFiltered
+		PCTSEA.logStatus(ret.size() + " single cells expressing the minimum number of genes (" + numFiltered
 				+ " were single cells discarded)");
+		return ret;
 	}
 
 	private List<CellTypeClassification> getIntersection(List<List<CellTypeClassification>> cellTypesPerRound) {
@@ -704,7 +708,7 @@ public class PCTSEA {
 		inputParameters.setOutputPrefix(prefix);
 		inputParameters.setPlotNegativeEnriched(plotNegativeEnrichedCellTypes);
 		inputParameters.setMinCorr(minCorr);
-		inputParameters.setMinGenesCells(minNumberExpressedGenesInCells);
+		inputParameters.setCreateZipFile(createZipFile);
 		return inputParameters;
 	}
 
@@ -1931,12 +1935,10 @@ public class PCTSEA {
 	 * @param cellTypeClassifications
 	 * @param singleCellList
 	 * @param scoringSchema
-	 * @param minNumberExpressedGenesInCell
 	 * @throws IOException
 	 */
 	private void printCellTypeClassifications(List<CellTypeClassification> cellTypeClassifications,
-			List<SingleCell> singleCellList, ScoringSchema scoringSchema, int minNumberExpressedGenesInCell)
-			throws IOException {
+			List<SingleCell> singleCellList, ScoringSchema scoringSchema) throws IOException {
 		logStatus("Printing output table...");
 		// sort cell type classifications by the enrichment score significancy, but
 		// keeping the negative scores at the end
@@ -2029,7 +2031,7 @@ public class PCTSEA {
 			paramsHeader.append("\n");
 			paramsHeader.append("Time:\t" + AutomaticGUICreator.getFormattedTime() + "\n");
 			paramsHeader.append(parameters);
-			paramsHeader.append("Total number of single cells with at least " + minNumberExpressedGenesInCell
+			paramsHeader.append("Total number of single cells with at least " + scoringSchema.getMinGenesCells()
 					+ " genes present in the input data:\t" + singleCellList.size() + "\n");
 			buffer.write(paramsHeader.toString());
 			fwParameters.write(paramsHeader.toString());
@@ -2118,24 +2120,26 @@ public class PCTSEA {
 		sb.append(InputParameters.OUT + " = " + prefix + "\n");
 		sb.append(InputParameters.PERM + " = " + maxIterations + "\n");
 		sb.append(InputParameters.EEF + " = " + experimentExpressionFile.getAbsolutePath() + "\n");
-
+		sb.append(InputParameters.MINIMUM_CORRELATION + " = " + minCorr + "\n");
 		for (int i = 0; i < sequentialScoringSchemas.size(); i++) {
 			final ScoringSchema scoringSchema = sequentialScoringSchemas.get(i);
 			if (sequentialScoringSchemas.size() > 1) {
 				sb.append("Round " + (i + 1) + "\n");
 			}
-			sb.append(InputParameters.SCORING_METHOD + " = " + scoringSchema.getScoringMethod().getScoreName() + "\n");
-			sb.append(
-					InputParameters.MIN_SCORE + " = " + scoringSchema.getScoringThreshold().getThresholdValue() + "\n");
+			sb.append("\t" + InputParameters.SCORING_METHOD + " = " + scoringSchema.getScoringMethod().getScoreName()
+					+ "\n");
+			sb.append("\t" + InputParameters.MIN_SCORE + " = " + scoringSchema.getScoringThreshold().getThresholdValue()
+					+ "\n");
+			sb.append("\t" + InputParameters.MIN_GENES_CELLS + " = " + scoringSchema.getMinGenesCells() + "\n");
 
 		}
-		sb.append(InputParameters.MIN_GENES_CELLS + " = " + minNumberExpressedGenesInCells + "\n");
+
 		sb.append(InputParameters.CELL_TYPES_CLASSIFICATION + " = " + cellTypeBranch + "\n");
 		sb.append(InputParameters.LOAD_RANDOM + " = " + loadRandomDistributionsIfExist + "\n");
 		sb.append(InputParameters.PLOT_NEGATIVE_ENRICHED + " = " + plotNegativeEnrichedCellTypes + "\n");
 		sb.append(InputParameters.WRITE_SCORES + " = " + writeScoresFile + "\n");
 		sb.append(InputParameters.UNIPROT_RELEASE + " = " + uniprotRelease + "\n");
-
+		sb.append(InputParameters.CREATE_ZIP_FILE + " = " + createZipFile + "\n");
 		return sb.toString();
 	}
 
@@ -2785,11 +2789,11 @@ public class PCTSEA {
 		this.minCorr = minCorr;
 	}
 
-	public int getMinNumberExpressedGenesInCells() {
-		return minNumberExpressedGenesInCells;
+	public boolean isCreateZipFile() {
+		return createZipFile;
 	}
 
-	public void setMinNumberExpressedGenesInCells(int minNumberExpressedGenesInCells) {
-		this.minNumberExpressedGenesInCells = minNumberExpressedGenesInCells;
+	public void setCreateZipFile(boolean createZipFile) {
+		this.createZipFile = createZipFile;
 	}
 }
