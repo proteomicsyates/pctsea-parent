@@ -30,16 +30,16 @@ import gnu.trove.map.hash.TIntIntHashMap;
 
 public class EnrichmentWeigthedScoreParallel extends Thread {
 
-	private final ParIterator<CellTypeClassification> iterator;
-	private final List<SingleCell> singleCellList = new ArrayList<SingleCell>();
-	private final KolmogorovSmirnovTest test = new KolmogorovSmirnovTest();
-	private final boolean permutatedData;
-	private final boolean plotNegativeEnrichedCellTypes;
-	private final String scoreName;
-	private final File resultsSubfolderForCellTypes;
-	private final String prefix;
-	private final boolean compensateWithNegativeSupremum;
-	private final ScoringMethod scoringMethod;
+	final ParIterator<CellTypeClassification> iterator;
+	final List<SingleCell> singleCellList = new ArrayList<SingleCell>();
+	final KolmogorovSmirnovTest test = new KolmogorovSmirnovTest();
+	final boolean permutatedData;
+	final boolean plotNegativeEnrichedCellTypes;
+	final String scoreName;
+	final File resultsSubfolderForCellTypes;
+	final String prefix;
+	final boolean compensateWithNegativeSupremum;
+	final ScoringMethod scoringMethod;
 
 	public EnrichmentWeigthedScoreParallel(ParIterator<CellTypeClassification> iterator, int numCore,
 			List<SingleCell> singleCellList, boolean permutatedData, boolean plotNegativeEnrichedCellTypes,
@@ -57,9 +57,9 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		this.scoringMethod = scoringMethod;
 	}
 
-	private class XYPoint {
-		private final int x;
-		private final float y;
+	class XYPoint {
+		final int x;
+		final float y;
 
 		XYPoint(int x, float y) {
 			this.x = x;
@@ -352,7 +352,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		}
 	}
 
-	private void writeScoreCalculationFile(String cellTypeName, int size, List<XYPoint> scoreSeriesType,
+	protected void writeScoreCalculationFile(String cellTypeName, int size, List<XYPoint> scoreSeriesType,
 			List<XYPoint> scoreSeriesOtherType, List<XYPoint> supremumLineSeries,
 			List<XYPoint> secondarySupremumLineSeries) throws IOException {
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes, cellTypeName + "_ews",
@@ -410,7 +410,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		buffer.close();
 	}
 
-	private void writeNumGenesHistogramFile(String cellTypeName, TIntIntMap histogramOfNumGenes) throws IOException {
+	protected void writeNumGenesHistogramFile(String cellTypeName, TIntIntMap histogramOfNumGenes) throws IOException {
 		final TIntIntMap histogramOfNumGenesAccumulative = new TIntIntHashMap();
 		final TIntList keys = new TIntArrayList(histogramOfNumGenes.keys());
 		keys.sort();
@@ -436,7 +436,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		buffer.close();
 	}
 
-	private void writeScoreDistributionFile(String cellTypeName, TDoubleList scoresFromCellType) throws IOException {
+	protected void writeScoreDistributionFile(String cellTypeName, TDoubleList scoresFromCellType) throws IOException {
 		final File outputTXTFile = PCTSEAUtils.getOutputTXTFile(resultsSubfolderForCellTypes, cellTypeName + "_corr",
 				prefix, scoringMethod);
 		final BufferedWriter buffer = new BufferedWriter(new FileWriter(outputTXTFile));
@@ -451,21 +451,21 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	 * When product of sample sizes is less than this value, 2-sample K-S test is
 	 * exact
 	 */
-	private static final int SMALL_SAMPLE_PRODUCT = 200;
+	protected static final int SMALL_SAMPLE_PRODUCT = 200;
 
 	/**
 	 * When product of sample sizes exceeds this value, 2-sample K-S test uses
 	 * asymptotic distribution for strict inequality p-value.
 	 */
-	private static final int LARGE_SAMPLE_PRODUCT = 10000;
+	protected static final int LARGE_SAMPLE_PRODUCT = 10000;
 
 	/**
 	 * Default number of iterations used by
 	 * {@link #monteCarloP(double, int, int, boolean, int)}
 	 */
-	private static final int MONTE_CARLO_ITERATIONS = 500;
+	protected static final int MONTE_CARLO_ITERATIONS = 500;
 
-	private double ksPValue(double dStatistic, int a, int b) {
+	protected double ksPValue(double dStatistic, int a, int b) {
 
 		final long lengthProduct = (long) a * b;
 		final boolean strict = true; // checks whether the supremum of random permutations of data are STRICTLY
@@ -489,7 +489,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	 * @param differences
 	 * @return
 	 */
-	private Pair<Integer, Float> lookForPriorNegativeSupremum(int supremumX, TFloatList differences) {
+	protected Pair<Integer, Float> lookForPriorNegativeSupremum(int supremumX, TFloatList differences) {
 		Pair<Integer, Float> ret = null;
 
 		float negativeSupremum = 0;
@@ -511,7 +511,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 
 	}
 
-	private int lookForSecondaryEnrichmentIndex(int supremumX, TFloatList differences) {
+	protected int lookForSecondaryEnrichmentIndex(int supremumX, TFloatList differences) {
 
 		int secondaryEnrichmentIndex = 0;
 		double previousDifference = 0;
