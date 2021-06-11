@@ -8,6 +8,7 @@ import java.util.Optional;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentUtil;
+import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.dependency.JsModule;
@@ -39,6 +40,10 @@ import edu.scripps.yates.pctsea.views.home.HomeView;
 @Push
 public class MainView extends AppLayout {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8555562304002467379L;
 	private final Tabs menu;
 
 	public MainView() {
@@ -121,5 +126,10 @@ public class MainView extends AppLayout {
 
 		}
 		super.onAttach(attachEvent);
+	}
+
+	@Override
+	protected void onDetach(DetachEvent detachEvent) {
+		super.onDetach(detachEvent);
 	}
 }

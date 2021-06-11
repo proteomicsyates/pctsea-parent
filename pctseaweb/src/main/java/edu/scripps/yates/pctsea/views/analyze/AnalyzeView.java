@@ -22,6 +22,7 @@ import javax.annotation.PostConstruct;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.vaadin.flow.component.Component;
@@ -71,6 +72,7 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 
 import edu.scripps.yates.pctsea.PCTSEA;
+import edu.scripps.yates.pctsea.WebAppContextListener;
 import edu.scripps.yates.pctsea.db.CellTypeAndGeneMongoRepository;
 import edu.scripps.yates.pctsea.db.Dataset;
 import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
@@ -99,6 +101,7 @@ import gnu.trove.set.hash.THashSet;
 @PageTitle("PCTSEA web - Analyze")
 @CssImport("./styles/views/analyze/analyze-view.css")
 public class AnalyzeView extends VerticalLayout {
+	private final static Logger log = Logger.getLogger(WebAppContextListener.class);
 
 	/**
 	 * 
@@ -153,7 +156,7 @@ public class AnalyzeView extends VerticalLayout {
 	private CellTypeAndGeneMongoRepository ctgmr;
 
 	private HorizontalLayout resultsPanel;
-	private ExecutorService executor;
+	public static ExecutorService executor = Executors.newFixedThreadPool(40);
 	private List<Dataset> datasetsFromDB;
 	private VerticalLayout inputParametersTabContent;
 	private boolean wasInNewLine;
@@ -644,9 +647,6 @@ public class AnalyzeView extends VerticalLayout {
 		// hide input parameters
 		inputParametersTabContent.setVisible(false);
 		statusArea.setValue("Starting run...");
-
-		// launch this in background
-		executor = Executors.newSingleThreadExecutor();
 
 		final Runnable currentPSEAJob = new Runnable() {
 

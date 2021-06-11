@@ -57,7 +57,7 @@ public class PCTSEALocalConfiguration {
 		if (property != null && !"".equals(property)) {
 			try {
 				final URI uri = new java.net.URL(property).toURI();
-				log.log(java.util.logging.Level.INFO, "URL is good: " + uri.toString());
+//				log.log(java.util.logging.Level.INFO, "URL is good: " + uri.toString());
 			} catch (MalformedURLException | URISyntaxException e) {
 				e.printStackTrace();
 				throw new PCTSEAConfigurationException(e);
