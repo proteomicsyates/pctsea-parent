@@ -183,7 +183,7 @@ public class PCTSEA {
 		this.runLogsRepo = runLogsRepo;
 
 		cellTypeBranch = inputParameters.getCellTypeBranch();
-
+		sequentialScoringSchemas.clear();
 		sequentialScoringSchemas.addAll(inputParameters.getScoringSchemas());
 		experimentExpressionFile = new File(inputParameters.getInputDataFile());
 		loadRandomDistributionsIfExist = inputParameters.isLoadRandom();
