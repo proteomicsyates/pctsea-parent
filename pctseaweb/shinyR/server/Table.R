@@ -82,7 +82,7 @@ observeEvent(enrichment_table(),{
 output$enrichmentDataTable2 <- DT::renderDT(
   {
     table <- enrichment_table()
-    table <- table[, c("cell type", "num cells of type", "num cells of type corr", "ews", "norm-ews", "2nd ews","empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value", "Num Genes Significant")]
+    table <- table[, c("cell type", "num cells of type", "num cells of type corr", "ews", "norm-ews", "2nd ews","supX","norm-supX", "empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value", "Num Genes Significant")]
     colnames(table)[2] <- "total num cells of type"
     colnames(table)[3] <- "num cells of type with score > threshold"
     datatable(
@@ -92,11 +92,11 @@ output$enrichmentDataTable2 <- DT::renderDT(
       options = list(
         pageLength = 10,
         dom = 'lftipr',
-        order = list(list(8, 'asc'), list(11, 'desc'), list(9, 'asc'))
+        order = list(list(10, 'asc'), list(13, 'desc'), list(11, 'asc'))
       )
     ) %>%
       formatRound(columns=c("empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value"), digits=4) %>%
-      formatRound(columns=c("ews", "2nd ews"), digits=2)
+      formatRound(columns=c("ews", "2nd ews","supX","norm-supX"), digits=2)
   }
 )
 # event that catches the selection on the table and updates the input selection of the dropdown
