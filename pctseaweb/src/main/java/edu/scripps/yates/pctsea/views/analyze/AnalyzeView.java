@@ -948,7 +948,7 @@ public class AnalyzeView extends VerticalLayout {
 	}
 
 	private void clearForm() {
-		final InputParameters bean = new InputParameters();
+		final InputParameters inputParameters = new InputParameters();
 		final ScoringSchema scoringSchema = new ScoringSchema(ScoringMethod.SIMPLE_SCORE,
 				new ScoreThreshold(InputParameters.DEFAULT_MIN_SCORE_SIMPLE_SCORE),
 				InputParameters.DEFAULT_MIN_GENES_CELLS_SIMPLE_SCORE);
@@ -959,12 +959,12 @@ public class AnalyzeView extends VerticalLayout {
 		final List<ScoringSchema> scoringSchemas = new ArrayList<ScoringSchema>();
 		scoringSchemas.add(scoringSchema);
 		scoringSchemas.add(scoringSchema2);
-		bean.setScoringSchemas(scoringSchemas);
-		bean.setNumPermutations(1000);
-		bean.setCellTypeBranch(CellTypeBranch.ORIGINAL);
-		bean.setInputDataType(null);
-		bean.setEmail(null);
-		binder.setBean(bean);
+		inputParameters.setScoringSchemas(scoringSchemas);
+		inputParameters.setNumPermutations(1000);
+		inputParameters.setCellTypeBranch(CellTypeBranch.ORIGINAL);
+		inputParameters.setInputDataType(null);
+		inputParameters.setEmail(null);
+		binder.setBean(inputParameters);
 		inputFileDataTab.setEnabled(false);
 		inputFileDataTabContent.removeAll();
 	}
