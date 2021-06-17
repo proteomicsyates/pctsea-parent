@@ -70,7 +70,6 @@ createPlotWithUmap4D <- function(table, title){
 }
 createPlotWithUmap2D <- function(table, title){
   req(table)
-  browser()
   colnames(table)[1] <- 'cell type'
   colnames(table)[2] <- 'x'
   colnames(table)[3] <- 'y'
