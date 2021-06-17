@@ -5,13 +5,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.boot.logging.LogLevel;
-
-import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.model.CellTypeClassification;
 import edu.scripps.yates.pctsea.model.ScoringMethod;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.utilities.pi.ParIterator;
+import edu.scripps.yates.utilities.swing.StatusListener;
 import edu.scripps.yates.utilities.util.Pair;
 import gnu.trove.list.TDoubleList;
 import gnu.trove.list.TFloatList;
@@ -25,9 +23,9 @@ public class EnrichmentWeigthedScoreParallelBalanced extends EnrichmentWeigthedS
 	public EnrichmentWeigthedScoreParallelBalanced(ParIterator<CellTypeClassification> iterator, int numCore,
 			List<SingleCell> singleCellList, boolean permutatedData, boolean plotNegativeEnrichedCellTypes,
 			String scoreName, File resultsSubfolderForCellTypes, String prefix, boolean compensateWithNegativeSupremum,
-			ScoringMethod scoringMethod) {
+			ScoringMethod scoringMethod, StatusListener<Boolean> statusListener) {
 		super(iterator, numCore, singleCellList, permutatedData, plotNegativeEnrichedCellTypes, scoreName,
-				resultsSubfolderForCellTypes, prefix, compensateWithNegativeSupremum, scoringMethod);
+				resultsSubfolderForCellTypes, prefix, compensateWithNegativeSupremum, scoringMethod, statusListener);
 	}
 
 	@Override
@@ -309,9 +307,8 @@ public class EnrichmentWeigthedScoreParallelBalanced extends EnrichmentWeigthedS
 //				cellType.setHistogramOfCorrelatingGenesChart(chart2);
 				} catch (final IOException e) {
 					e.printStackTrace();
-					PCTSEA.logStatus(
-							"Some error occurred while writting files for " + cellTypeID + ": " + e.getMessage(),
-							LogLevel.ERROR);
+					statusListener.onStatusUpdate("ERROR: Some error occurred while writting files for " + cellTypeID
+							+ ": " + e.getMessage());
 				}
 			}
 

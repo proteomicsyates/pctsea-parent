@@ -141,7 +141,7 @@ public class PCTSEA {
 	protected Future<?> savingFiles;
 	private boolean plotNegativeEnrichedCellTypes;
 
-	private static StatusListener<Boolean> statusListener;
+	private StatusListener<Boolean> statusListener;
 
 	private String currentTimeStamp;
 
@@ -320,7 +320,7 @@ public class PCTSEA {
 			final List<SingleCell> singleCellList = getSingleCellListFromDB(datasets, cellTypeBranch, numGenes);
 
 			interactorExpressions = new InteractorsExpressionsRetriever(mongoBaseService, experimentExpressionFile,
-					datasets, uniprotRelease, runLog, singleCellList);
+					datasets, uniprotRelease, runLog, singleCellList, statusListener);
 
 			// we call this so that it output the log of looking for uniprot annotations and
 			// getting the expressions before going any further
@@ -383,7 +383,7 @@ public class PCTSEA {
 //							}
 //						}
 //						ConcurrentUtil.sleep(1L);
-//						PCTSEA.logStatus(singleCellList.size() + " single cells have positive correlations (> 0)");
+//						logStatus(singleCellList.size() + " single cells have positive correlations (> 0)");
 //					}
 					// make a chart with the histogram of number of genes used to correlate for each
 					// cells with and without the threshold
@@ -501,7 +501,7 @@ public class PCTSEA {
 				runLogsRepo.save(runLog);
 
 				if (runLog.getInputParameters().getEmail() != null && fromEmail != null) {
-					EmailUtil.sendEmailWithResults(result, fromEmail);
+					EmailUtil.sendEmailWithResults(result, fromEmail, statusListener);
 				}
 				log.info("PCTSEA got some results in "
 						+ DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime()));
@@ -528,8 +528,8 @@ public class PCTSEA {
 	 */
 	private List<SingleCell> filterByMinimumNumberOfGenesExpressedInEachCell(List<SingleCell> singleCellList,
 			InteractorsExpressionsRetriever interactorExpressions, int minNumberExpressedGenesInCells) {
-		PCTSEA.logStatus("Filtering by minimum number of genes expressed in each cell ("
-				+ minNumberExpressedGenesInCells + ")...");
+		logStatus("Filtering by minimum number of genes expressed in each cell (" + minNumberExpressedGenesInCells
+				+ ")...");
 		final List<SingleCell> ret = new ArrayList<SingleCell>();
 		final ProgressCounter counter = new ProgressCounter(singleCellList.size(),
 				ProgressPrintingType.PERCENTAGE_STEPS, 0, true);
@@ -540,7 +540,7 @@ public class PCTSEA {
 			counter.increment();
 			final String printIfNecessary = counter.printIfNecessary();
 			if (!"".equals(printIfNecessary)) {
-				PCTSEA.logStatus(printIfNecessary, false);
+				logStatus(printIfNecessary, false);
 			}
 			final SingleCell cell = iterator.next();
 			final boolean hasMinimumGenes = cell.hasMinNumberOfExpressedGenes(interactorExpressions,
@@ -551,7 +551,7 @@ public class PCTSEA {
 				numFiltered++;
 			}
 		}
-		PCTSEA.logStatus(ret.size() + " single cells expressing the minimum number of genes (" + numFiltered
+		logStatus(ret.size() + " single cells expressing the minimum number of genes (" + numFiltered
 				+ " were single cells discarded)");
 		return ret;
 	}
@@ -662,9 +662,8 @@ public class PCTSEA {
 			float quickScore = 0;
 			for (final GeneOccurrence geneOccurrence : genes) {
 				final String geneName = geneOccurrence.getGene();
-				final short geneID = InteractorsExpressionsRetriever.getInstance().getGeneID(geneName);
-				final int num_cells = InteractorsExpressionsRetriever.getInstance().getExpressionsOfGene(geneID)
-						.getSingleCellsIDs().size();
+				final short geneID = interactorExpressions.getGeneID(geneName);
+				final int num_cells = interactorExpressions.getExpressionsOfGene(geneID).getSingleCellsIDs().size();
 				final int num_cells_of_type = geneOccurrence.getOccurrence();
 				final float p = 1.0f * num_cells / num_cells_of_type;
 				if (quickScore == 0) {
@@ -814,8 +813,8 @@ public class PCTSEA {
 				for (final GeneOccurrence geneOccurrence : geneOccurrences) {
 
 					final String gene = geneOccurrence.getGene();
-					final short geneID = InteractorsExpressionsRetriever.getInstance().getGeneID(gene);
-					final Gene geneObject = InteractorsExpressionsRetriever.getInstance().getExpressionsOfGene(geneID);
+					final short geneID = interactorExpressions.getGeneID(gene);
+					final Gene geneObject = interactorExpressions.getExpressionsOfGene(geneID);
 					final int numSingleCellsInWhichIsExpressed = geneObject
 							.getNumSingleCellsInWhichIsExpressed(cellType.getName());
 					final long numSingleCellsOfType = cellType.getNumCellsOfTypePassingCorrelationThreshold();
@@ -975,10 +974,10 @@ public class PCTSEA {
 				}
 			}
 			fw.close();
-			PCTSEA.logStatus("Rank of cells by Pearson's correlation plot of suprema created.");
+			logStatus("Rank of cells by Pearson's correlation plot of suprema created.");
 		} catch (final IOException e) {
 			e.printStackTrace();
-			PCTSEA.logStatus("Some error occurred while creating chart for UMAP clustering: " + e.getMessage(),
+			logStatus("Some error occurred while creating chart for UMAP clustering: " + e.getMessage(),
 					LogLevel.ERROR);
 		}
 
@@ -1014,10 +1013,10 @@ public class PCTSEA {
 				}
 			}
 			fw.close();
-			PCTSEA.logStatus("Rank of cells by " + scoringMethod.getScoreName() + " plot created.");
+			logStatus("Rank of cells by " + scoringMethod.getScoreName() + " plot created.");
 		} catch (final IOException e) {
 			e.printStackTrace();
-			PCTSEA.logStatus("Some error occurred while creating chart for " + scoringMethod.getScoreName() + ": "
+			logStatus("Some error occurred while creating chart for " + scoringMethod.getScoreName() + ": "
 					+ e.getMessage(), LogLevel.ERROR);
 		}
 	}
@@ -1095,8 +1094,7 @@ public class PCTSEA {
 
 		} catch (final IOException e) {
 			e.printStackTrace();
-			PCTSEA.logStatus(
-					"Some error occurred while creating chart for histogram of correlating genes: " + e.getMessage(),
+			logStatus("Some error occurred while creating chart for histogram of correlating genes: " + e.getMessage(),
 					LogLevel.ERROR);
 		}
 
@@ -1407,7 +1405,7 @@ public class PCTSEA {
 					counter.increment();
 					final String printIfNecessary = counter.printIfNecessary();
 					if (!"".equals(printIfNecessary)) {
-						PCTSEA.logStatus(printIfNecessary, false);
+						logStatus(printIfNecessary, false);
 					}
 				} finally {
 					iteration++;
@@ -1416,7 +1414,7 @@ public class PCTSEA {
 			}
 
 			printToRandomDistributionFile(randomScoresFile, cellTypeClassifications);
-			PCTSEA.logStatus("Iterations  finished. Random scores distributions are stored at: "
+			logStatus("Iterations  finished. Random scores distributions are stored at: "
 					+ randomScoresFile.getAbsolutePath());
 			// we set back the original correlations values
 			for (int i = 0; i < singleCellsPassingScoreThreshold.size(); i++) {
@@ -1434,7 +1432,7 @@ public class PCTSEA {
 		// we do that by dividing the real scores by the average of the random scores
 		// this is done now when calling to cellType.getNormalizedEnrichmentScore()
 		final boolean onlyTakePositiveScores = true;
-		PCTSEA.logStatus("Calculating enrichment scores significance...");
+		logStatus("Calculating enrichment scores significance...");
 		for (final CellTypeClassification cellType : cellTypeClassifications) {
 			final float realScore = cellType.getEnrichmentScore();
 			if (Float.isNaN(realScore)) {
@@ -1465,7 +1463,7 @@ public class PCTSEA {
 
 		// FDR calculation. For this, we use all the random statistics and all the real
 		// statistics
-		PCTSEA.logStatus("Calculating False Discovery Rate for multiple hypothesis correction...");
+		logStatus("Calculating False Discovery Rate for multiple hypothesis correction...");
 		final TFloatList totalRealNormalizedScores = new TFloatArrayList();
 		final TFloatList totalRandomNormalizedScores = new TFloatArrayList();
 		for (final CellTypeClassification cellType : cellTypeClassifications) {
@@ -1560,7 +1558,7 @@ public class PCTSEA {
 
 	private JFreeChart createFDRCalculationPlot(TFloatList totalRealNormalizedScores,
 			TFloatList totalRandomNormalizedScores, ScoringMethod scoringMethod) {
-		PCTSEA.logStatus("Creating FDR calculation plot with " + totalRealNormalizedScores.size() + " real scores and "
+		logStatus("Creating FDR calculation plot with " + totalRealNormalizedScores.size() + " real scores and "
 				+ totalRandomNormalizedScores.size() + " random scores");
 		// create chart
 //		final DefaultCategoryDataset dataset = new DefaultCategoryDataset();
@@ -1625,7 +1623,7 @@ public class PCTSEA {
 
 		} catch (final IOException e) {
 			e.printStackTrace();
-			PCTSEA.logStatus("Some error occurred while creating chart for the multiple hypothesis correction: "
+			logStatus("Some error occurred while creating chart for the multiple hypothesis correction: "
 					+ e.getMessage(), LogLevel.ERROR);
 		}
 		return null;
@@ -1820,7 +1818,7 @@ public class PCTSEA {
 
 	private void readRandomDistributionFile(File randomScoresFile, List<CellTypeClassification> cellTypeClassifications)
 			throws IOException {
-		PCTSEA.logStatus("File with random score distributions found: '"
+		logStatus("File with random score distributions found: '"
 				+ FilenameUtils.getName(randomScoresFile.getAbsolutePath()) + "'. Loading distributions now...");
 		final Map<String, CellTypeClassification> cellTypeClassificationsPerName = new THashMap<String, CellTypeClassification>();
 		cellTypeClassifications.forEach(c -> cellTypeClassificationsPerName.put(c.getName(), c));
@@ -1852,7 +1850,7 @@ public class PCTSEA {
 		}
 
 		reader.close();
-		PCTSEA.logStatus("Random score distributions loaded.");
+		logStatus("Random score distributions loaded.");
 	}
 
 	/**
@@ -1892,7 +1890,7 @@ public class PCTSEA {
 			buffer.write("\n");
 		}
 		buffer.close();
-		PCTSEA.logStatus("File with null distributions of scores written at: " + randomScoresFile.getAbsolutePath());
+		logStatus("File with null distributions of scores written at: " + randomScoresFile.getAbsolutePath());
 	}
 
 	private File getRandomScoresFile(ScoringMethod scoringMethod) {
@@ -2146,12 +2144,12 @@ public class PCTSEA {
 
 	private List<CellTypeClassification> calculateHyperGeometricStatistics(List<SingleCell> singleCellList,
 			ScoreThreshold scoreThreshold, ScoringMethod scoringMethod) {
-//		PCTSEA.logStatus("Starting hyperG...");
+//		logStatus("Starting hyperG...");
 		final List<Integer> celltypes = singleCellList.stream().map(sc -> sc.getCellTypeID())
 				.filter(ct -> !ct.equals(-1)) // discard cell types that are unknown (-1)
 				.distinct().sorted().collect(Collectors.toList());
 		final String message = celltypes.size() + " different cell types with branch " + cellTypeBranch;
-		PCTSEA.logStatus(message);
+		logStatus(message);
 
 		// by cell types
 
@@ -2159,9 +2157,9 @@ public class PCTSEA {
 
 		final int numSingleCellsPassingThreshold = scoreThreshold.countSingleCellsPassingThreshold(singleCellList);
 //		final int numSingleCellsPassingThreshold = singleCellsPassingThreshold.size();
-//		PCTSEA.logStatus(numSingleCellsPassingThreshold + " single cells with " + scoringMethod.getScoreName()
+//		logStatus(numSingleCellsPassingThreshold + " single cells with " + scoringMethod.getScoreName()
 //				+ " passing threshold " + scoreThreshold);
-		PCTSEA.logStatus("Calculating hypergeometric statistics...");
+		logStatus("Calculating hypergeometric statistics...");
 		//
 		int N; // population size
 		int K; // successes in entire population
@@ -2234,13 +2232,13 @@ public class PCTSEA {
 				final Double casimirsEnrichmentScore = Maths.log(x, 2);
 				cellTypeClassification.setCasimirsEnrichmentScore(casimirsEnrichmentScore.floatValue());
 			} else {
-				PCTSEA.logStatus(cellTypeName + " cannot have a casimirs score because # of '" + cellTypeName
-						+ "' cells is " + numCellsOfType + " and # of '" + cellTypeName + "' cells with score "
-						+ scoreThreshold + " is " + numSingleCellsPassingThreshold);
+				logStatus(cellTypeName + " cannot have a casimirs score because # of '" + cellTypeName + "' cells is "
+						+ numCellsOfType + " and # of '" + cellTypeName + "' cells with score " + scoreThreshold
+						+ " is " + numSingleCellsPassingThreshold);
 			}
 			newCellTypeClassifications.add(cellTypeClassification);
 		}
-		PCTSEA.logStatus("Hypergeometric statistics calculated. " + numSignificantCellTypes
+		logStatus("Hypergeometric statistics calculated. " + numSignificantCellTypes
 				+ " cell types are significative (pvalue<0.05)");
 		return newCellTypeClassifications;
 	}
@@ -2270,7 +2268,7 @@ public class PCTSEA {
 		final int originalNumCells = singleCellList.size();
 		int numPassingThreshold = 0;
 		if (outputToLog) {
-			PCTSEA.logStatus("Calculating " + scoringMethod.getScoreName() + "...");
+			logStatus("Calculating " + scoringMethod.getScoreName() + "...");
 		}
 		// output correlations
 		BufferedWriter buffer = null;
@@ -2401,7 +2399,7 @@ public class PCTSEA {
 //			PCTSEAUtils.writeTXTFileForChart(chart, getResultsSubfolderGeneral(), prefix, fileName);
 
 		} catch (final IOException e) {
-			PCTSEA.logStatus("Some error occurred while creating chart for " + scoringMethod.getScoreName() + ": "
+			logStatus("Some error occurred while creating chart for " + scoringMethod.getScoreName() + ": "
 					+ e.getMessage(), LogLevel.ERROR);
 		}
 
@@ -2436,7 +2434,7 @@ public class PCTSEA {
 			List<SingleCell> singleCellList, boolean calculateUnweighted, boolean outputToLog, boolean permutatedData,
 			boolean plotNegativeEnrichedCellTypes, ScoringMethod scoringMethod) {
 		if (outputToLog) {
-			PCTSEA.logStatus("Calculating enrichment scores...");
+			logStatus("Calculating enrichment scores...");
 		}
 		// first set NaN correlations to zero
 		singleCellList.stream().forEach(s -> {
@@ -2472,7 +2470,7 @@ public class PCTSEA {
 			List<SingleCell> singleCellList, boolean outputToLog, boolean permutatedData,
 			boolean plotNegativeEnrichedCellTypes, ScoringMethod scoreMethod) {
 		if (outputToLog) {
-			PCTSEA.logStatus("Calculating weigthed enrichment score and KS statistics...");
+			logStatus("Calculating weigthed enrichment score and KS statistics...");
 		}
 		// sort by score from higher to lower
 		PCTSEAUtils.sortByScoreDescending(singleCellList);
@@ -2483,7 +2481,7 @@ public class PCTSEA {
 			// take current DB session
 			final EnrichmentWeigthedScoreParallel runner = new EnrichmentWeigthedScoreParallel(iterator, numCore,
 					singleCellList, permutatedData, plotNegativeEnrichedCellTypes, scoreMethod.getScoreName(),
-					getResultsSubfolderForCellTypes(scoreMethod), prefix, true, scoreMethod);
+					getResultsSubfolderForCellTypes(scoreMethod), prefix, true, scoreMethod, statusListener);
 			runners.add(runner);
 			runner.start();
 		}
@@ -2513,7 +2511,7 @@ public class PCTSEA {
 		final Runnable runnable = new Runnable() {
 			@Override
 			public void run() {
-				PCTSEA.logStatus("Creating charts for each cell type in the background...");
+				logStatus("Creating charts for each cell type in the background...");
 				final File resultsSubfolderForCellTypes = getResultsSubfolderForCellTypes(scoringMethod);
 
 				// we create the writableImages on the FX thread and store them in a list, so
@@ -2523,7 +2521,7 @@ public class PCTSEA {
 ////						cellTypeClassification.saveCharts(resultsSubfolderForCellTypes, prefix, generatePDFCharts);
 //					} catch (final IOException e) {
 //						e.printStackTrace();
-//						PCTSEA.logStatus("Some error occurred while saving chart for "
+//						logStatus("Some error occurred while saving chart for "
 //								+ cellTypeClassification.getName() + ": " + e.getMessage(), LogLevel.ERROR);
 //					}
 				}
@@ -2542,7 +2540,7 @@ public class PCTSEA {
 	private void calculateUnweigthedEnrichmentScore(List<CellTypeClassification> cellTypeClassifications,
 			List<SingleCell> singleCellList, boolean outputToLog) {
 		if (outputToLog) {
-			PCTSEA.logStatus("Calculating unweigthed enrichment score...");
+			logStatus("Calculating unweigthed enrichment score...");
 		}
 		final long n = singleCellList.size();
 		for (final CellTypeClassification cellType : cellTypeClassifications) {
@@ -2706,7 +2704,7 @@ public class PCTSEA {
 	}
 
 	public void setStatusListener(StatusListener<Boolean> statusListener) {
-		PCTSEA.statusListener = statusListener;
+		this.statusListener = statusListener;
 	}
 
 	/**
@@ -2715,15 +2713,15 @@ public class PCTSEA {
 	 * 
 	 * @param message
 	 */
-	public static void logStatus(String message) {
+	public void logStatus(String message) {
 		logStatus(message, LogLevel.INFO);
 	}
 
-	public static void logStatus(String message, boolean inNewLine) {
+	public void logStatus(String message, boolean inNewLine) {
 		logStatus(message, LogLevel.INFO, inNewLine);
 	}
 
-	public static void logStatus(String message, LogLevel level) {
+	public void logStatus(String message, LogLevel level) {
 		logStatus(message, level, true);
 	}
 
@@ -2734,7 +2732,7 @@ public class PCTSEA {
 	 * @param level
 	 * @param inNewLine
 	 */
-	public static void logStatus(String message, LogLevel level, boolean inNewLine) {
+	public void logStatus(String message, LogLevel level, boolean inNewLine) {
 		if (statusListener != null) {
 			statusListener.onStatusUpdate(
 //					format.format(new Date()) + ": " + 
@@ -2797,4 +2795,5 @@ public class PCTSEA {
 	public void setCreateZipFile(boolean createZipFile) {
 		this.createZipFile = createZipFile;
 	}
+
 }

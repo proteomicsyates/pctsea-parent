@@ -189,6 +189,23 @@ public class AnalyzeView extends VerticalLayout {
 	}
 
 	public AnalyzeView() {
+		final UI ui = UI.getCurrent();
+		statusListener = new StatusListener<Boolean>() {
+
+			@Override
+			public void onStatusUpdate(String statusMessage, Boolean inNewLine) {
+				ui.access(() -> {
+					showMessage(statusMessage, inNewLine);
+				});
+			}
+
+			@Override
+			public void onStatusUpdate(String statusMessage) {
+				ui.access(() -> {
+					showMessage(statusMessage, true);
+				});
+			}
+		};
 	}
 
 	@PostConstruct
@@ -621,22 +638,8 @@ public class AnalyzeView extends VerticalLayout {
 //		showSpinnerDialog();
 		final UI ui = UI.getCurrent();
 		final PCTSEA pctsea = new PCTSEA(inputParameters, emr, scmr, runLogsRepo, dmr, ctgmr, mbs);
-		pctsea.setStatusListener(new StatusListener<Boolean>() {
 
-			@Override
-			public void onStatusUpdate(String statusMessage, Boolean inNewLine) {
-				ui.access(() -> {
-					showMessage(statusMessage, inNewLine);
-				});
-			}
-
-			@Override
-			public void onStatusUpdate(String statusMessage) {
-				ui.access(() -> {
-					showMessage(statusMessage, true);
-				});
-			}
-		});
+		pctsea.setStatusListener(statusListener);
 
 		final String pctseaResultsViewerURL = PCTSEALocalConfiguration.getPCTSEAResultsViewerURL();
 		pctsea.setResultsViewerURL(pctseaResultsViewerURL);
@@ -843,6 +846,8 @@ public class AnalyzeView extends VerticalLayout {
 	private final DecimalFormat df = new DecimalFormat("#.#%");
 	private FormLayout formLayout;
 
+	private final StatusListener<Boolean> statusListener;
+
 	private int getNumNotMapped(List<MappingRow> rows, String dataset) {
 		int ret = 0;
 		for (final MappingRow row : rows) {
@@ -921,8 +926,8 @@ public class AnalyzeView extends VerticalLayout {
 		datasets.addAll(datasetsFromDB.stream().map(dataset -> dataset.getTag()).collect(Collectors.toList()));
 
 		for (final String dataset : datasets) {
-			final Map<String, Pair<String, Long>> mapToDatabase = new InputDataMappingValidation().mapToDatabase(genes,
-					null, mbs, dataset);
+			final Map<String, Pair<String, Long>> mapToDatabase = new InputDataMappingValidation(statusListener)
+					.mapToDatabase(genes, null, mbs, dataset);
 			// there is a row per gene
 			for (int i = 0; i < rows.size(); i++) {
 				final MappingRow mappingRow = rows.get(i);

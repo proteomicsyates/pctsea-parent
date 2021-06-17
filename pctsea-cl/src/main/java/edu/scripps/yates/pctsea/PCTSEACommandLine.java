@@ -35,7 +35,7 @@ import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TDoubleArrayList;
 import gnu.trove.list.array.TIntArrayList;
 
-public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable {
+public class PCTSEACommandLine extends CommandLineProgramGuiEnclosable<Boolean> {
 	private final PCTSEA pctsea;
 	private DatasetMongoRepository dmr;
 	private final Logger log = Logger.getLogger(PCTSEACommandLine.class);

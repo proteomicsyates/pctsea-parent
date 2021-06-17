@@ -6,17 +6,22 @@ import java.util.List;
 import java.util.Map;
 
 import edu.scripps.yates.annotations.uniprot.UniprotProteinLocalRetriever;
-import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.utilities.annotations.uniprot.UniprotEntryUtil;
 import edu.scripps.yates.utilities.annotations.uniprot.xml.Entry;
 import edu.scripps.yates.utilities.fasta.FastaParser;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
 import edu.scripps.yates.utilities.progresscounter.ProgressPrintingType;
+import edu.scripps.yates.utilities.swing.StatusListener;
 import edu.scripps.yates.utilities.util.Pair;
 import gnu.trove.map.hash.THashMap;
 
 public class InputDataMappingValidation {
+	private final StatusListener<Boolean> statusListener;
+
+	public InputDataMappingValidation(StatusListener<Boolean> statusListener) {
+		this.statusListener = statusListener;
+	}
 
 	public Map<String, Pair<String, Long>> mapToDatabase(List<String> inputProteinGeneList, String uniprotRelease,
 			MongoBaseService mongoBaseService, String dataset) {
@@ -32,7 +37,7 @@ public class InputDataMappingValidation {
 			counter.increment();
 			final String printIfNecessary = counter.printIfNecessary();
 			if (!"".equals(printIfNecessary)) {
-				PCTSEA.logStatus(printIfNecessary, false);
+				statusListener.onStatusUpdate(printIfNecessary, false);
 			}
 			final List<String> genes = genesByInputEntry.get(inputProteinGene);
 			for (final String geneName : genes) {
@@ -73,7 +78,7 @@ public class InputDataMappingValidation {
 		}
 		final Map<String, Entry> annotatedProteins = new THashMap<String, Entry>();
 		if (!uniprotAccs.isEmpty()) {
-			PCTSEA.logStatus("Translating " + uniprotAccs.size() + " uniprot accessions to gene names");
+			statusListener.onStatusUpdate("Translating " + uniprotAccs.size() + " uniprot accessions to gene names");
 
 			final UniprotProteinLocalRetriever uplr = new UniprotProteinLocalRetriever(
 					new File(System.getProperty("user.dir")), true);

@@ -404,7 +404,7 @@ public class SingleCell {
 
 				interactorsExpressionsToCorrelate.add(interactorExpression);
 				genesExpressionsToCorrelate.add(geneExpressionInSingleCell);
-				genesUsedForScore.add(InteractorsExpressionsRetriever.getInstance().getGeneName(geneID));
+				genesUsedForScore.add(interactorExpressions.getGeneName(geneID));
 			}
 			if (geneExpressionInSingleCell != 0.0f) {// this is also true when value is NaN
 				singleCellNonZero++;
@@ -513,7 +513,7 @@ public class SingleCell {
 				genesExpressionsToUSe.add(geneExpressionInSingleCell);
 			}
 			if (geneExpressionInSingleCell > 0.0f) {
-				genesUsedForScore.add(InteractorsExpressionsRetriever.getInstance().getGeneName(geneID));
+				genesUsedForScore.add(interactorExpressions.getGeneName(geneID));
 				nonZeroSingleCellGenesExpressionsToUse.add(geneExpressionInSingleCell);
 				nonZeroInputGenesExpressionsToUse.add(interactorExpression);
 			}

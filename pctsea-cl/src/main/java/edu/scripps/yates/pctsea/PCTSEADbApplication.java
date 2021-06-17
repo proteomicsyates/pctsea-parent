@@ -27,6 +27,7 @@ import edu.scripps.yates.pctsea.db.datasets.singlecellshuman.GeneToUpperCase;
 import edu.scripps.yates.pctsea.db.datasets.singlecellshuman.HumanSingleCellsDatasetCreation;
 import edu.scripps.yates.utilities.strings.StringUtils;
 import edu.scripps.yates.utilities.swing.DoNotInvokeRunMethod;
+import edu.scripps.yates.utilities.swing.StatusListener;
 
 @SpringBootApplication
 public class PCTSEADbApplication implements CommandLineRunner {
@@ -179,7 +180,20 @@ public class PCTSEADbApplication implements CommandLineRunner {
 			System.out.println("BATCH_SIZE:" + batchSize);
 
 			final HumanSingleCellsDatasetCreation hsc = new HumanSingleCellsDatasetCreation(expressionFolder,
-					metadataFolder, pmr, scmr, mbs, batchSize);
+					metadataFolder, pmr, scmr, mbs, batchSize, new StatusListener<Boolean>() {
+
+						@Override
+						public void onStatusUpdate(String statusMessage) {
+							log.info(statusMessage);
+
+						}
+
+						@Override
+						public void onStatusUpdate(String statusMessage, Boolean param) {
+							log.info(statusMessage);
+
+						}
+					});
 			hsc.run();
 			return;
 		}

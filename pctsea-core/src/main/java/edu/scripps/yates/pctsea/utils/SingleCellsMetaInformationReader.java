@@ -14,14 +14,13 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
-import org.springframework.boot.logging.LogLevel;
 
-import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.utilities.files.FileUtils;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
 import edu.scripps.yates.utilities.progresscounter.ProgressPrintingType;
+import edu.scripps.yates.utilities.swing.StatusListener;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntObjectMap;
@@ -36,6 +35,7 @@ public class SingleCellsMetaInformationReader {
 	private static final TObjectIntMap<String> singleCellIDsBySingleCellNameMap = new TObjectIntHashMap<String>();
 	private static final TIntList cellIDs = new TIntArrayList();
 	private static int totalNumCellsForDataset;
+	private StatusListener<Boolean> statusListener;
 
 //	/**
 //	 * This reads a file with the meta-information of the single cells, their
@@ -45,7 +45,7 @@ public class SingleCellsMetaInformationReader {
 //	 * @throws IOException
 //	 */
 //	public SingleCellsMetaInformationReader(File metadataFile) throws IOException {
-//		PCTSEA.logStatus("Reading single cells metadata file: " + FilenameUtils.getBaseName(metadataFile.getAbsolutePath()));
+//		statusListener.onStatusUpdate("Reading single cells metadata file: " + FilenameUtils.getBaseName(metadataFile.getAbsolutePath()));
 //		if (!metadataFile.exists()) {
 //			throw new FileNotFoundException(metadataFile.getAbsolutePath() + " not found");
 //		}
@@ -98,7 +98,7 @@ public class SingleCellsMetaInformationReader {
 //		} finally {
 //			reader.close();
 //			final String message = "Information from " + singleCellList.size() + " single cells read";
-//			PCTSEA.logStatus(message);
+//			statusListener.onStatusUpdate(message);
 ////			System.out.println(message);
 //		}
 //	}
@@ -110,8 +110,10 @@ public class SingleCellsMetaInformationReader {
 	 * @param metadataFile
 	 * @throws IOException
 	 */
-	public SingleCellsMetaInformationReader(File annotationRMBatchFolder) throws IOException {
-		PCTSEA.logStatus(
+	public SingleCellsMetaInformationReader(File annotationRMBatchFolder, StatusListener<Boolean> statusListener)
+			throws IOException {
+		this.statusListener = statusListener;
+		statusListener.onStatusUpdate(
 				"Reading single cells metadata information from folder: " + annotationRMBatchFolder.getAbsolutePath());
 		final File[] files = annotationRMBatchFolder.listFiles(new FilenameFilter() {
 
@@ -128,7 +130,7 @@ public class SingleCellsMetaInformationReader {
 		for (int numFile = 1; numFile <= files.length; numFile++) {
 			totalSize += files[numFile - 1].length();
 		}
-		PCTSEA.logStatus(FileUtils.getDescriptiveSizeFromBytes(totalSize) + " from all files");
+		statusListener.onStatusUpdate(FileUtils.getDescriptiveSizeFromBytes(totalSize) + " from all files");
 		final ProgressCounter counter = new ProgressCounter(totalSize, ProgressPrintingType.EVERY_STEP, 1, true);
 		int cellID = 0;
 		final int cellsNotFound = 0;
@@ -152,12 +154,12 @@ public class SingleCellsMetaInformationReader {
 						}
 					} else {
 						if (!indexesByHeader.containsKey("cell_id")) {
-							PCTSEA.logStatus("File " + metadataFile.getAbsolutePath() + " has different header!",
-									LogLevel.ERROR);
+							statusListener.onStatusUpdate(
+									"ERROR: File " + metadataFile.getAbsolutePath() + " has different header!");
 						}
 						final int cellIDIndex = indexesByHeader.get("cell_id");
 						if (cellIDIndex >= split.length) {
-							PCTSEA.logStatus("Skipping line: '" + line + "'", LogLevel.WARN);
+							statusListener.onStatusUpdate("WARN: Skipping line: '" + line + "'");
 							continue;
 						}
 						final String cellName = removeQuotes(split[cellIDIndex]);
@@ -202,17 +204,17 @@ public class SingleCellsMetaInformationReader {
 			} finally {
 				reader.close();
 				final String message = "Information from " + singleCellList.size() + " single cells read";
-				PCTSEA.logStatus(message);
-				PCTSEA.logStatus("Cells not found in DB: " + cellsNotFound);
+				statusListener.onStatusUpdate(message);
+				statusListener.onStatusUpdate("Cells not found in DB: " + cellsNotFound);
 				counter.increment(metadataFile.length());
 				final String printIfNecessary = counter.printIfNecessary();
 				if (!"".equals(printIfNecessary)) {
-					PCTSEA.logStatus(printIfNecessary);
+					statusListener.onStatusUpdate(printIfNecessary);
 				}
 //			System.out.println(message);
 			}
 		}
-		PCTSEA.logStatus(singleCellList.size() + " single cells read");
+		statusListener.onStatusUpdate(singleCellList.size() + " single cells read");
 	}
 
 	private String removeQuotes(String text) {
@@ -229,16 +231,16 @@ public class SingleCellsMetaInformationReader {
 	public List<SingleCell> getSingleCellListWithCorrelationGT(double minCorrelation) {
 		final List<SingleCell> ret = singleCellList.stream().filter(sc -> sc.getScoreForRanking() >= minCorrelation)
 				.collect(Collectors.toList());
-		PCTSEA.logStatus(ret.size() + " (out of " + singleCellList.size() + ") single cells with correlation >= "
-				+ minCorrelation);
+		statusListener.onStatusUpdate(ret.size() + " (out of " + singleCellList.size()
+				+ ") single cells with correlation >= " + minCorrelation);
 		return ret;
 	}
 
 	public List<SingleCell> getSingleCellListWithCorrelationLT(double maxCorrelation) {
 		final List<SingleCell> ret = singleCellList.stream().filter(sc -> sc.getScoreForRanking() <= maxCorrelation)
 				.collect(Collectors.toList());
-		PCTSEA.logStatus(ret.size() + " (out of " + singleCellList.size() + ") single cells with correlation <= "
-				+ maxCorrelation);
+		statusListener.onStatusUpdate(ret.size() + " (out of " + singleCellList.size()
+				+ ") single cells with correlation <= " + maxCorrelation);
 		return ret;
 	}
 
@@ -268,7 +270,8 @@ public class SingleCellsMetaInformationReader {
 				}
 			}
 		}
-		PCTSEA.logStatus("Now we have " + singleCellList.size() + "(" + singleCellsByCellID.size() + ") single cells");
+		statusListener.onStatusUpdate(
+				"Now we have " + singleCellList.size() + "(" + singleCellsByCellID.size() + ") single cells");
 	}
 
 	/**
@@ -292,7 +295,7 @@ public class SingleCellsMetaInformationReader {
 //			if (!cellIDs.isEmpty()) {
 //				cellID = cellIDs.max() + 1;
 //			}
-////			PCTSEA.logStatus("Why cell " + name + " was not found before in the DB?",LogLevel.WARN);
+////			statusListener.onStatusUpdate("Why cell " + name + " was not found before in the DB?",LogLevel.WARN);
 //			final SingleCell cell = new SingleCell(cellID, name, Double.NaN);
 //			addSingleCell(cell);
 //			return cellID;

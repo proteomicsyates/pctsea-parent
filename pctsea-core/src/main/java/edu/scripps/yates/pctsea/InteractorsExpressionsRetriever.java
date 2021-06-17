@@ -34,6 +34,7 @@ import edu.scripps.yates.utilities.dates.DatesUtil;
 import edu.scripps.yates.utilities.fasta.FastaParser;
 import edu.scripps.yates.utilities.pi.ConcurrentUtil;
 import edu.scripps.yates.utilities.strings.StringUtils;
+import edu.scripps.yates.utilities.swing.StatusListener;
 import edu.scripps.yates.utilities.util.Pair;
 import gnu.trove.list.TShortList;
 import gnu.trove.list.array.TShortArrayList;
@@ -56,15 +57,15 @@ public class InteractorsExpressionsRetriever {
 	private final TShortFloatMap interactorExpressionsInOurExperiment = new TShortFloatHashMap();
 	private final TShortList geneIDs = new TShortArrayList();
 	private final List<String> genes;
-	private static final TObjectShortMap<String> geneIDsByGeneNameMap = new TObjectShortHashMap<String>();
-	private static final TShortObjectMap<String> geneNamesByGeneIDMap = new TShortObjectHashMap<String>();
+	private final TObjectShortMap<String> geneIDsByGeneNameMap = new TObjectShortHashMap<String>();
+	private final TShortObjectMap<String> geneNamesByGeneIDMap = new TShortObjectHashMap<String>();
 	private static final int MIN_NUM_MAPPED_GENES = 20;
 	private final MongoBaseService mongoBaseService;
 	private final List<Dataset> datasets = new ArrayList<Dataset>();
 	private final String uniprotRelease;
 	private final PctseaRunLog runLog;
 	private final List<SingleCell> singleCellList;
-	private static InteractorsExpressionsRetriever instance;
+	private final StatusListener<Boolean> statusListener;
 
 	/**
 	 * 
@@ -78,15 +79,14 @@ public class InteractorsExpressionsRetriever {
 	 * @throws IOException
 	 */
 	public InteractorsExpressionsRetriever(MongoBaseService mongoBaseService, File experimentalExpressionsFile,
-			Collection<Dataset> datasets, String uniprotRelease, PctseaRunLog runLog, List<SingleCell> singleCellList)
-			throws IOException {
+			Collection<Dataset> datasets, String uniprotRelease, PctseaRunLog runLog, List<SingleCell> singleCellList,
+			StatusListener<Boolean> statusListener) throws IOException {
 //		if (SingleCellsMetaInformationReader.singleCellIDsBySingleCellNameMap.isEmpty()) {
 //			throw new IllegalArgumentException(
 //					"We need to read the single cell metainformation before reading expressions");
 //		}
-		// clear static
-		geneIDsByGeneNameMap.clear();
-		geneNamesByGeneIDMap.clear();
+		this.statusListener = statusListener;
+
 		this.runLog = runLog;
 		if (datasets != null) {
 			this.datasets.addAll(datasets);
@@ -94,12 +94,8 @@ public class InteractorsExpressionsRetriever {
 		this.mongoBaseService = mongoBaseService;
 		this.uniprotRelease = uniprotRelease;
 		genes = readExperimentalExpressionsFile(experimentalExpressionsFile);
-		instance = this;
-		this.singleCellList = singleCellList;
-	}
 
-	public static InteractorsExpressionsRetriever getInstance() {
-		return instance;
+		this.singleCellList = singleCellList;
 	}
 
 	/**
@@ -112,7 +108,7 @@ public class InteractorsExpressionsRetriever {
 	 */
 	private void getSingleCellExpressionsFromDB(List<String> inputProteinGeneList) {
 
-//		PCTSEA.logStatus(geneIDsByGeneNameMap.size() + " - " + geneNamesByGeneIDMap.size());
+//		statusListener.onStatusUpdate(geneIDsByGeneNameMap.size() + " - " + geneNamesByGeneIDMap.size());
 		final TIntSet singleCellIDs = new TIntHashSet();
 
 		final Map<String, List<String>> genesByInputEntry = getGenesFromInputList(inputProteinGeneList);
@@ -133,7 +129,7 @@ public class InteractorsExpressionsRetriever {
 		final Set<String> foundGeneNames = new THashSet<String>();
 		final Set<String> foundInputEntries = new THashSet<String>();
 		final TShortSet geneIDsSet = new TShortHashSet();
-		PCTSEA.logStatus("Getting single-cell expression profiles with the input protein/gene list...");
+		statusListener.onStatusUpdate("Getting single-cell expression profiles with the input protein/gene list...");
 
 		final DocumentCallbackHandler documentProcessor = new DocumentCallbackHandler() {
 
@@ -244,7 +240,7 @@ public class InteractorsExpressionsRetriever {
 			final String message2 = "Expression values from " + foundInputEntries.size()
 					+ " input entries were found in the database. Expression values from " + notFoundInputEntries.size()
 					+ " genes were NOT found in the single cells dataset: " + sb.toString();
-			PCTSEA.logStatus(message2);
+			statusListener.onStatusUpdate(message2);
 			if (foundInputEntries.size() < MIN_NUM_MAPPED_GENES) {
 				throw new IllegalArgumentException("Minimum number of input entries not satisfied: " + message2
 						+ " Minimum number is " + MIN_NUM_MAPPED_GENES);
@@ -258,7 +254,7 @@ public class InteractorsExpressionsRetriever {
 		final String message = singleCellIDs.size() + " single cells with expression values in " + genesById.size()
 				+ " different genes/proteins out of a total " + SingleCellsMetaInformationReader.getNumSingleCells()
 				+ " of single cells";
-		PCTSEA.logStatus(message);
+		statusListener.onStatusUpdate(message);
 
 	}
 
@@ -282,7 +278,7 @@ public class InteractorsExpressionsRetriever {
 		}
 		final Map<String, Entry> annotatedProteins = new THashMap<String, Entry>();
 		if (!uniprotAccs.isEmpty()) {
-			PCTSEA.logStatus("Translating " + uniprotAccs.size() + " uniprot accessions to gene names");
+			statusListener.onStatusUpdate("Translating " + uniprotAccs.size() + " uniprot accessions to gene names");
 
 			final UniprotProteinLocalRetriever uplr = new UniprotProteinLocalRetriever(
 					new File(System.getProperty("user.dir")), true);
@@ -345,7 +341,7 @@ public class InteractorsExpressionsRetriever {
 	private List<String> readExperimentalExpressionsFile(File experimentalExpressionsFile)
 			throws NumberFormatException, IOException {
 		final Set<String> genes = new THashSet<String>();
-		PCTSEA.logStatus("Reading experimental expressions from file "
+		statusListener.onStatusUpdate("Reading experimental expressions from file "
 				+ FilenameUtils.getName(experimentalExpressionsFile.getAbsolutePath()));
 		BufferedReader reader = null;
 		short id = 0;
@@ -376,15 +372,15 @@ public class InteractorsExpressionsRetriever {
 				final String geneName = split[0].toUpperCase();
 				final short geneID = id++;
 				genes.add(geneName);
-				InteractorsExpressionsRetriever.geneIDsByGeneNameMap.put(geneName, geneID);
-				InteractorsExpressionsRetriever.geneNamesByGeneIDMap.put(geneID, geneName);
+				geneIDsByGeneNameMap.put(geneName, geneID);
+				geneNamesByGeneIDMap.put(geneID, geneName);
 				final float interactorExpressionInOurExperiment = Float.valueOf(split[1]);
 				interactorExpressionsInOurExperiment.put(geneID, interactorExpressionInOurExperiment);
 
 			}
 			final String message = "Information from " + interactorExpressionsInOurExperiment.size()
 					+ " genes/proteins read";
-			PCTSEA.logStatus(message);
+			statusListener.onStatusUpdate(message);
 		} catch (final Exception e) {
 			e.printStackTrace();
 			log.error("Error reading input file: " + e.getMessage());
@@ -464,7 +460,4 @@ public class InteractorsExpressionsRetriever {
 		return StringUtils.getSortedSeparatedValueStringFromChars(genes, "-");
 	}
 
-	public static void setInstance(InteractorsExpressionsRetriever interactorExpressions) {
-		instance = interactorExpressions;
-	}
 }

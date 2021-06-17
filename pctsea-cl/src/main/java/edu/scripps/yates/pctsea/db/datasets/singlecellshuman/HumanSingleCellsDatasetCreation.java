@@ -27,6 +27,7 @@ import edu.scripps.yates.utilities.dates.DatesUtil;
 import edu.scripps.yates.utilities.files.FileUtils;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
 import edu.scripps.yates.utilities.progresscounter.ProgressPrintingType;
+import edu.scripps.yates.utilities.swing.StatusListener;
 import gnu.trove.map.hash.THashMap;
 import gnu.trove.set.hash.THashSet;
 
@@ -40,19 +41,23 @@ public class HumanSingleCellsDatasetCreation {
 	private final MongoBaseService mongoBaseService;
 
 	private Set<String> singleCellsInDB;
+
+	private final StatusListener<Boolean> statusListener;
 	private static long id = 0;
 
 	public HumanSingleCellsDatasetCreation(File singleCellExpressionFolder, File annotationRMBatchFolder,
 			DatasetMongoRepository projectMongoRepo, SingleCellMongoRepository singleCellMongoRepository,
-			MongoBaseService mongoBaseService, Integer batchSize) throws IOException {
+			MongoBaseService mongoBaseService, Integer batchSize, StatusListener<Boolean> statusListener)
+			throws IOException {
 		// read single cells
-		new SingleCellsMetaInformationReader(annotationRMBatchFolder);
+		this.statusListener = statusListener;
+		new SingleCellsMetaInformationReader(annotationRMBatchFolder, statusListener);
 		this.singleCellExpressionFolder = singleCellExpressionFolder;
 		this.projectMongoRepo = projectMongoRepo;
 		this.singleCellMongoRepository = singleCellMongoRepository;
 		this.mongoBaseService = mongoBaseService;
 		if (batchSize != null) {
-			this.BATCH_SIZE = batchSize;
+			BATCH_SIZE = batchSize;
 		}
 	}
 
@@ -104,7 +109,7 @@ public class HumanSingleCellsDatasetCreation {
 			for (final Expression sce : sces) {
 				batch.add(sce);
 				if (batch.size() == BATCH_SIZE) {
-					mongoBaseService.saveExpressions(batch);
+					mongoBaseService.saveExpressions(batch, statusListener);
 					final long t1 = System.currentTimeMillis() - t0;
 //					System.out.println(batch.size() + " entities saved in database in "
 //							+ DatesUtil.getDescriptiveTimeFromMillisecs(t1) + " " + num + "/" + sces.size());
@@ -113,7 +118,7 @@ public class HumanSingleCellsDatasetCreation {
 				}
 			}
 			if (!batch.isEmpty()) {
-				mongoBaseService.saveExpressions(batch);
+				mongoBaseService.saveExpressions(batch, statusListener);
 
 			}
 			counter.increment(file.length());
@@ -134,9 +139,9 @@ public class HumanSingleCellsDatasetCreation {
 
 		if (singleCellsInDB == null) {
 
-			singleCellsInDB = this.singleCellMongoRepository.findAll().stream().map(sc -> sc.getName())
+			singleCellsInDB = singleCellMongoRepository.findAll().stream().map(sc -> sc.getName())
 					.collect(Collectors.toSet());
-			log.info(singleCellsInDB.size() + " single cells in DB " + this.singleCellMongoRepository.count());
+			log.info(singleCellsInDB.size() + " single cells in DB " + singleCellMongoRepository.count());
 		}
 		// final THashMap<String, TObjectIntMap<String>> expressionsByCell = new
 		// THashMap<String, TObjectIntMap<String>>();
@@ -235,13 +240,13 @@ public class HumanSingleCellsDatasetCreation {
 			}
 			if (batch.size() == BATCH_SIZE) {
 
-				mongoBaseService.saveSingleCells(batch);
+				mongoBaseService.saveSingleCells(batch, statusListener);
 				singleCellsInDB.addAll(batch.stream().map(sc2 -> sc2.getName()).collect(Collectors.toList()));
 				batch.clear();
 			}
 		}
 		if (!batch.isEmpty()) {
-			mongoBaseService.saveSingleCells(batch);
+			mongoBaseService.saveSingleCells(batch, statusListener);
 
 			singleCellsInDB.addAll(batch.stream().map(sc2 -> sc2.getName()).collect(Collectors.toList()));
 		}

@@ -10,14 +10,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.math3.stat.inference.KolmogorovSmirnovTest;
-import org.springframework.boot.logging.LogLevel;
 
-import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.model.CellTypeClassification;
 import edu.scripps.yates.pctsea.model.ScoringMethod;
 import edu.scripps.yates.pctsea.model.SingleCell;
 import edu.scripps.yates.pctsea.utils.PCTSEAUtils;
 import edu.scripps.yates.utilities.pi.ParIterator;
+import edu.scripps.yates.utilities.swing.StatusListener;
 import edu.scripps.yates.utilities.util.Pair;
 import gnu.trove.list.TDoubleList;
 import gnu.trove.list.TFloatList;
@@ -40,11 +39,12 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 	final String prefix;
 	final boolean compensateWithNegativeSupremum;
 	final ScoringMethod scoringMethod;
+	protected final StatusListener<Boolean> statusListener;
 
 	public EnrichmentWeigthedScoreParallel(ParIterator<CellTypeClassification> iterator, int numCore,
 			List<SingleCell> singleCellList, boolean permutatedData, boolean plotNegativeEnrichedCellTypes,
 			String scoreName, File resultsSubfolderForCellTypes, String prefix, boolean compensateWithNegativeSupremum,
-			ScoringMethod scoringMethod) {
+			ScoringMethod scoringMethod, StatusListener<Boolean> statusListener) {
 		this.iterator = iterator;
 		this.singleCellList.addAll(singleCellList);
 
@@ -55,6 +55,7 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 		this.prefix = prefix;
 		this.compensateWithNegativeSupremum = compensateWithNegativeSupremum;
 		this.scoringMethod = scoringMethod;
+		this.statusListener = statusListener;
 	}
 
 	class XYPoint {
@@ -343,9 +344,8 @@ public class EnrichmentWeigthedScoreParallel extends Thread {
 //				cellType.setHistogramOfCorrelatingGenesChart(chart2);
 				} catch (final IOException e) {
 					e.printStackTrace();
-					PCTSEA.logStatus(
-							"Some error occurred while writting files for " + cellTypeID + ": " + e.getMessage(),
-							LogLevel.ERROR);
+					statusListener.onStatusUpdate("ERROR: Some error occurred while writting files for " + cellTypeID
+							+ ": " + e.getMessage());
 				}
 			}
 

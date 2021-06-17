@@ -11,7 +11,6 @@ import javax.inject.Inject;
 
 import org.bson.types.ObjectId;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.logging.LogLevel;
 import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.BulkOperations.BulkMode;
 import org.springframework.data.mongodb.core.DocumentCallbackHandler;
@@ -26,9 +25,9 @@ import org.springframework.util.Assert;
 
 import com.mongodb.BasicDBObject;
 
-import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
 import edu.scripps.yates.utilities.progresscounter.ProgressPrintingType;
+import edu.scripps.yates.utilities.swing.StatusListener;
 import gnu.trove.map.hash.THashMap;
 import gnu.trove.set.hash.THashSet;
 
@@ -92,7 +91,8 @@ public class MongoBaseService {
 		return ret;
 	}
 
-	public Map<String, List<Expression>> getExpressionByGenesOneByOne(Set<String> genes, Set<String> datasets) {
+	public Map<String, List<Expression>> getExpressionByGenesOneByOne(Set<String> genes, Set<String> datasets,
+			StatusListener<Boolean> statusListener) {
 		final Map<String, List<Expression>> ret = new THashMap<String, List<Expression>>();
 
 		final ProgressCounter counter = new ProgressCounter(genes.size(), ProgressPrintingType.PERCENTAGE_STEPS, 1,
@@ -101,8 +101,8 @@ public class MongoBaseService {
 		for (final String gene : genes) {
 			counter.increment();
 			final String printIfNecessary = counter.printIfNecessary();
-			if (!"".equals(printIfNecessary)) {
-				PCTSEA.logStatus(printIfNecessary);
+			if (!"".equals(printIfNecessary) && statusListener != null) {
+				statusListener.onStatusUpdate(printIfNecessary);
 			}
 			if (datasets != null && !datasets.isEmpty()) {
 				for (final String dataset : datasets) {
@@ -118,9 +118,9 @@ public class MongoBaseService {
 					}
 				}
 			} else {
-				PCTSEA.logStatus("Gene: " + gene);
+				statusListener.onStatusUpdate("Gene: " + gene);
 				final List<Expression> expressions = emr.findByGene(gene);
-				PCTSEA.logStatus(expressions.size() + " expressions");
+				statusListener.onStatusUpdate(expressions.size() + " expressions");
 				for (final Expression expression : expressions) {
 					if (!ret.containsKey(gene)) {
 						final ArrayList<Expression> list = new ArrayList<Expression>();
@@ -216,7 +216,7 @@ public class MongoBaseService {
 		return ret;
 	}
 
-	public List<Expression> saveExpressions(List<Expression> entities) {
+	public List<Expression> saveExpressions(List<Expression> entities, StatusListener<Boolean> statusListener) {
 		Assert.notNull(entities, "Entity must not be null!");
 
 		final BulkOperations bulkOps = mongoTemplate.bulkOps(BulkMode.UNORDERED, entities.get(0).getClass());
@@ -267,12 +267,14 @@ public class MongoBaseService {
 			return entities;
 
 		} catch (final Exception ex) {
-			PCTSEA.logStatus("BulkWriteOperation Exception ::  " + ex, LogLevel.ERROR);
+			if (statusListener != null) {
+				statusListener.onStatusUpdate("ERROR: BulkWriteOperation Exception:  " + ex);
+			}
 			return null;
 		}
 	}
 
-	public List<SingleCell> saveSingleCells(List<SingleCell> entities) {
+	public List<SingleCell> saveSingleCells(List<SingleCell> entities, StatusListener<Boolean> statusListener) {
 		Assert.notNull(entities, "Entity must not be null!");
 
 		final BulkOperations bulkOps = mongoTemplate.bulkOps(BulkMode.UNORDERED, entities.get(0).getClass());
@@ -323,7 +325,9 @@ public class MongoBaseService {
 			return entities;
 
 		} catch (final Exception ex) {
-			PCTSEA.logStatus("BulkWriteOperation Exception ::  " + ex, LogLevel.ERROR);
+			if (statusListener != null) {
+				statusListener.onStatusUpdate("ERROR: BulkWriteOperation Exception ::  " + ex);
+			}
 			return null;
 		}
 	}

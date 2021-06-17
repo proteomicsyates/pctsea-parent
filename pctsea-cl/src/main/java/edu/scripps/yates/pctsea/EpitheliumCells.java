@@ -33,6 +33,7 @@ import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
 import edu.scripps.yates.utilities.dates.DatesUtil;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
 import edu.scripps.yates.utilities.progresscounter.ProgressPrintingType;
+import edu.scripps.yates.utilities.swing.StatusListener;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.THashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
@@ -70,6 +71,8 @@ public class EpitheliumCells implements CommandLineRunner {
 
 	private String biomaterial;
 
+	private StatusListener<Boolean> statusListener;
+
 	public static void main(String[] args) {
 		final SpringApplicationBuilder builder = new SpringApplicationBuilder(EpitheliumCells.class);
 		builder.headless(false).logStartupInfo(false);
@@ -79,6 +82,20 @@ public class EpitheliumCells implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) throws Exception {
+		statusListener = new StatusListener<Boolean>() {
+
+			@Override
+			public void onStatusUpdate(String statusMessage) {
+				log.info(statusMessage);
+
+			}
+
+			@Override
+			public void onStatusUpdate(String statusMessage, Boolean param) {
+				log.info(statusMessage);
+
+			}
+		};
 		singleCellMetadataFile = new File(args[0]);
 		singleCellExpressionTableFile = new File(args[1]);
 
@@ -143,7 +160,7 @@ public class EpitheliumCells implements CommandLineRunner {
 			if (batch.size() == BATCH_SIZE) {
 				t0 = System.currentTimeMillis();
 				num += batch.size();
-				mongoBaseService.saveSingleCells(batch);
+				mongoBaseService.saveSingleCells(batch, statusListener);
 				t1 = System.currentTimeMillis() - t0;
 				System.out.println(batch.size() + " entities saved in database in "
 						+ DatesUtil.getDescriptiveTimeFromMillisecs(t1) + " " + num + "/" + cells.size());
@@ -156,7 +173,7 @@ public class EpitheliumCells implements CommandLineRunner {
 		}
 		t0 = System.currentTimeMillis();
 		if (!batch.isEmpty()) {
-			mongoBaseService.saveSingleCells(batch);
+			mongoBaseService.saveSingleCells(batch, statusListener);
 			t1 = System.currentTimeMillis() - t0;
 			System.out.println(batch.size() + " entities saved in database in "
 					+ DatesUtil.getDescriptiveTimeFromMillisecs(t1) + " " + num + "/" + cells.size());
@@ -205,7 +222,7 @@ public class EpitheliumCells implements CommandLineRunner {
 			if (batch.size() == BATCH_SIZE) {
 				t0 = System.currentTimeMillis();
 				num += batch.size();
-				mongoBaseService.saveExpressions(batch);
+				mongoBaseService.saveExpressions(batch, statusListener);
 				t1 = System.currentTimeMillis() - t0;
 
 //				System.out.println(batch.size() + " entities saved in database in "
@@ -215,7 +232,7 @@ public class EpitheliumCells implements CommandLineRunner {
 		}
 		t0 = System.currentTimeMillis();
 
-		mongoBaseService.saveExpressions(batch);
+		mongoBaseService.saveExpressions(batch, statusListener);
 		t1 = System.currentTimeMillis() - t0;
 //		System.out.println(batch.size() + " entities saved in database in "
 //				+ DatesUtil.getDescriptiveTimeFromMillisecs(t1) + " " + num + "/" + sces.size());
@@ -227,7 +244,7 @@ public class EpitheliumCells implements CommandLineRunner {
 		final List<Expression> ret = new ArrayList<Expression>();
 		BufferedReader r = null;
 		try {
-			r = new BufferedReader(new FileReader(this.singleCellExpressionTableFile));
+			r = new BufferedReader(new FileReader(singleCellExpressionTableFile));
 			String line;
 			TObjectIntMap<String> indexesByColumnName = null;
 			List<String> cellIDs = null;
@@ -391,7 +408,7 @@ public class EpitheliumCells implements CommandLineRunner {
 			if (batch.size() == BATCH_SIZE) {
 				final long t0 = System.currentTimeMillis();
 				num += batch.size();
-				mongoBaseService.saveSingleCells(batch);
+				mongoBaseService.saveSingleCells(batch, statusListener);
 				final long t1 = System.currentTimeMillis() - t0;
 				System.out.println(batch.size() + " single cells saved in database in "
 						+ DatesUtil.getDescriptiveTimeFromMillisecs(t1) + " " + num + "/" + singleCellList.size());
@@ -400,7 +417,7 @@ public class EpitheliumCells implements CommandLineRunner {
 			}
 		}
 		final long t0 = System.currentTimeMillis();
-		mongoBaseService.saveSingleCells(batch);
+		mongoBaseService.saveSingleCells(batch, statusListener);
 		final long t1 = System.currentTimeMillis() - t0;
 		System.out.println(batch.size() + " single cells saved in database in "
 				+ DatesUtil.getDescriptiveTimeFromMillisecs(t1) + " in last batch");

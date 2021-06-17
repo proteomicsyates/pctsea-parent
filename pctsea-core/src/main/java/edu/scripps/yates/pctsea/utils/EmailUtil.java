@@ -4,9 +4,7 @@ import java.util.List;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
-import org.springframework.boot.logging.LogLevel;
 
-import edu.scripps.yates.pctsea.PCTSEA;
 import edu.scripps.yates.pctsea.db.Dataset;
 import edu.scripps.yates.pctsea.model.CellTypeClassification;
 import edu.scripps.yates.pctsea.model.InputParameters;
@@ -14,13 +12,15 @@ import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.pctsea.model.ScoringSchema;
 import edu.scripps.yates.utilities.dates.DatesUtil;
 import edu.scripps.yates.utilities.email.EmailSender;
+import edu.scripps.yates.utilities.swing.StatusListener;
 
 public class EmailUtil {
 	private final static Logger log = Logger.getLogger(EmailUtil.class);
 
-	public static String sendEmailWithResults(PCTSEAResult result, String fromEmail) {
+	public static String sendEmailWithResults(PCTSEAResult result, String fromEmail,
+			StatusListener<Boolean> statusListener) {
 		final InputParameters inputParameters = result.getRunLog().getInputParameters();
-		PCTSEA.logStatus("Sending email with results to " + inputParameters.getEmail());
+		statusListener.onStatusUpdate("Sending email with results to " + inputParameters.getEmail());
 		// SUBJECT
 		final String subject = "pCtSEA results '" + result.getRunLog().getTimeStamp() + " - "
 				+ inputParameters.getOutputPrefix();
@@ -118,10 +118,10 @@ public class EmailUtil {
 		final String error = EmailSender.sendEmail(subject, body.toString(), fromEmail, destinationEmail, fromEmail,
 				true);
 		if (error != null) {
-			PCTSEA.logStatus("Error sending email. Perhaps emails cannot be sent from this machine: " + error,
-					LogLevel.ERROR);
+			statusListener
+					.onStatusUpdate("Error sending email. Perhaps emails cannot be sent from this machine: " + error);
 		} else {
-			PCTSEA.logStatus("Email sent!");
+			statusListener.onStatusUpdate("Email sent!");
 		}
 		return error;
 	}
