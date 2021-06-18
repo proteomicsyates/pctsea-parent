@@ -447,6 +447,7 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 		upload.addFinishedListener(event -> {
 
 			try {
+				hasUploadedFile = true; // set flag to true
 				// save input File to the results folder using PCTSEALocalConfiguration:
 				final String fileName = event.getFileName();
 				final File pctseaResultsFolder = PCTSEALocalConfiguration.getPCTSEAResultsFolder();
@@ -899,6 +900,8 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 
 	private boolean isrunning;
 
+	private boolean hasUploadedFile;
+
 	private int getNumNotMapped(List<MappingRow> rows, String dataset) {
 		int ret = 0;
 		for (final MappingRow row : rows) {
@@ -1098,16 +1101,27 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 
 	@Override
 	public void beforeLeave(BeforeLeaveEvent event) {
-		if (isRunning()) {
+		if (!isRunning() && hasUploadedFile()) {
+			final ContinueNavigationAction action = event.postpone();
+			final MyConfirmDialogBeforeLeaving dialog = new MyConfirmDialogBeforeLeaving(
+					"Are you sure you want to leave this page?", "If you leave, the uploaded file will be discarded.",
+					"I understand, but I want to leave", "I am going to stay", action);
+
+			dialog.open();
+		} else if (isRunning()) {
 			final ContinueNavigationAction action = event.postpone();
 			final MyConfirmDialogBeforeLeaving dialog = new MyConfirmDialogBeforeLeaving(
 					"Are you sure you want to leave this page?",
-					"If you leave you will loose the progress view although you will still get the email with the results",
-					"I understand, but I want to leave", "I will stay", action);
+					"If you leave you will loose the running progress view, although you will still get the email with the results when finished.",
+					"I understand, but I want to leave", "I am going to stay", action);
 
 			dialog.open();
 		}
 
+	}
+
+	private boolean hasUploadedFile() {
+		return hasUploadedFile;
 	}
 
 	private boolean isRunning() {
