@@ -67,7 +67,11 @@ import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.data.validator.EmailValidator;
+import com.vaadin.flow.router.BeforeLeaveEvent;
+import com.vaadin.flow.router.BeforeLeaveEvent.ContinueNavigationAction;
+import com.vaadin.flow.router.BeforeLeaveObserver;
 import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.PreserveOnRefresh;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 
@@ -81,6 +85,7 @@ import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
+import edu.scripps.yates.pctsea.model.CellTypeClassification;
 import edu.scripps.yates.pctsea.model.InputDataType;
 import edu.scripps.yates.pctsea.model.InputParameters;
 import edu.scripps.yates.pctsea.model.PCTSEAResult;
@@ -97,10 +102,11 @@ import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import gnu.trove.set.hash.THashSet;
 
+@PreserveOnRefresh
 @Route(value = "analyze", layout = MainView.class)
 @PageTitle("PCTSEA web - Analyze")
 @CssImport("./styles/views/analyze/analyze-view.css")
-public class AnalyzeView extends VerticalLayout {
+public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 	private final static Logger log = Logger.getLogger(WebAppContextListener.class);
 
 	/**
@@ -155,11 +161,12 @@ public class AnalyzeView extends VerticalLayout {
 	@Autowired
 	private CellTypeAndGeneMongoRepository ctgmr;
 
-	private HorizontalLayout resultsPanel;
+	private VerticalLayout resultsPanel;
 	public static ExecutorService executor = Executors.newFixedThreadPool(40);
 	private List<Dataset> datasetsFromDB;
 	private VerticalLayout inputParametersTabContent;
 	private boolean wasInNewLine;
+	private static int numInstances = 0;
 
 	class MyUpload extends Upload {
 		private static final long serialVersionUID = 1L;
@@ -189,6 +196,7 @@ public class AnalyzeView extends VerticalLayout {
 	}
 
 	public AnalyzeView() {
+		System.out.println("Creating new Analyze view #" + ++numInstances);
 		final UI ui = UI.getCurrent();
 		statusListener = new StatusListener<Boolean>() {
 
@@ -413,7 +421,7 @@ public class AnalyzeView extends VerticalLayout {
 		});
 		cancelButton.setEnabled(false);
 
-		resultsPanel = new HorizontalLayout();
+		resultsPanel = new VerticalLayout();
 		resultsPanel.add(
 				"Results will appear here as soon as the analysis is done. Also, an email will be sent to the provided email address.");
 		resultsPanel.setVisible(false);
@@ -466,27 +474,53 @@ public class AnalyzeView extends VerticalLayout {
 				final FileOutputStream outputStream = new FileOutputStream(inputFile);
 				IOUtils.copy(buffer.getInputStream(), outputStream);
 				outputStream.close();
-				final List<MappingRow> rows = validateInputFile(inputFile);
-				enableInputFileDataTab(rows);
+
+				// make this on the background
 				outputDiv.removeAll();
-				int numNotMapped = 0;
-				for (final Dataset dataset : datasetsFromDB) {
-					numNotMapped += getNumNotMapped(rows, dataset.getTag());
+				outputDiv.add(
+						"File received. Now we are mapping it to information in the database to give you an idea of whether the input is valid or not. This can take some seconds or a few minutes, but if you don't want to wait, you can continue filling the parameters and submitting.");
+				final UI ui = UI.getCurrent();
+				final Runnable validationJob = new Runnable() {
 
-				}
-				if (numNotMapped == 0) {
-					outputDiv.add(rows.size()
-							+ " genes/proteins read successfully from input file. You can review the input data in the 'Input data' tab below:");
-				} else {
-					outputDiv.add(rows.size()
-							+ " genes/proteins read from input file. However, some of them were not found in some of the datasets. You can review the mapping in the 'Input data' tab below:");
-				}
-				showInputDataButton.setEnabled(true);
+					@Override
+					public void run() {
+						try {
 
+							final List<MappingRow> rows = validateInputFile(inputFile);
+							ui.access(() -> {
+								enableInputFileDataTab(rows);
+								outputDiv.removeAll();
+								int numNotMapped = 0;
+								for (final Dataset dataset : datasetsFromDB) {
+									numNotMapped += getNumNotMapped(rows, dataset.getTag());
+
+								}
+								if (numNotMapped == 0) {
+									outputDiv.add(rows.size()
+											+ " genes/proteins read successfully from input file. You can review the input data in the 'Input data' tab below:");
+								} else {
+									outputDiv.add(rows.size()
+											+ " genes/proteins read from input file. However, some of them were not found in some of the datasets. You can review the mapping in the 'Input data' tab below:");
+								}
+								showInputDataButton.setEnabled(true);
+							});
+						} catch (final Exception e) {
+							e.printStackTrace();
+							ui.access(() -> {
+								VaadinUtil.showErrorDialog("Error validating input file: " + e.getMessage());
+							});
+							inputFile = null;
+
+						}
+					}
+				};
+
+				executor.execute(validationJob);
 			} catch (final Exception e) {
 				e.printStackTrace();
 				VaadinUtil.showErrorDialog("Error validating input file: " + e.getMessage());
 				inputFile = null;
+
 			}
 		});
 		upload.addFileRemoveListener(event -> {
@@ -650,7 +684,7 @@ public class AnalyzeView extends VerticalLayout {
 		// hide input parameters
 		inputParametersTabContent.setVisible(false);
 		statusArea.setValue("Starting run...");
-
+		isrunning = true; // turn flag on, to warn if user wants to leave
 		final Runnable currentPSEAJob = new Runnable() {
 
 			@Override
@@ -659,7 +693,7 @@ public class AnalyzeView extends VerticalLayout {
 				try {
 					final PCTSEAResult results = pctsea.run();
 					ui.access(() -> {
-						showLinkToResults(results.getUrlToViewers());
+						showLinkToResults(results);
 					});
 
 				} catch (final Exception e) {
@@ -669,6 +703,7 @@ public class AnalyzeView extends VerticalLayout {
 						showMessage("PCTSEA has stopped.", true);
 					});
 				} finally {
+					isrunning = false;// turn flag off
 					ui.access(() -> {
 						setEnabledStatusAsReady();
 						// show again input parameters
@@ -715,21 +750,35 @@ public class AnalyzeView extends VerticalLayout {
 //		generatePDFCheckbox.setEnabled(true);
 	}
 
-	protected void showLinkToResults(List<URL> urls) {
-		if (urls != null) {
+	protected void showLinkToResults(PCTSEAResult results) {
+		if (results != null) {
 			resultsPanel.removeAll();
-			resultsPanel.add("Access your results at: ");
-			for (final URL url : urls) {
-				final Anchor link = new Anchor(url.toString(), url.toString());
-				link.setTarget("_blank");
+			if (results.getUrlToViewers() != null) {
+				resultsPanel.add("Access your results at: ");
 
-				resultsPanel.add(link);
+				for (final URL url : results.getUrlToViewers()) {
+					final Anchor link = new Anchor(url.toString(), url.toString());
+					link.setTarget("_blank");
+					resultsPanel.add(link);
+				}
+
 			}
-
 		} else {
 			resultsPanel.removeAll();
 			resultsPanel.add("Your results cannot be accessed by our web. Hopefully you got them by email.");
 		}
+
+		final VerticalLayout significantTypesLinesPanel = new VerticalLayout();
+		if (results.getSignificantTypes() != null && !results.getSignificantTypes().isEmpty()) {
+			for (final CellTypeClassification significantCellType : results.getSignificantTypes()) {
+				significantTypesLinesPanel
+						.add(significantCellType.getName() + " " + significantCellType.getSignificancyString());
+			}
+		}
+		final VerticalLayout significantTypesPanel = new VerticalLayout();
+		significantTypesPanel.add("The following cell types are significantly enriched (FDR < 0.05)");
+		significantTypesPanel.add(significantTypesLinesPanel);
+		resultsPanel.add(significantTypesPanel);
 	}
 
 	private static final SimpleDateFormat timeformatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");
@@ -847,6 +896,8 @@ public class AnalyzeView extends VerticalLayout {
 	private FormLayout formLayout;
 
 	private final StatusListener<Boolean> statusListener;
+
+	private boolean isrunning;
 
 	private int getNumNotMapped(List<MappingRow> rows, String dataset) {
 		int ret = 0;
@@ -1043,6 +1094,25 @@ public class AnalyzeView extends VerticalLayout {
 		horizontal.setAlignSelf(Alignment.CENTER, showInputDataButton);
 		uploadLayout.add(horizontal);
 		return uploadLayout;
+	}
+
+	@Override
+	public void beforeLeave(BeforeLeaveEvent event) {
+		if (isRunning()) {
+			final ContinueNavigationAction action = event.postpone();
+			final MyConfirmDialogBeforeLeaving dialog = new MyConfirmDialogBeforeLeaving(
+					"Are you sure you want to leave this page?",
+					"If you leave you will loose the progress view although you will still get the email with the results",
+					"I understand, but I want to leave", "I will stay", action);
+
+			dialog.open();
+		}
+
+	}
+
+	private boolean isRunning() {
+
+		return isrunning;
 	}
 
 }
