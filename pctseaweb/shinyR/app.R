@@ -118,7 +118,7 @@ ui <- fluidPage(title = "PCTSEA",
                                               ),
 
                                               fluidRow(
-                                                column(4,
+                                                column(3,
                                                        wellPanel(
                                                          style = "background: white",
                                                          fluidRow(
@@ -127,7 +127,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                          plotlyOutput(outputId = "globalMultipleTestingCorrectionPlot", height = "300px")
                                                        )
                                                 ),
-                                                column(4,
+                                                column(3,
                                                        wellPanel(
                                                          style = "background: white",
                                                          fluidRow(
@@ -136,7 +136,7 @@ ui <- fluidPage(title = "PCTSEA",
                                                          plotlyOutput(outputId = "globalSupremaHistogramPlot", height = "300px")
                                                        )
                                                 ),
-                                                column(4,
+                                                column(6,
                                                        wellPanel(
                                                          style = "background: white",
                                                          fluidRow(

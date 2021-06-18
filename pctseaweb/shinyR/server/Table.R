@@ -60,7 +60,8 @@ output$enrichmentDataTable <- DT::renderDT(
         pageLength = 10,
         columnDefs = list(list(className = 'dt-center', targets = 5)),
         order = list(list(13, 'asc'), list(12, 'asc'), list(22, 'desc'), list(20, 'asc'))
-      )
+      ),
+      rownames = FALSE
     ) %>%
       formatRound(columns=c("hyperG p-value", "FDR", "empirical p-value", "KS p-value", "KS p-value BH corrected"), digits=4) %>%
       formatRound(columns=c("log2 ratio", "ews", "2nd ews", "norm-ews", "norm-supX", "2nd supX", "Dab", "Umap 1", "Umap 2", "Umap 3", "Umap 4"), digits=2)
@@ -82,7 +83,7 @@ observeEvent(enrichment_table(),{
 output$enrichmentDataTable2 <- DT::renderDT(
   {
     table <- enrichment_table()
-    table <- table[, c("cell type", "num cells of type", "num cells of type corr", "ews", "norm-ews", "2nd ews","supX","norm-supX", "empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value", "Num Genes Significant")]
+    table <- table[, c("cell type", "num cells of type", "num cells of type corr", "log2 ratio", "ews", "norm-ews", "2nd ews","supX","norm-supX", "empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value", "Num Genes Significant")]
     colnames(table)[2] <- "total num cells of type"
     colnames(table)[3] <- "num cells of type with score > threshold"
     datatable(
@@ -92,11 +93,12 @@ output$enrichmentDataTable2 <- DT::renderDT(
       options = list(
         pageLength = 10,
         dom = 'lftipr',
-        order = list(list(10, 'asc'), list(13, 'desc'), list(11, 'asc'))
-      )
+        order = list(list(11, 'asc'), list(14, 'desc'), list(12, 'asc'))
+      ),
+      rownames = FALSE
     ) %>%
       formatRound(columns=c("empirical p-value", "FDR", "KS p-value BH corrected", "hyperG p-value"), digits=4) %>%
-      formatRound(columns=c("ews", "2nd ews","supX","norm-supX"), digits=2)
+      formatRound(columns=c("log2 ratio", "ews", "2nd ews","supX","norm-supX"), digits=2)
   }
 )
 # event that catches the selection on the table and updates the input selection of the dropdown
