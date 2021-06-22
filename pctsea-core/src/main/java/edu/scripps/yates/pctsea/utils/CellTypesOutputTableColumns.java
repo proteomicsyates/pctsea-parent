@@ -112,7 +112,11 @@ public enum CellTypesOutputTableColumns {
 		case UMAP_4:
 			return parseNullableNumber(cellType.getUmapClustering(3));
 		case GENES:
-			return cellType.getStringOfRankingOfGenesThatContributedToTheScore(scoringSchema.getScoringThreshold());
+			if (scoringSchema != null) {
+				return cellType.getStringOfRankingOfGenesThatContributedToTheScore(scoringSchema.getScoringThreshold());
+			} else {
+				return "";
+			}
 
 		default:
 			throw new IllegalArgumentException("Value for column " + this + " is not supported yet!");
