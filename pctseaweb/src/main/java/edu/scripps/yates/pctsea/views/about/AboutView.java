@@ -8,7 +8,6 @@ import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.vaadin.flow.component.Text;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.details.Details;
 import com.vaadin.flow.component.details.DetailsVariant;
@@ -18,6 +17,7 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Label;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.function.ValueProvider;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -79,11 +79,18 @@ public class AboutView extends Div {
 		try {
 
 			final String pctseaResultsViewerURL = PCTSEALocalConfiguration.getPCTSEAResultsViewerURL();
+			final String pctseaComparisonViewerURL = PCTSEALocalConfiguration.getPCTSEAResultsComparisonURL();
 			final Details details = new Details();
 			details.setSummaryText("Server status");
-			details.addContent(new Text("Viewer of results located at: " + pctseaResultsViewerURL),
-					new Text("Emails with the results will be sent by: " + PCTSEALocalConfiguration.getFromEmail()),
-					new Text("Results are stored at: " + PCTSEALocalConfiguration.getPCTSEAResultsFolder()));
+			final VerticalLayout verticalPanel = new VerticalLayout(
+					new Label("URL for viewer of results: " + pctseaResultsViewerURL),
+					new Label("URL for comparisons of results: " + pctseaComparisonViewerURL),
+					new Label("Emails with the results will be sent by: " + PCTSEALocalConfiguration.getFromEmail()),
+					new Label("Results are stored at: " + PCTSEALocalConfiguration.getPCTSEAResultsFolder()),
+					new Label("Results comparisons are stored at: "
+							+ PCTSEALocalConfiguration.getPCTSEAResultsComparisonFolder()));
+
+			details.addContent(verticalPanel);
 			details.addThemeVariants(DetailsVariant.SMALL);
 			add(details);
 		} catch (final PCTSEAConfigurationException e) {

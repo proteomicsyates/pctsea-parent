@@ -147,40 +147,6 @@ ui <- fluidPage(title = "PCTSEA",
                                                 )
                                               )
                                      ),
-                                     tabPanel("Cluster cell types by genes",
-                                              br(),
-                                              sidebarLayout(
-                                                sidebarPanel(width = 2,
-                                                             radioButtons(
-                                                               inputId = "heatmap_cell_value_type",
-                                                               label = "Cluster cell types by",
-                                                               choices = c("presence/absence"="binary",
-                                                                           "# of cells of that type in the which gene is present"="num_cells",
-                                                                           "% of cells of that type in which the gene is present"="pct_cells")
-                                                             ),
-                                                             radioButtons(inputId = "swap_rows_cols",
-                                                                          label = "Show cell types in",
-                                                                          choices = c("columns", "rows")
-                                                             ),
-                                                             checkboxInput(inputId = "cluster_genes",
-                                                                           label = "Cluster genes too",
-                                                                           value = TRUE),
-                                                             selectInput(inputId = "num_clusters", label = "Number of clusters",choices = c("Automatic",seq(2:10)), selected = "Automatic", multiple = FALSE),
-                                                             numericInput(inputId ="threshold",
-                                                                          label= "KS BH-corrected pvalue threshold",
-                                                                          value = 0.05 ),
-                                                             br(),
-                                                             numericInput(inputId = "heatmap_width", label = "heatmap width", min = 400, max = 2400, value = 1000),
-                                                             numericInput(inputId = "heatmap_height", label = "heatmap heigth", min = 400, max = 5000, value = 1000),
-                                                             numericInput(inputId = "heatmap_font_size", label = "Font size", min = 1, max = 20, value = 6)
-                                                ),
-                                                mainPanel(width = 10,
-                                                          plotlyOutput("heatmap", height = "1600px")#, width = "1000px")
-                                                )
-                                              )
-
-
-                                     ),
                                      tabPanel("Charts per cell type", icon = icon("bar-chart-o"),
                                               br(),
                                               fluidRow(style='padding-left:10px;',
@@ -220,10 +186,44 @@ ui <- fluidPage(title = "PCTSEA",
 
                                               ),
                                               fluidRow(
-                                                column(width = 10,
+                                                column(width = 12,
                                                        div(DT::dataTableOutput(outputId = "enrichmentDataTable2"), style = "font-size:80%; rowHeight: 75%")
                                                 )
                                               )
+                                     ),
+                                     tabPanel("Cluster cell types by genes",
+                                              br(),
+                                              sidebarLayout(
+                                                sidebarPanel(width = 2,
+                                                             radioButtons(
+                                                               inputId = "heatmap_cell_value_type",
+                                                               label = "Cluster cell types by",
+                                                               choices = c("presence/absence"="binary",
+                                                                           "# of cells of that type in the which gene is present"="num_cells",
+                                                                           "% of cells of that type in which the gene is present"="pct_cells")
+                                                             ),
+                                                             radioButtons(inputId = "swap_rows_cols",
+                                                                          label = "Show cell types in",
+                                                                          choices = c("columns", "rows")
+                                                             ),
+                                                             checkboxInput(inputId = "cluster_genes",
+                                                                           label = "Cluster genes too",
+                                                                           value = TRUE),
+                                                             selectInput(inputId = "num_clusters", label = "Number of clusters",choices = c("Automatic",seq(2:10)), selected = "Automatic", multiple = FALSE),
+                                                             numericInput(inputId ="threshold",
+                                                                          label= "KS BH-corrected pvalue threshold",
+                                                                          value = 0.05 ),
+                                                             br(),
+                                                             numericInput(inputId = "heatmap_width", label = "heatmap width", min = 400, max = 2400, value = 1000),
+                                                             numericInput(inputId = "heatmap_height", label = "heatmap heigth", min = 400, max = 5000, value = 1000),
+                                                             numericInput(inputId = "heatmap_font_size", label = "Font size", min = 1, max = 20, value = 6)
+                                                ),
+                                                mainPanel(width = 10,
+                                                          plotlyOutput("heatmap", height = "1600px")#, width = "1000px")
+                                                )
+                                              )
+
+
                                      ),
                                      tabPanel("Clustering",icon = icon("project-diagram"),
                                               br(),

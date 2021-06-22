@@ -6,10 +6,10 @@ createPlotWithGenesPerCellType <- function(table, cell_type, corr_threshold){
       xaxis = list(titlefont = list(size = 12), title = "# genes"),
       yaxis = list(titlefont = list(size = 12), title = "# cells"),
       title = list(
-        text = paste0("Number of cells of type '", cell_type, "' that express each number of genes (or more)"),
+        text = paste0("Number of cells of type '", cell_type, "'\nthat express each number of genes (or more)"),
         font = list(size = 11)
       )
-    )
+    ) %>% layout(legend = list(x = 0.5, y = 1))
 
   # plot <- ggplot(data = table) +
   #   geom_bar(stat="identity", aes(x=factor(`# genes`), y=`# cells`, fill = type), position = 'dodge') +

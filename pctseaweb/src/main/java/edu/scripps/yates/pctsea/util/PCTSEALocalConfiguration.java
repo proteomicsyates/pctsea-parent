@@ -2,15 +2,13 @@ package edu.scripps.yates.pctsea.util;
 
 import java.io.File;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Properties;
-import java.util.logging.Logger;
 
 import edu.scripps.yates.utilities.properties.PropertiesUtil;
 
 public class PCTSEALocalConfiguration {
-	private static final Logger log = Logger.getLogger(PCTSEALocalConfiguration.class.getName());
+//	private static final Logger log = Logger.getLogger(PCTSEALocalConfiguration.class.getName());
 	/**
 	 * You must have this environmental variable pointing to the path of the folder
 	 * in which the pctsea.conf properties is located
@@ -24,6 +22,8 @@ public class PCTSEALocalConfiguration {
 	/* PROPERTIES */
 	public static final String resultsPathProperty = "pctsea.results.path";
 	public static final String resultsViewerURLProperty = "pctsea.results.viewer.url";
+	public static final String resultsComparisonPathProperty = "pctsea.results.comparison.path";
+	public static final String resultsComparisonsURLProperty = "pctsea.results.comparison.url";
 	public static final String fromEmailProperty = "pctsea.from.email";
 
 	/**************************/
@@ -52,11 +52,36 @@ public class PCTSEALocalConfiguration {
 		return null;
 	}
 
+	public static File getPCTSEAResultsComparisonFolder() {
+		final String property = getPropertyValue(resultsComparisonPathProperty);
+		if (property != null && !"".equals(property)) {
+			return new File(property);
+		}
+		return null;
+	}
+
 	public static String getPCTSEAResultsViewerURL() {
 		final String property = getPropertyValue(resultsViewerURLProperty);
 		if (property != null && !"".equals(property)) {
 			try {
-				final URI uri = new java.net.URL(property).toURI();
+//				final URI uri =
+				new java.net.URL(property).toURI();
+//				log.log(java.util.logging.Level.INFO, "URL is good: " + uri.toString());
+			} catch (MalformedURLException | URISyntaxException e) {
+				e.printStackTrace();
+				throw new PCTSEAConfigurationException(e);
+			}
+			return property;
+		}
+		return null;
+	}
+
+	public static String getPCTSEAResultsComparisonURL() {
+		final String property = getPropertyValue(resultsComparisonsURLProperty);
+		if (property != null && !"".equals(property)) {
+			try {
+//				final URI uri = 
+				new java.net.URL(property).toURI();
 //				log.log(java.util.logging.Level.INFO, "URL is good: " + uri.toString());
 			} catch (MalformedURLException | URISyntaxException e) {
 				e.printStackTrace();

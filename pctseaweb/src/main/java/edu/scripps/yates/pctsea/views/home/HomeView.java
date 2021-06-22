@@ -21,6 +21,11 @@ import edu.scripps.yates.pctsea.views.main.MainView;
 @RouteAlias(value = "", layout = MainView.class)
 public class HomeView extends Div {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7372239097771647693L;
+
 	public HomeView() {
 		setId("home-view");
 		add(new H3("Welcome to the Proteomics Cell Type Set Enrichment Analysis (PCTSEA) web tool"));

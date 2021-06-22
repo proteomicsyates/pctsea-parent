@@ -172,6 +172,12 @@
 		    <artifactId>jsoup</artifactId>
 		    <version>1.12.1</version>
 		</dependency>
+		<!-- using zip -->
+		<dependency>
+			<groupId>org.apache.ant</groupId>
+			<artifactId>ant</artifactId>
+			<version>1.10.2</version>
+		</dependency>
     </dependencies>
 
     <build>

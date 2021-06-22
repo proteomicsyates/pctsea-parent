@@ -118,9 +118,10 @@ observeEvent(cell_type_scores_table(),{
         xaxis = list(titlefont = list(size = 12), title = "cell #"),
         yaxis = list(titlefont = list(size = 12), title = "Cumulative Probability"),
         title = list(
-          text = paste0("Calculation of Enrichment score for cell of type '", cell_type,"'"),
+          text = paste0("Calculation of Enrichment score\nfor cell of type '", cell_type,"'"),
           font = list(size = 11)
-        )
+        ),
+        legend = list(x = 0.5, y = 0.1)
       )
 
     })

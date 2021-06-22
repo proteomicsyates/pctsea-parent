@@ -29,6 +29,7 @@ import edu.scripps.yates.pctsea.util.VaadinUtil;
 import edu.scripps.yates.pctsea.views.about.AboutView;
 import edu.scripps.yates.pctsea.views.analyze.AnalyzeView;
 import edu.scripps.yates.pctsea.views.home.HomeView;
+import edu.scripps.yates.pctsea.views.results.CompareResultsView;
 
 /**
  * The main view is a top-level placeholder for other views.
@@ -89,8 +90,7 @@ public class MainView extends AppLayout {
 
 	private static Tab[] getAvailableTabs() {
 		return new Tab[] { createTab("Home", HomeView.class), createTab("Analyze", AnalyzeView.class),
-//				createTab("Results", ResultsView.class), 
-				createTab("About", AboutView.class) };
+				createTab("Compare results", CompareResultsView.class), createTab("About", AboutView.class) };
 	}
 
 	private static Tab createTab(String text, Class<? extends Component> navigationTarget) {
@@ -114,14 +114,40 @@ public class MainView extends AppLayout {
 
 	@Override
 	protected void onAttach(AttachEvent attachEvent) {
+		// check configuration
 		final String pctseaResultsViewerURL = PCTSEALocalConfiguration.getPCTSEAResultsViewerURL();
+		if (pctseaResultsViewerURL == null) {
+			final String text = "Error in configuration input file. \n pCtSEA final configuration error: Property '"
+					+ PCTSEALocalConfiguration.resultsViewerURLProperty + "' on configuration file '"
+					+ PCTSEALocalConfiguration.PCTSEA_CONF_FILE_NAME + "' is not found";
+			VaadinUtil.showErrorDialog(text);
+			throw new IllegalArgumentException(text);
+		}
 		try {
 			new URL(pctseaResultsViewerURL).toURI().toString();
 		} catch (MalformedURLException | URISyntaxException e) {
 			VaadinUtil.showErrorDialog("Error in configuration input file: " + e.getMessage() + "\n"
 					+ "pCtSEA configuration error: Property '" + PCTSEALocalConfiguration.resultsViewerURLProperty
 					+ "' on configuration file '" + PCTSEALocalConfiguration.PCTSEA_CONF_FILE_NAME
-					+ "'   is a malformed URL");
+					+ "' is a malformed URL");
+			throw new RuntimeException(e);
+
+		}
+		final String pctseaResultsComparisonsURL = PCTSEALocalConfiguration.getPCTSEAResultsComparisonURL();
+		if (pctseaResultsComparisonsURL == null) {
+			final String text = "Error in configuration input file\n" + "pCtSEA configuration error: Property '"
+					+ PCTSEALocalConfiguration.resultsComparisonsURLProperty + "' on configuration file '"
+					+ PCTSEALocalConfiguration.PCTSEA_CONF_FILE_NAME + "' is not found";
+			VaadinUtil.showErrorDialog(text);
+			throw new IllegalArgumentException(text);
+		}
+		try {
+			new URL(pctseaResultsComparisonsURL).toURI().toString();
+		} catch (MalformedURLException | URISyntaxException e) {
+			VaadinUtil.showErrorDialog("Error in configuration input file: " + e.getMessage() + "\n"
+					+ "pCtSEA configuration error: Property '" + PCTSEALocalConfiguration.resultsComparisonsURLProperty
+					+ "' on configuration file '" + PCTSEALocalConfiguration.PCTSEA_CONF_FILE_NAME
+					+ "' is a malformed URL");
 			throw new RuntimeException(e);
 
 		}

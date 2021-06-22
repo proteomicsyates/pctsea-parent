@@ -442,12 +442,14 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 
 		upload.addFileRejectedListener(event -> {
 			VaadinUtil.showErrorDialog(event.getErrorMessage());
+			hasUploadedFile = false;
 		});
 
 		upload.addFinishedListener(event -> {
 
 			try {
-				hasUploadedFile = true; // set flag to true
+				hasUploadedFile = true; // set flag to true o warn user if wants to leave that the file will be
+										// discarded
 				// save input File to the results folder using PCTSEALocalConfiguration:
 				final String fileName = event.getFileName();
 				final File pctseaResultsFolder = PCTSEALocalConfiguration.getPCTSEAResultsFolder();
@@ -772,8 +774,9 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 		final VerticalLayout significantTypesLinesPanel = new VerticalLayout();
 		if (results.getSignificantTypes() != null && !results.getSignificantTypes().isEmpty()) {
 			for (final CellTypeClassification significantCellType : results.getSignificantTypes()) {
-				significantTypesLinesPanel
-						.add(significantCellType.getName() + " " + significantCellType.getSignificancyString());
+				final String text = significantCellType.getName() + " " + significantCellType.getSignificancyString();
+				final Label label = new Label(text);
+				significantTypesLinesPanel.add(label);
 			}
 		}
 		final VerticalLayout significantTypesPanel = new VerticalLayout();
@@ -1105,7 +1108,7 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 			final ContinueNavigationAction action = event.postpone();
 			final MyConfirmDialogBeforeLeaving dialog = new MyConfirmDialogBeforeLeaving(
 					"Are you sure you want to leave this page?", "If you leave, the uploaded file will be discarded.",
-					"I understand, but I want to leave", "I am going to stay", action);
+					"I understand, but I want to leave", "I am going to stay", action, inputFile);
 
 			dialog.open();
 		} else if (isRunning()) {
@@ -1113,7 +1116,7 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 			final MyConfirmDialogBeforeLeaving dialog = new MyConfirmDialogBeforeLeaving(
 					"Are you sure you want to leave this page?",
 					"If you leave you will loose the running progress view, although you will still get the email with the results when finished.",
-					"I understand, but I want to leave", "I am going to stay", action);
+					"I understand, but I want to leave", "I am going to stay", action, inputFile);
 
 			dialog.open();
 		}

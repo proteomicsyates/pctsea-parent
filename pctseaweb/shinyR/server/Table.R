@@ -59,7 +59,7 @@ output$enrichmentDataTable <- DT::renderDT(
       options = list(
         pageLength = 10,
         columnDefs = list(list(className = 'dt-center', targets = 5)),
-        order = list(list(13, 'asc'), list(12, 'asc'), list(22, 'desc'), list(20, 'asc'))
+        order = list(list(12, 'asc'), list(11, 'asc'), list(21, 'desc'), list(19, 'asc'))
       ),
       rownames = FALSE
     ) %>%
@@ -93,7 +93,7 @@ output$enrichmentDataTable2 <- DT::renderDT(
       options = list(
         pageLength = 10,
         dom = 'lftipr',
-        order = list(list(11, 'asc'), list(14, 'desc'), list(12, 'asc'))
+        order = list(list(10, 'asc'), list(13, 'desc'), list(11, 'asc'))
       ),
       rownames = FALSE
     ) %>%

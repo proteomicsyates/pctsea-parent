@@ -6,9 +6,10 @@ createPlotWithGlobalGenesPerCellType <- function(table, score_name){
       xaxis = list(titlefont = list(size = 12), title = "# genes"),
       yaxis = list(titlefont = list(size = 12), title = "# cells"),
       title = list(
-        text = paste0("Number of cells that express each number of genes (or more)"),
+        text = paste0("Number of cells that express\neach number of genes (or more)"),
         font = list(size = 11)
-      )
+      ),
+      legend = list(x = 0.5, y = 1)
     )
 
   # plot <- ggplot(data = table) +

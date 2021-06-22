@@ -1,160 +1,193 @@
 package edu.scripps.yates.pctsea.views.results;
 
-import com.vaadin.flow.component.AbstractField;
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.PostConstruct;
+
+import com.google.common.base.Charsets;
+import com.google.common.hash.Hashing;
+import com.vaadin.flow.component.Unit;
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dependency.CssImport;
-import com.vaadin.flow.component.formlayout.FormLayout;
-import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.grid.GridVariant;
+import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.splitlayout.SplitLayout;
+import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.Label;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.PreserveOnRefresh;
 import com.vaadin.flow.router.Route;
 
+import edu.scripps.yates.pctsea.comparator.PCTSEAMultipleResultsMerger;
+import edu.scripps.yates.pctsea.util.PCTSEALocalConfiguration;
+import edu.scripps.yates.pctsea.utils.CellTypesOutputTableColumns;
+import edu.scripps.yates.pctsea.views.analyze.MyConfirmDialog;
 import edu.scripps.yates.pctsea.views.main.MainView;
 
-@Route(value = "results", layout = MainView.class)
-@PageTitle("Results")
+@PreserveOnRefresh
+@Route(value = "compare", layout = MainView.class)
+@PageTitle("PCTSEA web - Compare results")
 @CssImport("./styles/views/results/results-view.css")
-public class ResultsView extends Div {
+public class CompareResultsView extends VerticalLayout {
 
-//	private final Grid<SingleCell> grid;
-	private final Grid<String> grid;
+	/**
+		 * 
+		 */
+	private static final long serialVersionUID = 4823065117108763681L;
+	private Button compareButton;
+	private TextArea textArea;
+	private VerticalLayout resultsPanel;
 
-//	private final TextField firstName = new TextField();
-//	private final TextField lastName = new TextField();
-//	private final TextField email = new TextField();
-//	private final TextField phone = new TextField();
-//	private final DatePicker dateOfBirth = new DatePicker();
-//	private final TextField occupation = new TextField();
+	public CompareResultsView() {
+	}
 
-//	private final Button cancel = new Button("Cancel");
-//	private final Button save = new Button("Save");
-
-//	private final Binder<SingleCell> binder;
-
-//	private final SingleCell singleCell = new SingleCell();
-
-//	private final SingleCellMongoRepository singleCellMongoRepository;
-
-	public ResultsView(
-//			@Autowired SingleCellMongoRepository personService
-	) {
+	@PostConstruct
+	public void init() {
 		setId("results-view");
-//		this.singleCellMongoRepository = personService;
-		// Configure Grid
-//		grid = new Grid<>(SingleCell.class);
-		grid = new Grid<String>();
-		grid.setColumns("firstName", "lastName", "email", "phone", "dateOfBirth", "occupation");
-//		grid.setDataProvider(new CrudServiceDataProvider<SingleCell, Void>(personService));
-		grid.addThemeVariants(GridVariant.LUMO_NO_BORDER);
-		grid.setHeightFull();
 
-		// when a row is selected or deselected, populate form
-//		grid.asSingleSelect().addValueChangeListener(event -> {
-//			if (event.getValue() != null) {
-//				final Optional<SingleCell> personFromBackend = personService.get(event.getValue().getId());
-//				// when a row is selected but the data is no longer available, refresh grid
-//				if (personFromBackend.isPresent()) {
-//					populateForm(personFromBackend.get());
-//				} else {
-//					refreshGrid();
-//				}
-//			} else {
-//				clearForm();
-//			}
-//		});
+		final H3 title = new H3("Paste here the URL with the results that you want to compare:");
+		add(title);
+		textArea = new TextArea("URLs with results", "Paste here in multiple lines...");
+		textArea.getStyle().set("minHeight", "350px");
+		textArea.setWidth(100, Unit.PERCENTAGE);
 
-		// Configure Form
-//		binder = new Binder<>(SingleCell.class);
+		add(textArea);
 
-		// Bind fields. This where you'd define e.g. validation rules
-//		binder.bindInstanceFields(this);
-
-//		cancel.addClickListener(e -> {
-//			clearForm();
-//			refreshGrid();
-//		});
-//
-//		save.addClickListener(e -> {
-//			try {
-//				if (this.singleCell == null) {
-//					this.singleCell = new SingleCell();
-//				}
-//				binder.writeBean(this.singleCell);
-//				personService.update(this.singleCell);
-//				clearForm();
-//				refreshGrid();
-//				Notification.show("SingleCell details stored.");
-//			} catch (final ValidationException validationException) {
-//				Notification.show("An exception happened while trying to store the SingleCell details.");
-//			}
-//		});
-
-		final SplitLayout splitLayout = new SplitLayout();
-		splitLayout.setSizeFull();
-
-		createGridLayout(splitLayout);
-//		createEditorLayout(splitLayout);
-
-		add(splitLayout);
+		compareButton = new Button("Compare");
+		compareButton.addClickListener(event -> {
+			startComparison();
+		});
+		add(compareButton);
+		final Button buttonTMP = new Button("Add test");
+		buttonTMP.addClickListener(event -> {
+			final String urls = "http://sealion.scripps.edu:3838/salvador/pctsea/?results=2021-06-18_15-05-37_Jolene_Brain_M-D-2-SPC5_correlation"
+					+ "\n"
+					+ "http://sealion.scripps.edu:3838/salvador/pctsea/?results=2021-06-18_15-55-22_Jolene_Brain_M-D-3_Pearson_correlation";
+			textArea.setValue(urls);
+		});
+		add(buttonTMP);
+		resultsPanel = new VerticalLayout();
+		add(resultsPanel);
+		final Div footer = new Div();
+		add(footer);
 	}
 
-//	private void createEditorLayout(SplitLayout splitLayout) {
-//		final Div editorLayoutDiv = new Div();
-//		editorLayoutDiv.setId("editor-layout");
-//
-//		final Div editorDiv = new Div();
-//		editorDiv.setId("editor");
-//		editorLayoutDiv.add(editorDiv);
-//
-//		final FormLayout formLayout = new FormLayout();
-//		addFormItem(editorDiv, formLayout, firstName, "First name");
-//		addFormItem(editorDiv, formLayout, lastName, "Last name");
-//		addFormItem(editorDiv, formLayout, email, "Email");
-//		addFormItem(editorDiv, formLayout, phone, "Phone");
-//		addFormItem(editorDiv, formLayout, dateOfBirth, "Date of birth");
-//		addFormItem(editorDiv, formLayout, occupation, "Occupation");
-//		createButtonLayout(editorLayoutDiv);
-//
-//		splitLayout.addToSecondary(editorLayoutDiv);
-//	}
+	private void startComparison() {
+		try {
+			compareButton.setEnabled(false);
+			final List<String> resultNames = getResultNamesFromURLs(textArea.getValue());
+			for (final String string : resultNames) {
+				System.out.println(string);
+			}
+			final File pctseaResultsComparisonsFolder = PCTSEALocalConfiguration.getPCTSEAResultsComparisonFolder();
+			if (pctseaResultsComparisonsFolder == null) {
+				throw new IllegalArgumentException(
+						"Something is not well configured in PCTSEA. There is not a configured results comparisons folder to look at.");
+			}
 
-//	private void createButtonLayout(Div editorLayoutDiv) {
-//		final HorizontalLayout buttonLayout = new HorizontalLayout();
-//		buttonLayout.setId("button-layout");
-//		buttonLayout.setWidthFull();
-//		buttonLayout.setSpacing(true);
-//		cancel.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-//		save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-//		buttonLayout.add(save, cancel);
-//		editorLayoutDiv.add(buttonLayout);
-//	}
+			if (!pctseaResultsComparisonsFolder.exists()) {
+				pctseaResultsComparisonsFolder.mkdirs();
+			}
+			final File pctseaResultsFolder = PCTSEALocalConfiguration.getPCTSEAResultsFolder();
+			if (pctseaResultsFolder == null || !pctseaResultsFolder.exists()) {
+				throw new IllegalArgumentException(
+						"Something is not well configured in PCTSEA. There is not a configured results folder to look at.");
+			}
 
-	private void createGridLayout(SplitLayout splitLayout) {
-		final Div wrapper = new Div();
-		wrapper.setId("grid-wrapper");
-		wrapper.setWidthFull();
-		splitLayout.addToPrimary(wrapper);
-		wrapper.add(grid);
+			final List<File> zipFiles = getZipFilesFromResultsFolder(pctseaResultsFolder, resultNames);
+
+			// generate unique code from the resultsNames
+			final String comparisonFolderCode = getComparisonFolderCode(resultNames);
+			final File resultsComparisonFolder = new File(pctseaResultsComparisonsFolder.getAbsolutePath()
+					+ File.separator + "comparisons" + File.separator + comparisonFolderCode);
+			// exists already? then redirect
+			if (!resultsComparisonFolder.exists()) {
+
+				resultsComparisonFolder.mkdirs();
+				final Double fdrThreshold = null;
+				final PCTSEAMultipleResultsMerger resultsMerger = new PCTSEAMultipleResultsMerger(zipFiles,
+						fdrThreshold, resultsComparisonFolder);
+				final CellTypesOutputTableColumns[] values = CellTypesOutputTableColumns.values();
+				try {
+					final CellTypesOutputTableColumns[] cols = values;
+					for (final CellTypesOutputTableColumns col : cols) {
+						resultsMerger.run(col);
+					}
+
+				} catch (final Exception e) {
+					e.printStackTrace();
+				}
+			}
+			// redirect to comparison shiny app
+			final String pctseaComparisonViewerURL = PCTSEALocalConfiguration.getPCTSEAResultsComparisonURL();
+			final String comparisonURL = pctseaComparisonViewerURL + "?f=" + comparisonFolderCode;
+			resultsPanel.add(new Label("The comparison now is ready."));
+			final Anchor link = new Anchor(comparisonURL, comparisonURL);
+			link.setTarget("_blank");
+			resultsPanel.add(new Label("Go to: "), link);
+
+		} catch (final Exception e) {
+			final MyConfirmDialog dialog = new MyConfirmDialog("Error occurred:", e.getMessage(), "OK");
+			dialog.open();
+		} finally {
+			compareButton.setEnabled(true);
+		}
 	}
 
-	private void addFormItem(Div wrapper, FormLayout formLayout, AbstractField field, String fieldName) {
-		formLayout.addFormItem(field, fieldName);
-		wrapper.add(formLayout);
-		field.getElement().getClassList().add("full-width");
+	private String getComparisonFolderCode(List<String> resultNames) {
+		final StringBuilder sb = new StringBuilder();
+		resultNames.stream().sorted().forEach(name -> sb.append(name));
+		final String hash = Hashing.sha256().hashString(sb.toString(), Charsets.UTF_8).toString();
+		return hash;
 	}
 
-	private void refreshGrid() {
-		grid.select(null);
-		grid.getDataProvider().refreshAll();
+	private List<File> getZipFilesFromResultsFolder(File pctseaResultsFolder, List<String> resultNames) {
+		final List<File> ret = new ArrayList<File>();
+		for (final String fileName : resultNames) {
+			final File zipFile = new File(pctseaResultsFolder.getAbsolutePath() + File.separator + fileName + ".zip");
+			if (!zipFile.exists()) {
+				throw new IllegalArgumentException("File not found for result: '" + fileName + "'");
+			}
+			ret.add(zipFile);
+		}
+		return ret;
 	}
 
-//	private void clearForm() {
-//		populateForm(null);
-//	}
+	private List<String> getResultNamesFromURLs(String string) throws MalformedURLException, URISyntaxException {
+		if (string.trim().equals("")) {
+			throw new IllegalArgumentException("You must enter at least 2 URL with results to compare");
+		}
+		if (!string.contains("\n")) {
+			throw new IllegalArgumentException("You must enter at least 2 URL with results to compare");
+		} else {
+			final String[] split = string.split("\n");
+			final List<String> ret = new ArrayList<String>();
+			for (final String urlString : split) {
 
-//	private void populateForm(SingleCell value) {
-//		this.singleCell = value;
-//		binder.readBean(this.singleCell);
-//	}
+				final String query = new URL(urlString).getQuery();
+				final String[] params = query.split("&");
+
+				boolean valid = false;
+				for (final String param : params) {
+					final String name = param.split("=")[0];
+					final String value = param.split("=")[1];
+					if ("results".equals(name)) {
+						ret.add(value);
+						valid = true;
+					}
+				}
+				if (!valid) {
+					throw new IllegalArgumentException("URL '" + urlString + "' doesn't contain 'results=XXXX'");
+				}
+			}
+			return ret;
+		}
+
+	}
 }

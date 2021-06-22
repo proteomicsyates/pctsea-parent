@@ -1,5 +1,7 @@
 package edu.scripps.yates.pctsea.views.analyze;
 
+import java.io.File;
+
 import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.Shortcuts;
 import com.vaadin.flow.component.Text;
@@ -11,8 +13,19 @@ import com.vaadin.flow.router.BeforeLeaveEvent.ContinueNavigationAction;
 
 public class MyConfirmDialogBeforeLeaving extends Dialog {
 
+	/**
+	 * Dialog to wanr the user that if they leave, progress will be lost. If they
+	 * are ok with leaving, the inputFile will be deleted.
+	 * 
+	 * @param title
+	 * @param message
+	 * @param confirmButtonText
+	 * @param cancelButtonText
+	 * @param action
+	 * @param inputFile
+	 */
 	public MyConfirmDialogBeforeLeaving(String title, String message, String confirmButtonText, String cancelButtonText,
-			ContinueNavigationAction action) {
+			ContinueNavigationAction action, File inputFile) {
 		super();
 
 		final Div content = new Div();
@@ -25,7 +38,9 @@ public class MyConfirmDialogBeforeLeaving extends Dialog {
 		setCloseOnOutsideClick(true);
 
 		final Button confirmButton = new Button(confirmButtonText, event -> {
-
+			if (inputFile != null) {
+				inputFile.delete();
+			}
 			close();
 			action.proceed();
 		});

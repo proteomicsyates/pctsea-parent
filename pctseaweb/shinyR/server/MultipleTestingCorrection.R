@@ -17,9 +17,10 @@ createPlotMultipleTestingCorrection <- function(table){
       yaxis = list(titlefont = list(size = 12), #range = c(0, max_y),
                    title = "Frequency"),
       title = list(
-        text = 'Distributions of Observed vs Random enrichment scores for FDR calculation',
+        text = 'Distributions of Observed vs Random \nenrichment scores for FDR calculation',
         font = list(size = 11)
-      )
+      ),
+      legend = list(x = 0.5, y = 1)
     )
 
 }

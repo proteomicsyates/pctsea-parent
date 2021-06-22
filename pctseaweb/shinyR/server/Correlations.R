@@ -10,7 +10,7 @@ createPlotWithCorrelationsForCellType <- function(table, cell_type ){
       xaxis = list(titlefont = list(size = 12), title = score_name),
       yaxis = list(titlefont = list(size = 12), title = "Frequency (# cells)"),
       title = list(
-        text = paste0("Distribution of ", score_name, " across ", num_cells, " cells of type '", cell_type, "'"),
+        text = paste0("Distribution of ", score_name, " across ", num_cells, "\ncells of type '", cell_type, "'"),
         font = list(size = 11)
       )
     )

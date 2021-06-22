@@ -152,7 +152,7 @@ observeEvent(
     dimensions <- input$umapPlotDimensions
     output$umapHypGPlot <- renderPlotly({
       umap_hypG_table() %>%
-        createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> by hypergeometric test (p<0.05)', dimensions = dimensions)
+        createPlotWithUmap(title = 'UMAP clustering of significant \ncell types by hypergeometric test (p<0.05)', dimensions = dimensions)
     }
     )
   })
@@ -172,7 +172,7 @@ observeEvent(
     dimensions <- input$umapPlotDimensions
     output$umapKSTestPlot <- renderPlotly(
       umap_KStest_table() %>%
-        createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> by K-S test', dimensions = dimensions)
+        createPlotWithUmap(title = 'UMAP clustering of significant\ncell types by K-S test', dimensions = dimensions)
     )
   })
 
@@ -191,7 +191,7 @@ observeEvent(
     dimensions <- input$umapPlotDimensions
     output$umapSig001Plot <- renderPlotly(
       umap_sig001_table() %>%
-        createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> (sig<0.01)', dimensions = dimensions)
+        createPlotWithUmap(title = 'UMAP clustering of significant\ncell types (sig<0.01)', dimensions = dimensions)
     )
   })
 
@@ -210,7 +210,7 @@ observeEvent(
     dimensions <- input$umapPlotDimensions
     output$umapSig005Plot <- renderPlotly(
       umap_sig005_table() %>%
-        createPlotWithUmap(title = 'UMAP clustering of significant cell types<br> (sig<0.05)', dimensions = dimensions)
+        createPlotWithUmap(title = 'UMAP clustering of significant\ncell types (sig<0.05)', dimensions = dimensions)
     )
   })
 

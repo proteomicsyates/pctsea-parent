@@ -7,7 +7,7 @@ createPlotWithSupremaHistogram <- function(table){
     xaxis = list(title = 'Supremum X'),
     yaxis = list(title = 'Frequency'),
     title = list(
-      text = 'Distribution of positive suprema positions across cell types',
+      text = 'Distribution of positive suprema\n positions across cell types',
       font = list(size = 11)
     )
   )
@@ -57,7 +57,7 @@ createPlotWithSupremaScatter <- function(table){
       xaxis = list(title = 'suprema positions in ranked list'),
       yaxis = list(title = 'supremum size'),
       title = list(
-        text = "Suprema values vs suprema positions per cell type",
+        text = "Suprema values vs suprema\npositions per cell type",
         font = list(size = 11)
       )
     )
