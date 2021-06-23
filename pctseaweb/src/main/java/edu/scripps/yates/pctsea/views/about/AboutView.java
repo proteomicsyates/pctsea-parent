@@ -91,7 +91,7 @@ public class AboutView extends Div {
 							+ PCTSEALocalConfiguration.getPCTSEAResultsComparisonFolder()));
 
 			details.addContent(verticalPanel);
-			details.addThemeVariants(DetailsVariant.SMALL);
+//			details.addThemeVariants(DetailsVariant.SMALL);
 			add(details);
 		} catch (final PCTSEAConfigurationException e) {
 			add(new Label("There is some error in this server: " + e.getMessage()));
@@ -173,6 +173,16 @@ public class AboutView extends Div {
 				return "";
 			}
 		}).setHeader("Email");
+		gridFinishedRuns.addColumn(new ValueProvider<PctseaRunLog, String>() {
+
+			@Override
+			public String apply(PctseaRunLog run) {
+				if (run.getInputParameters() != null) {
+					return String.valueOf(run.getInputParameters().getNumPermutations());
+				}
+				return "";
+			}
+		}).setHeader("# Permutations");
 		gridFinishedRuns.addColumn(PctseaRunLog::getNumInputGenes).setHeader("# input genes");
 		detailsRunsFinished.addContent(gridFinishedRuns);
 		detailsRunsFinished.addThemeVariants(DetailsVariant.FILLED);

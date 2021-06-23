@@ -6,7 +6,6 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
 import gnu.trove.list.TFloatList;
 import gnu.trove.list.array.TFloatArrayList;
 import gnu.trove.map.TIntFloatMap;
@@ -75,7 +74,7 @@ public class Gene {
 		return 0;
 	}
 
-	public boolean permuteGeneExpressionInCells(List<SingleCell> singleCells) {
+	public boolean permuteGeneExpressionInCells(List<SingleCell> singleCells, SingleCellSet singleCellSet) {
 		try {
 			if (singleCellsIDs == null) {
 				// keep expressions of this gene in the single cells
@@ -105,7 +104,7 @@ public class Gene {
 				final Integer cellID = singleCellsIDs.get(i);
 				final float expression = expressions.get(index);
 				expressionsBySingleCellID.put(cellID, expression);
-				final SingleCell singleCell = SingleCellsMetaInformationReader.getSingleCellByCellID(cellID);
+				final SingleCell singleCell = singleCellSet.getSingleCellByCellID(cellID);
 				singleCell.addGeneExpressionValue(geneID, expression);
 			}
 		} catch (final Exception e) {
@@ -115,7 +114,7 @@ public class Gene {
 		return true;
 	}
 
-	public boolean permuteGeneExpressionInCells() {
+	public boolean permuteGeneExpressionInCells(SingleCellSet singleCellSet) {
 		try {
 			if (singleCellsIDs == null) {
 				// keep expressions of this gene in the single cells
@@ -143,7 +142,7 @@ public class Gene {
 				final Integer cellID = singleCellsIDs.get(i);
 				final float expression = expressions.get(index);
 				expressionsBySingleCellID.put(cellID, expression);
-				final SingleCell singleCell = SingleCellsMetaInformationReader.getSingleCellByCellID(cellID);
+				final SingleCell singleCell = singleCellSet.getSingleCellByCellID(cellID);
 				singleCell.addGeneExpressionValue(geneID, expression);
 			}
 			return true;
@@ -153,13 +152,13 @@ public class Gene {
 		}
 	}
 
-	public void resetToOriginalNonPermutatedExpressions() {
+	public void resetToOriginalNonPermutatedExpressions(SingleCellSet singleCellSet) {
 		if (singleCellsIDs != null) {
 			for (int i = 0; i < singleCellsIDs.size(); i++) {
 				final Integer cellID = singleCellsIDs.get(i);
 				final float expression = expressions.get(i);
 				expressionsBySingleCellID.put(cellID, expression);
-				final SingleCell singleCell = SingleCellsMetaInformationReader.getSingleCellByCellID(cellID);
+				final SingleCell singleCell = singleCellSet.getSingleCellByCellID(cellID);
 				singleCell.addGeneExpressionValue(geneID, expression);
 			}
 		}

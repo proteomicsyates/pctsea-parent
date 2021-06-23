@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.LoggerFactory;
+
 import edu.scripps.yates.annotations.uniprot.UniprotProteinLocalRetriever;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.utilities.annotations.uniprot.UniprotEntryUtil;
@@ -18,6 +20,7 @@ import gnu.trove.map.hash.THashMap;
 
 public class InputDataMappingValidation {
 	private final StatusListener<Boolean> statusListener;
+	private final static org.slf4j.Logger log = LoggerFactory.getLogger(InputDataMappingValidation.class);
 
 	public InputDataMappingValidation(StatusListener<Boolean> statusListener) {
 		this.statusListener = statusListener;
@@ -37,7 +40,7 @@ public class InputDataMappingValidation {
 			counter.increment();
 			final String printIfNecessary = counter.printIfNecessary();
 			if (!"".equals(printIfNecessary)) {
-				statusListener.onStatusUpdate(printIfNecessary, false);
+				log.info(printIfNecessary);
 			}
 			final List<String> genes = genesByInputEntry.get(inputProteinGene);
 			for (final String geneName : genes) {
@@ -78,7 +81,7 @@ public class InputDataMappingValidation {
 		}
 		final Map<String, Entry> annotatedProteins = new THashMap<String, Entry>();
 		if (!uniprotAccs.isEmpty()) {
-			statusListener.onStatusUpdate("Translating " + uniprotAccs.size() + " uniprot accessions to gene names");
+			log.info("Translating " + uniprotAccs.size() + " uniprot accessions to gene names");
 
 			final UniprotProteinLocalRetriever uplr = new UniprotProteinLocalRetriever(
 					new File(System.getProperty("user.dir")), true);

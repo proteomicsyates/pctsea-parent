@@ -786,6 +786,8 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 		datasetsCombo.setEnabled(false);
 		scoringMethodCombo.setEnabled(false);
 		cellTypeBranchCombo.setEnabled(false);
+		inputDataTypeCombo.setEnabled(false);
+		minimumCorrelationBox.setEnabled(false);
 //		generatePDFCheckbox.setEnabled(false);
 	}
 
@@ -801,6 +803,8 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 		datasetsCombo.setEnabled(true);
 		scoringMethodCombo.setEnabled(true);
 		cellTypeBranchCombo.setEnabled(true);
+		inputDataTypeCombo.setEnabled(true);
+		minimumCorrelationBox.setEnabled(true);
 //		generatePDFCheckbox.setEnabled(true);
 	}
 

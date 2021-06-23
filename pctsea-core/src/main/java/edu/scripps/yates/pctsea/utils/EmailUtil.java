@@ -31,8 +31,23 @@ public class EmailUtil {
 		body.append("Run submited: " + result.getRunLog().getStarted() + " <br> ");
 		body.append("Run finished: " + result.getRunLog().getFinished() + " <br> ");
 		body.append("Running time: " + DatesUtil.getDescriptiveTimeFromMillisecs(result.getRunLog().getRunningTime())
-				+ " <br><br> ");
+				+ " <br>");
+		body.append("Size of input protein list: " + result.getRunLog().getNumInputGenes() + "<br>");
+		final List<String> inputGenesNotFound = result.getRunLog().getInputGenesNotFound();
+		body.append("Number of input proteins not mapped: " + inputGenesNotFound.size() + "<br>");
 
+		if (!inputGenesNotFound.isEmpty()) {
+			body.append("Proteins not mapped: ");
+			final StringBuilder sb = new StringBuilder();
+			for (final String inputGeneNotFound : inputGenesNotFound) {
+				if (!"".equals(sb.toString())) {
+					sb.append(",");
+				}
+				sb.append(inputGeneNotFound);
+			}
+			body.append(sb.toString());
+		}
+		body.append("<br><br>");
 		// parameters
 		body.append("Parameters: <br> ");
 		body.append("<ul>");

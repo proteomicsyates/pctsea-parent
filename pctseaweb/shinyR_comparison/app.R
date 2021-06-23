@@ -46,14 +46,15 @@ ui <- fluidPage(
              sidebarLayout(
                sidebarPanel(
                  width = 3,
-                 selectInput(inputId = "dataTypeHeatmap", label = "Data type", choices = c("", data_types), selected = data_types[8]),
+                 selectInput(inputId = "dataTypeHeatmap", label = "PcTSEA measurement/score", choices = c("", data_types), selected = data_types[8]),
                  numericInput(inputId = "fdrThreshold", label ="FDR threshold:", value = 0.05),
                  checkboxInput(inputId = "clusterCellTypes", label = "Cluster cell types"),
                  checkboxInput(inputId = "clusterCellLines", label = "Cluster samples"),
                  checkboxInput(inputId = "doLog10", label = "Transform log10"),
                  checkboxInput(inputId = "scalingMode", label = "Color scale independent per cell type (horizontally)"),
                  numericInput(inputId = "naValues", label ="Replace NaN values with:", value = NULL),
-                 downloadButton("downloadData", label = "Download table (not filtered)")
+                 tags$h5("Download not filtered table"),
+                 downloadButton("downloadData", label = "Download")
                ),
                # Show a plot of the generated distribution
                mainPanel(

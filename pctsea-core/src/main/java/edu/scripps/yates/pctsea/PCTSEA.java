@@ -64,6 +64,7 @@ import edu.scripps.yates.pctsea.model.PCTSEAResult;
 import edu.scripps.yates.pctsea.model.ScoringMethod;
 import edu.scripps.yates.pctsea.model.ScoringSchema;
 import edu.scripps.yates.pctsea.model.SingleCell;
+import edu.scripps.yates.pctsea.model.SingleCellSet;
 import edu.scripps.yates.pctsea.model.charts.LabelGenerator;
 import edu.scripps.yates.pctsea.model.charts.LabeledXYDataset;
 import edu.scripps.yates.pctsea.scoring.NoThreshold;
@@ -71,7 +72,6 @@ import edu.scripps.yates.pctsea.scoring.ScoreThreshold;
 import edu.scripps.yates.pctsea.utils.CellTypesOutputTableColumns;
 import edu.scripps.yates.pctsea.utils.EmailUtil;
 import edu.scripps.yates.pctsea.utils.PCTSEAUtils;
-import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
 import edu.scripps.yates.pctsea.utils.parallel.EnrichmentWeigthedScoreParallel;
 import edu.scripps.yates.utilities.appversion.AppVersion;
 import edu.scripps.yates.utilities.cores.SystemCoreManager;
@@ -153,6 +153,7 @@ public class PCTSEA {
 	private boolean createZipFile = true;
 	private String fromEmail;
 	private String uniprotRelease;
+	private final SingleCellSet singleCellSet = new SingleCellSet();
 	/**
 	 * Sequentially applied scoring methods
 	 */
@@ -320,7 +321,7 @@ public class PCTSEA {
 			final List<SingleCell> singleCellList = getSingleCellListFromDB(datasets, cellTypeBranch, numGenes);
 
 			interactorExpressions = new InteractorsExpressionsRetriever(mongoBaseService, experimentExpressionFile,
-					datasets, uniprotRelease, runLog, singleCellList, statusListener);
+					datasets, uniprotRelease, runLog, singleCellList, statusListener, singleCellSet);
 
 			// we call this so that it output the log of looking for uniprot annotations and
 			// getting the expressions before going any further
@@ -1306,7 +1307,7 @@ public class PCTSEA {
 		logStatus(singleCellsFromDB.size() + " cells retrieved");
 		logStatus("Processing information from cells...");
 		int cellID = 0;
-		SingleCellsMetaInformationReader.clearInformation(true);
+		singleCellSet.clearInformation(true);
 		final ProgressCounter counter = new ProgressCounter(singleCellsFromDB.size(),
 				ProgressPrintingType.PERCENTAGE_STEPS, 0, true);
 		for (final edu.scripps.yates.pctsea.db.SingleCell singleCelldb : singleCellsFromDB) {
@@ -1341,7 +1342,7 @@ public class PCTSEA {
 
 			sc.setCellType(singleCelldb.getType(), true, cellTypeBranch);
 			ret.add(sc);
-			SingleCellsMetaInformationReader.addSingleCell(sc);
+			singleCellSet.addSingleCell(sc);
 		}
 		final long t1 = System.currentTimeMillis();
 		logStatus(ret.size() + " single cells read from database in "

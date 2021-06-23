@@ -25,6 +25,7 @@ import edu.scripps.yates.pctsea.db.PctseaRunLogRepository;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
 import edu.scripps.yates.pctsea.db.datasets.singlecellshuman.GeneToUpperCase;
 import edu.scripps.yates.pctsea.db.datasets.singlecellshuman.HumanSingleCellsDatasetCreation;
+import edu.scripps.yates.pctsea.model.SingleCellSet;
 import edu.scripps.yates.utilities.strings.StringUtils;
 import edu.scripps.yates.utilities.swing.DoNotInvokeRunMethod;
 import edu.scripps.yates.utilities.swing.StatusListener;
@@ -193,7 +194,7 @@ public class PCTSEADbApplication implements CommandLineRunner {
 							log.info(statusMessage);
 
 						}
-					});
+					}, new SingleCellSet());
 			hsc.run();
 			return;
 		}

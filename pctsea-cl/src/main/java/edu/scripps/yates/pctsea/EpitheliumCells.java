@@ -29,7 +29,7 @@ import edu.scripps.yates.pctsea.db.ExpressionMongoRepository;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.SingleCell;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
-import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
+import edu.scripps.yates.pctsea.model.SingleCellSet;
 import edu.scripps.yates.utilities.dates.DatesUtil;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
 import edu.scripps.yates.utilities.progresscounter.ProgressPrintingType;
@@ -322,7 +322,8 @@ public class EpitheliumCells implements CommandLineRunner {
 		return ret;
 	}
 
-	private List<Expression> readSingleCellGZipFile(File file, Dataset dataset) throws IOException {
+	private List<Expression> readSingleCellGZipFile(File file, Dataset dataset, SingleCellSet singleCellSet)
+			throws IOException {
 //		final THashMap<String, TObjectIntMap<String>> expressionsByCell = new THashMap<String, TObjectIntMap<String>>();
 		BufferedReader br = null;
 		final List<SingleCell> singleCellList = new ArrayList<SingleCell>();
@@ -357,7 +358,7 @@ public class EpitheliumCells implements CommandLineRunner {
 							final short expressionValue = Short.valueOf(expressionValueString);
 							if (expressionValue > 0) {
 								final String singleCellName = header;
-								final String type = getSingleCellType(singleCellName);
+								final String type = getSingleCellType(singleCellName, singleCellSet);
 
 								SingleCell singleCelldb = null;
 								if (!singleCellByNames.containsKey(singleCellName)) {
@@ -425,13 +426,12 @@ public class EpitheliumCells implements CommandLineRunner {
 
 	}
 
-	private String getSingleCellType(String singleCell) {
-		final int cellID = SingleCellsMetaInformationReader.getSingleCellIDBySingleCellName(singleCell);
+	private String getSingleCellType(String singleCell, SingleCellSet singleCellSet) {
+		final int cellID = singleCellSet.getSingleCellIDBySingleCellName(singleCell);
 		if (cellID == -1) {
 			return null;
 		}
-		final edu.scripps.yates.pctsea.model.SingleCell cell = SingleCellsMetaInformationReader
-				.getSingleCellByCellID(cellID);
+		final edu.scripps.yates.pctsea.model.SingleCell cell = singleCellSet.getSingleCellByCellID(cellID);
 		if (cell != null) {
 			return cell.getOriginalCellType();
 		}

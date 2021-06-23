@@ -8,7 +8,6 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,25 +16,20 @@ import org.apache.log4j.Logger;
 
 import edu.scripps.yates.pctsea.model.CellTypeBranch;
 import edu.scripps.yates.pctsea.model.SingleCell;
+import edu.scripps.yates.pctsea.model.SingleCellSet;
 import edu.scripps.yates.utilities.files.FileUtils;
 import edu.scripps.yates.utilities.progresscounter.ProgressCounter;
 import edu.scripps.yates.utilities.progresscounter.ProgressPrintingType;
 import edu.scripps.yates.utilities.swing.StatusListener;
-import gnu.trove.list.TIntList;
-import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.TObjectIntMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
 public class SingleCellsMetaInformationReader {
 	private static final Logger log = Logger.getLogger(SingleCellsMetaInformationReader.class);
-	private static final TIntObjectMap<SingleCell> singleCellsByCellID = new TIntObjectHashMap<SingleCell>();
-	private static final List<SingleCell> singleCellList = new ArrayList<SingleCell>();
-	private static final TObjectIntMap<String> singleCellIDsBySingleCellNameMap = new TObjectIntHashMap<String>();
-	private static final TIntList cellIDs = new TIntArrayList();
-	private static int totalNumCellsForDataset;
+
 	private StatusListener<Boolean> statusListener;
+
+	private SingleCellSet singleCellSet;
 
 //	/**
 //	 * This reads a file with the meta-information of the single cells, their
@@ -112,6 +106,7 @@ public class SingleCellsMetaInformationReader {
 	 */
 	public SingleCellsMetaInformationReader(File annotationRMBatchFolder, StatusListener<Boolean> statusListener)
 			throws IOException {
+		singleCellSet = new SingleCellSet();
 		this.statusListener = statusListener;
 		statusListener.onStatusUpdate(
 				"Reading single cells metadata information from folder: " + annotationRMBatchFolder.getAbsolutePath());
@@ -169,8 +164,8 @@ public class SingleCellsMetaInformationReader {
 								split[indexesByHeader.get("biomaterial")].trim().toLowerCase());
 
 						cellID++;
-						singleCellIDsBySingleCellNameMap.put(cellName, cellID);
-						cellIDs.add(cellID);
+						singleCellSet.getSingleCellIDsBySingleCellNameMap().put(cellName, cellID);
+						singleCellSet.getCellIDs().add(cellID);
 //						final List<edu.scripps.yates.pctsea.db.SingleCell> dbCell = repo.findByName(cellName);
 //						if (dbCell.isEmpty()) {
 //							cellsNotFound++;
@@ -197,13 +192,14 @@ public class SingleCellsMetaInformationReader {
 							singleCell.setAge(age);
 						}
 
-						addSingleCell(singleCell);
+						singleCellSet.addSingleCell(singleCell);
 
 					}
 				}
 			} finally {
 				reader.close();
-				final String message = "Information from " + singleCellList.size() + " single cells read";
+				final String message = "Information from " + singleCellSet.getSingleCellList().size()
+						+ " single cells read";
 				statusListener.onStatusUpdate(message);
 				statusListener.onStatusUpdate("Cells not found in DB: " + cellsNotFound);
 				counter.increment(metadataFile.length());
@@ -214,7 +210,7 @@ public class SingleCellsMetaInformationReader {
 //			System.out.println(message);
 			}
 		}
-		statusListener.onStatusUpdate(singleCellList.size() + " single cells read");
+		statusListener.onStatusUpdate(singleCellSet.getSingleCellList().size() + " single cells read");
 	}
 
 	private String removeQuotes(String text) {
@@ -224,22 +220,18 @@ public class SingleCellsMetaInformationReader {
 		return text;
 	}
 
-	public static SingleCell getSingleCellByCellID(int cellID) {
-		return singleCellsByCellID.get(cellID);
-	}
-
 	public List<SingleCell> getSingleCellListWithCorrelationGT(double minCorrelation) {
-		final List<SingleCell> ret = singleCellList.stream().filter(sc -> sc.getScoreForRanking() >= minCorrelation)
-				.collect(Collectors.toList());
-		statusListener.onStatusUpdate(ret.size() + " (out of " + singleCellList.size()
+		final List<SingleCell> ret = singleCellSet.getSingleCellList().stream()
+				.filter(sc -> sc.getScoreForRanking() >= minCorrelation).collect(Collectors.toList());
+		statusListener.onStatusUpdate(ret.size() + " (out of " + singleCellSet.getSingleCellList().size()
 				+ ") single cells with correlation >= " + minCorrelation);
 		return ret;
 	}
 
 	public List<SingleCell> getSingleCellListWithCorrelationLT(double maxCorrelation) {
-		final List<SingleCell> ret = singleCellList.stream().filter(sc -> sc.getScoreForRanking() <= maxCorrelation)
-				.collect(Collectors.toList());
-		statusListener.onStatusUpdate(ret.size() + " (out of " + singleCellList.size()
+		final List<SingleCell> ret = singleCellSet.getSingleCellList().stream()
+				.filter(sc -> sc.getScoreForRanking() <= maxCorrelation).collect(Collectors.toList());
+		statusListener.onStatusUpdate(ret.size() + " (out of " + singleCellSet.getSingleCellList().size()
 				+ ") single cells with correlation <= " + maxCorrelation);
 		return ret;
 	}
@@ -260,71 +252,20 @@ public class SingleCellsMetaInformationReader {
 			} else {
 				final String cellName = split[indexesByHeader.get("SingleCell")];
 				final double correlation = Double.valueOf(split[indexesByHeader.get("corr")]);
-				if (!singleCellIDsBySingleCellNameMap.containsKey(cellName)) {
+				if (!singleCellSet.getSingleCellIDsBySingleCellNameMap().containsKey(cellName)) {
 					// this means that the single cell was not clustered
-					final int cellID = cellIDs.max() + 1;
+					final int cellID = singleCellSet.getCellIDs().max() + 1;
 					final SingleCell singleCell = new SingleCell(cellID, cellName, correlation);
-					addSingleCell(singleCell);
+					singleCellSet.addSingleCell(singleCell);
 				} else {
-					singleCellsByCellID.get(singleCellIDsBySingleCellNameMap.get(cellName)).setScore(correlation);
+					singleCellSet.getSingleCellsByCellID()
+							.get(singleCellSet.getSingleCellIDsBySingleCellNameMap().get(cellName))
+							.setScore(correlation);
 				}
 			}
 		}
-		statusListener.onStatusUpdate(
-				"Now we have " + singleCellList.size() + "(" + singleCellsByCellID.size() + ") single cells");
-	}
-
-	/**
-	 * NOTE THAT CAN RETURN -1 if the cell is not found because it was ignored from
-	 * the db because it didnt have a type
-	 * 
-	 * @param name
-	 * @return
-	 */
-	public static int getSingleCellIDBySingleCellName(String name) {
-		final int id = singleCellIDsBySingleCellNameMap.get(name);
-		if (id > 0) {
-
-			return id;
-		} else {
-			// if it is not found it is because that single cell has not been classified,
-			// doesnt have a type and was ignored from the database, therefore, we return
-			// -1 here
-			return -1;
-//			int cellID = 1;
-//			if (!cellIDs.isEmpty()) {
-//				cellID = cellIDs.max() + 1;
-//			}
-////			statusListener.onStatusUpdate("Why cell " + name + " was not found before in the DB?",LogLevel.WARN);
-//			final SingleCell cell = new SingleCell(cellID, name, Double.NaN);
-//			addSingleCell(cell);
-//			return cellID;
-		}
-	}
-
-	public static void addSingleCell(SingleCell singleCell) {
-		addSingleCellIDBySingleCellName(singleCell.getName(), singleCell.getId());
-		singleCellList.add(singleCell);
-		totalNumCellsForDataset++;
-		singleCellsByCellID.put(singleCell.getId(), singleCell);
-	}
-
-	private static void addSingleCellIDBySingleCellName(String name, int id) {
-		singleCellIDsBySingleCellNameMap.put(name, id);
-		cellIDs.add(id);
-	}
-
-	public static int getNumSingleCells() {
-		return totalNumCellsForDataset;
-	}
-
-	public static void clearInformation(boolean clearTotalNumber) {
-		singleCellIDsBySingleCellNameMap.clear();
-		singleCellList.clear();
-		singleCellsByCellID.clear();
-		if (clearTotalNumber) {
-			totalNumCellsForDataset = 0;
-		}
+		statusListener.onStatusUpdate("Now we have " + singleCellSet.getSingleCellList().size() + "("
+				+ singleCellSet.getSingleCellsByCellID().size() + ") single cells");
 	}
 
 }

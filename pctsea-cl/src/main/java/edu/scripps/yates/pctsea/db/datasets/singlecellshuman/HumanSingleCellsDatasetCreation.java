@@ -22,6 +22,7 @@ import edu.scripps.yates.pctsea.db.Expression;
 import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.SingleCell;
 import edu.scripps.yates.pctsea.db.SingleCellMongoRepository;
+import edu.scripps.yates.pctsea.model.SingleCellSet;
 import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
 import edu.scripps.yates.utilities.dates.DatesUtil;
 import edu.scripps.yates.utilities.files.FileUtils;
@@ -43,14 +44,17 @@ public class HumanSingleCellsDatasetCreation {
 	private Set<String> singleCellsInDB;
 
 	private final StatusListener<Boolean> statusListener;
+
+	private final SingleCellSet singleCellSet;
 	private static long id = 0;
 
 	public HumanSingleCellsDatasetCreation(File singleCellExpressionFolder, File annotationRMBatchFolder,
 			DatasetMongoRepository projectMongoRepo, SingleCellMongoRepository singleCellMongoRepository,
-			MongoBaseService mongoBaseService, Integer batchSize, StatusListener<Boolean> statusListener)
-			throws IOException {
+			MongoBaseService mongoBaseService, Integer batchSize, StatusListener<Boolean> statusListener,
+			SingleCellSet singleCellSet) throws IOException {
 		// read single cells
 		this.statusListener = statusListener;
+		this.singleCellSet = singleCellSet;
 		new SingleCellsMetaInformationReader(annotationRMBatchFolder, statusListener);
 		this.singleCellExpressionFolder = singleCellExpressionFolder;
 		this.projectMongoRepo = projectMongoRepo;
@@ -258,12 +262,11 @@ public class HumanSingleCellsDatasetCreation {
 	}
 
 	private String getSingleCellBiomaterial(String singleCell) {
-		final int cellID = SingleCellsMetaInformationReader.getSingleCellIDBySingleCellName(singleCell);
+		final int cellID = singleCellSet.getSingleCellIDBySingleCellName(singleCell);
 		if (cellID == -1) {
 			return null;
 		}
-		final edu.scripps.yates.pctsea.model.SingleCell cell = SingleCellsMetaInformationReader
-				.getSingleCellByCellID(cellID);
+		final edu.scripps.yates.pctsea.model.SingleCell cell = singleCellSet.getSingleCellByCellID(cellID);
 		if (cell != null) {
 			return cell.getBiomaterial();
 		}
@@ -271,12 +274,11 @@ public class HumanSingleCellsDatasetCreation {
 	}
 
 	private String getSingleCellType(String singleCell) {
-		final int cellID = SingleCellsMetaInformationReader.getSingleCellIDBySingleCellName(singleCell);
+		final int cellID = singleCellSet.getSingleCellIDBySingleCellName(singleCell);
 		if (cellID == -1) {
 			return null;
 		}
-		final edu.scripps.yates.pctsea.model.SingleCell cell = SingleCellsMetaInformationReader
-				.getSingleCellByCellID(cellID);
+		final edu.scripps.yates.pctsea.model.SingleCell cell = singleCellSet.getSingleCellByCellID(cellID);
 		if (cell != null) {
 			return cell.getOriginalCellType();
 		}

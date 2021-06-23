@@ -27,7 +27,7 @@ import edu.scripps.yates.pctsea.db.MongoBaseService;
 import edu.scripps.yates.pctsea.db.PctseaRunLog;
 import edu.scripps.yates.pctsea.model.Gene;
 import edu.scripps.yates.pctsea.model.SingleCell;
-import edu.scripps.yates.pctsea.utils.SingleCellsMetaInformationReader;
+import edu.scripps.yates.pctsea.model.SingleCellSet;
 import edu.scripps.yates.utilities.annotations.uniprot.UniprotEntryUtil;
 import edu.scripps.yates.utilities.annotations.uniprot.xml.Entry;
 import edu.scripps.yates.utilities.dates.DatesUtil;
@@ -66,6 +66,7 @@ public class InteractorsExpressionsRetriever {
 	private final PctseaRunLog runLog;
 	private final List<SingleCell> singleCellList;
 	private final StatusListener<Boolean> statusListener;
+	private final SingleCellSet singleCellSet;
 
 	/**
 	 * 
@@ -76,17 +77,19 @@ public class InteractorsExpressionsRetriever {
 	 * @param runLog                          to log the number of genes found from
 	 *                                        input list in the database
 	 * @param singleCellList
+	 * @param statusListener
+	 * @param singleCellSet
 	 * @throws IOException
 	 */
 	public InteractorsExpressionsRetriever(MongoBaseService mongoBaseService, File experimentalExpressionsFile,
 			Collection<Dataset> datasets, String uniprotRelease, PctseaRunLog runLog, List<SingleCell> singleCellList,
-			StatusListener<Boolean> statusListener) throws IOException {
+			StatusListener<Boolean> statusListener, SingleCellSet singleCellSet) throws IOException {
 //		if (SingleCellsMetaInformationReader.singleCellIDsBySingleCellNameMap.isEmpty()) {
 //			throw new IllegalArgumentException(
 //					"We need to read the single cell metainformation before reading expressions");
 //		}
 		this.statusListener = statusListener;
-
+		this.singleCellSet = singleCellSet;
 		this.runLog = runLog;
 		if (datasets != null) {
 			this.datasets.addAll(datasets);
@@ -168,12 +171,17 @@ public class InteractorsExpressionsRetriever {
 					geneIDsSet.add(geneID);
 				}
 
-				final int singleCellID = SingleCellsMetaInformationReader.getSingleCellIDBySingleCellName(cellName);
+				final int singleCellID = singleCellSet.getSingleCellIDBySingleCellName(cellName);
 
-				final SingleCell cell = SingleCellsMetaInformationReader.getSingleCellByCellID(singleCellID);
+				final SingleCell cell = singleCellSet.getSingleCellByCellID(singleCellID);
 				if (cell == null) {
+
 					// this can be if PCTSEA.SINGLE_CELL_TYPE_FOR_DEBUGGING is enabled and only
 					// cells from a certain cell type are available and the rest are missing.
+					if (PCTSEA.SINGLE_CELL_TYPE_FOR_DEBUGGING == null) {
+						throw new IllegalArgumentException(
+								"Some error occurred in the flow! This singleCell should be already stored!");
+					}
 					return;
 				}
 				if (PCTSEA.SINGLE_CELL_TYPE_FOR_DEBUGGING != null) {
@@ -209,7 +217,7 @@ public class InteractorsExpressionsRetriever {
 		// now we can discard the static single cells from the
 		// SingleCellsMetaInformationReader because the cells that are in the list are
 		// the ones that we want
-		SingleCellsMetaInformationReader.clearInformation(false);
+		singleCellSet.clearInformation(false);
 		// and remove the names from the single cells
 		for (final SingleCell cell : singleCellList) {
 			cell.setName(null);
@@ -252,8 +260,7 @@ public class InteractorsExpressionsRetriever {
 //		System.out.println(message);
 
 		final String message = singleCellIDs.size() + " single cells with expression values in " + genesById.size()
-				+ " different genes/proteins out of a total " + SingleCellsMetaInformationReader.getNumSingleCells()
-				+ " of single cells";
+				+ " different genes/proteins out of a total " + singleCellSet.getNumSingleCells() + " of single cells";
 		statusListener.onStatusUpdate(message);
 
 	}
@@ -278,7 +285,7 @@ public class InteractorsExpressionsRetriever {
 		}
 		final Map<String, Entry> annotatedProteins = new THashMap<String, Entry>();
 		if (!uniprotAccs.isEmpty()) {
-			statusListener.onStatusUpdate("Translating " + uniprotAccs.size() + " uniprot accessions to gene names");
+			statusListener.onStatusUpdate("Translating " + uniprotAccs.size() + " uniprot accessions to gene names...");
 
 			final UniprotProteinLocalRetriever uplr = new UniprotProteinLocalRetriever(
 					new File(System.getProperty("user.dir")), true);
@@ -307,6 +314,8 @@ public class InteractorsExpressionsRetriever {
 				}
 			}
 			uplr.clearMemory();
+			statusListener
+					.onStatusUpdate("Translating " + uniprotAccs.size() + " uniprot accessions to gene names is done.");
 		}
 		return genesByInputEntry;
 	}
@@ -414,7 +423,8 @@ public class InteractorsExpressionsRetriever {
 
 	public void permuteSingleCellExpressions(List<SingleCell> totalSingles) {
 
-		final boolean problemOccurred = genesById.forEachValue(gene -> gene.permuteGeneExpressionInCells(totalSingles));
+		final boolean problemOccurred = genesById
+				.forEachValue(gene -> gene.permuteGeneExpressionInCells(totalSingles, singleCellSet));
 		if (problemOccurred) {
 			throw new RuntimeException("Error while permuting gene expresssions in cells");
 		}
@@ -425,7 +435,7 @@ public class InteractorsExpressionsRetriever {
 			getSingleCellExpressionsFromDB(genes);
 		}
 		for (final Gene gene : genesById.valueCollection()) {
-			final boolean noError = gene.permuteGeneExpressionInCells();
+			final boolean noError = gene.permuteGeneExpressionInCells(singleCellSet);
 			if (!noError) {
 				throw new RuntimeException(
 						"Error while permuting gene expresssions in cells for gene " + gene.getGeneName());
