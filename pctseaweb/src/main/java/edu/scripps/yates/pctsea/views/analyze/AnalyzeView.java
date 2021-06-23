@@ -164,6 +164,8 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 	private List<Dataset> datasetsFromDB;
 	private VerticalLayout inputParametersTabContent;
 	private boolean wasInNewLine;
+
+	private RadioButtonGroup<String> radioGroupDefaultParametersToggle;
 	private static int numInstances = 0;
 
 	class MyUpload extends Upload {
@@ -591,18 +593,18 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 	private final static String USE_DEFAULT_PARAMETERS = "Use default parameters";
 
 	private Component defaultsParametersToggle() {
-		final RadioButtonGroup<String> radioGroup = new RadioButtonGroup<String>();
-		radioGroup.setLabel("Select one option:");
-		radioGroup.setItems(USE_DEFAULT_PARAMETERS, "Customize parameters (for advanced users)");
-		radioGroup.setValue(USE_DEFAULT_PARAMETERS);
-		radioGroup.setHelperText("We recomend to try with defaults parameters first");
-		radioGroup.addThemeVariants(RadioGroupVariant.LUMO_VERTICAL);
-		radioGroup.addValueChangeListener(event -> {
+		radioGroupDefaultParametersToggle = new RadioButtonGroup<String>();
+		radioGroupDefaultParametersToggle.setLabel("Select one option:");
+		radioGroupDefaultParametersToggle.setItems(USE_DEFAULT_PARAMETERS, "Customize parameters (for advanced users)");
+		radioGroupDefaultParametersToggle.setValue(USE_DEFAULT_PARAMETERS);
+		radioGroupDefaultParametersToggle.setHelperText("We recomend to try with defaults parameters first");
+		radioGroupDefaultParametersToggle.addThemeVariants(RadioGroupVariant.LUMO_VERTICAL);
+		radioGroupDefaultParametersToggle.addValueChangeListener(event -> {
 			final String selected = event.getValue();
 			createFormLayout(USE_DEFAULT_PARAMETERS.equals(selected));
 		});
 
-		return radioGroup;
+		return radioGroupDefaultParametersToggle;
 	}
 
 	private void loadDatasetsInComboList() {
@@ -735,8 +737,7 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 		pctsea.setFromEmail(fromEmail);
 
 		setEnabledStatusAsRunning();
-		// hide input parameters
-		inputParametersTabContent.setVisible(false);
+
 		statusArea.setValue("Starting run...");
 		isrunning = true; // turn flag on, to warn if user wants to leave
 		final Runnable currentPSEAJob = new Runnable() {
@@ -788,6 +789,7 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 		cellTypeBranchCombo.setEnabled(false);
 		inputDataTypeCombo.setEnabled(false);
 		minimumCorrelationBox.setEnabled(false);
+		radioGroupDefaultParametersToggle.setEnabled(false);
 //		generatePDFCheckbox.setEnabled(false);
 	}
 
@@ -805,6 +807,7 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 		cellTypeBranchCombo.setEnabled(true);
 		inputDataTypeCombo.setEnabled(true);
 		minimumCorrelationBox.setEnabled(true);
+		radioGroupDefaultParametersToggle.setEnabled(true);
 //		generatePDFCheckbox.setEnabled(true);
 	}
 
