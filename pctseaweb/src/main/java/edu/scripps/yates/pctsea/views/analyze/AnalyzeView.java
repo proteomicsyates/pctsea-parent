@@ -48,7 +48,6 @@ import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Label;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.listbox.MultiSelectListBox;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -66,7 +65,6 @@ import com.vaadin.flow.component.upload.Receiver;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
 import com.vaadin.flow.data.binder.Binder;
-import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.data.validator.EmailValidator;
 import com.vaadin.flow.router.BeforeLeaveEvent;
 import com.vaadin.flow.router.BeforeLeaveEvent.ContinueNavigationAction;
@@ -123,7 +121,7 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 	private final TextField minScoreField = new TextField("Score threshold(s)", DEFAULT_MIN_SCORE);
 	private final TextField minGenesCellsField = new TextField("Minimum number of proteins per cell",
 			DEFAULT_MIN_GENES_CELLS);
-	private final MultiSelectListBox<Dataset> datasetsCombo = new MultiSelectListBox<Dataset>();
+	private final CheckboxGroup<Dataset> datasetsCombo = new CheckboxGroup<Dataset>();
 	private final ComboBox<CellTypeBranch> cellTypeBranchCombo = new ComboBox<CellTypeBranch>(
 			"Level of cell type classification");
 	private final ComboBox<InputDataType> inputDataTypeCombo = new ComboBox<InputDataType>("Type of input data");
@@ -239,19 +237,22 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 				"Number of permutations for calculating significance of the enrichment scores, being a value of 1000 reasonable. Minimum value: 10");
 
 		//
-		datasetsCombo.setRenderer(
-				new ComponentRenderer<VerticalLayout, Dataset>(VerticalLayout::new, (container, dataset) -> {
-					final Label label = new Label(dataset.getTag());
-					label.getStyle().set("font-weight", "bold");
-					final HorizontalLayout tag = new HorizontalLayout(
-							// new Icon(VaadinIcon.DATABASE),
-							label);
-					final HorizontalLayout name = new HorizontalLayout(new Label(dataset.getName()));
-					container.add(tag, name);
-				}));
+		datasetsCombo.setLabel("Datasets:");
+		datasetsCombo.setItemLabelGenerator(dataset -> dataset.getTag());
+//		datasetsCombo.setRenderer(
+//				new ComponentRenderer<VerticalLayout, Dataset>(VerticalLayout::new, (container, dataset) -> {
+//					final Label label = new Label(dataset.getTag());
+//					label.getStyle().set("font-weight", "bold");
+//					final HorizontalLayout tag = new HorizontalLayout(
+//							// new Icon(VaadinIcon.DATABASE),
+//							label);
+//					final HorizontalLayout name = new HorizontalLayout(new Label(dataset.getName()));
+//					container.add(tag, name);
+//				}));
 		datasetsCombo.addValueChangeListener(event -> {
 			final Set<Dataset> datasets = event.getValue();
 			if (datasets != null) {
+				datasetsCombo.setHelperText(getDatasetsDescription(datasetsCombo));
 				// TODO
 				// show information about it on other components
 			}
@@ -281,8 +282,9 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 		});
 
 		// load scoring methods
+		scoringMethodCombo.setLabel("Scoring Method:");
 		scoringMethodCombo.setItems(ScoringMethod.values());
-
+		scoringMethodCombo.setHelperText(getScoringMethodDescription(scoringMethodCombo));
 		scoringMethodCombo.setItemEnabledProvider(item -> {
 			if (scoringMethodCombo.getValue().size() > 1 && !scoringMethodCombo.isSelected(item)) {
 				return false;
@@ -290,6 +292,8 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 			return true;
 		});
 		scoringMethodCombo.addValueChangeListener(event -> {
+			scoringMethodCombo.setHelperText(getScoringMethodDescription(scoringMethodCombo));
+
 			final Set<ScoringMethod> values = event.getValue();
 			if (values != null) {
 				// disable the rest when selecting two
@@ -549,6 +553,39 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 			inputFile = null;
 			showInputDataButton.setEnabled(false);
 		});
+	}
+
+	private String getDatasetsDescription(CheckboxGroup<Dataset> datasetsCombo2) {
+		if (datasetsCombo2.getSelectedItems().isEmpty()) {
+			return "Select a dataset";
+		} else {
+
+			final StringBuilder sb = new StringBuilder();
+			for (final Dataset dataset : datasetsCombo2.getSelectedItems()) {
+				if (!"".equals(sb.toString())) {
+					sb.append(". ");
+				}
+				sb.append(dataset.getTag() + ": " + dataset.getName());
+			}
+			return sb.toString();
+		}
+
+	}
+
+	private String getScoringMethodDescription(CheckboxGroup<ScoringMethod> scoringMethodCombo2) {
+		if (scoringMethodCombo2.getSelectedItems().isEmpty()) {
+			return "Select a scoring method";
+		} else {
+			final StringBuilder sb = new StringBuilder();
+			for (final ScoringMethod scoringMethod : scoringMethodCombo2.getSelectedItems()) {
+				if (!"".equals(sb.toString())) {
+					sb.append(". ");
+				}
+				sb.append(scoringMethod.getScoreName() + ": " + scoringMethod.getDescription());
+			}
+			return sb.toString();
+		}
+
 	}
 
 	private final static String USE_DEFAULT_PARAMETERS = "Use default parameters";
@@ -1062,11 +1099,10 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 			formLayout.add(emailField);
 			formLayout.add(inputDataTypeCombo);
 			formLayout.add(cellTypeBranchCombo);
-			final Label datasetsLabel = new Label("Datasets:");
-			final VerticalLayout datasetsPanel = new VerticalLayout(datasetsLabel, datasetsCombo);
-			formLayout.add(datasetsPanel);
-			final VerticalLayout scoringsPanel = new VerticalLayout(new Label("Scoring Methods:"), scoringMethodCombo);
-			formLayout.add(scoringsPanel);
+
+			formLayout.add(datasetsCombo);
+
+			formLayout.add(scoringMethodCombo);
 			formLayout.add(minScoreField);
 			formLayout.add(minGenesCellsField);
 			formLayout.add(minimumCorrelationBox);
