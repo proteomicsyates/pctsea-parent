@@ -13,7 +13,7 @@ library(data.table)
 library(htmlwidgets) 
 library(jsonlite)
 library(dplyr)
-library(devtools)
+# library(devtools)
 library(ggplot2)
 # devtools::install_github('ramnathv/htmlwidgets')
 # if(!require('devtools')){
@@ -32,7 +32,7 @@ library(ggplot2)
 # data <- log10(data)
 # y <- data.frame(TumorOrigin=annotations$TumorOrigin)
 #setwd("C:\\Users\\salvador\\Dropbox (Scripps Research)\\NCI60_pctsea\\NCI60_PCTSEA")
-# annotations <- read.csv(file = "data/CellLineID_to_LineNumber.txt", sep = "\t")
+
 
 data_types = c('hyperG_p-value','log2_ratio','ews','norm-ews','supX','norm-supX','empirical_p-value','FDR','2nd_ews','2nd_supX','Dab','KS_p-value','KS_p-value_BH_corrected','KS_significance_level')
 
@@ -45,7 +45,7 @@ ui <- fluidPage(
              # Sidebar with a slider input for number of bins
              sidebarLayout(
                sidebarPanel(
-                 width = 2,
+                 width = 3,
                  selectInput(inputId = "dataTypeHeatmap", label = "Data type", choices = c("", data_types), selected = data_types[8]),
                  numericInput(inputId = "fdrThreshold", label ="FDR threshold:", value = 0.05),
                  checkboxInput(inputId = "clusterCellTypes", label = "Cluster cell types"),
@@ -57,7 +57,7 @@ ui <- fluidPage(
                ),
                # Show a plot of the generated distribution
                mainPanel(
-                 width = 10,
+                 width = 9,
                  fluidRow(column(12, verbatimTextOutput(outputId = "errorMessageText"))),
                  fluidRow(column(12, morpheusOutput("heatmap", height = "1600px", width = "1000px")))
                )
@@ -118,7 +118,8 @@ server <- function(input, output, session) {
           # now filter data with the rows present in fdr_data
           data <- data[rownames(data) %in% rownames(fdr_data),]
         }
-        y <- data.frame(sample = colnames(data), #TumorOrigin=annotations$TumorOrigin,  
+        # annotations <- read.csv(file = "data/CellLineID_to_LineNumber.txt", sep = "\t")
+        y <- data.frame(sample = colnames(data),names = colnames(data),# TumorOrigin=annotations$TumorOrigin,  
                         stringsAsFactors = F)
         # cluster cell types:
         rowv = NULL
@@ -164,11 +165,12 @@ server <- function(input, output, session) {
                            Colv = colv,
                            dendrogram = dendrogram,
                            # na.rm = TRUE,
-                           # columnAnnotations = y,
+                           columnAnnotations = y,
+                           columns=list(list(field='names', highlightMatchingValues=TRUE, display=list('text'))),
                            # columnGroupBy=list(list(field='TumorOrigin')),
                            # by default color scale is map to the minimum and maximum of each row independently
-                           colorScheme=colorScheme,
-                           columns=list(list(field='TumorOrigin',display=list('text_and_color')))
+                           colorScheme=colorScheme#,
+                           # columns=list(list(field='TumorOrigin',display=list('text_and_color')))
                            
           )#+ scale_fill_gradient( trans = 'log' )
           plot
