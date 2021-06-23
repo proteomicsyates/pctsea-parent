@@ -36,6 +36,7 @@ import com.vaadin.flow.component.Tag;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.checkbox.CheckboxGroup;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.formlayout.FormLayout;
@@ -71,7 +72,6 @@ import com.vaadin.flow.router.BeforeLeaveEvent;
 import com.vaadin.flow.router.BeforeLeaveEvent.ContinueNavigationAction;
 import com.vaadin.flow.router.BeforeLeaveObserver;
 import com.vaadin.flow.router.PageTitle;
-import com.vaadin.flow.router.PreserveOnRefresh;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 
@@ -102,7 +102,7 @@ import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import gnu.trove.set.hash.THashSet;
 
-@PreserveOnRefresh
+//@PreserveOnRefresh
 @Route(value = "analyze", layout = MainView.class)
 @PageTitle("PCTSEA web - Analyze")
 @CssImport("./styles/views/analyze/analyze-view.css")
@@ -114,11 +114,11 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 	 */
 	private static final long serialVersionUID = -2614242304318406941L;
 
-	private static final String DEFAULT_MIN_SCORE = InputParameters.DEFAULT_MIN_SCORE_SIMPLE_SCORE + ","
-			+ InputParameters.DEFAULT_MIN_SCORE_PEARSON;
+	private static final String DEFAULT_MIN_SCORE = // InputParameters.DEFAULT_MIN_SCORE_SIMPLE_SCORE + ","+
+			InputParameters.DEFAULT_MIN_SCORE_PEARSON + "";
 
-	private static final String DEFAULT_MIN_GENES_CELLS = InputParameters.DEFAULT_MIN_GENES_CELLS_SIMPLE_SCORE + ","
-			+ InputParameters.DEFAULT_MIN_GENES_CELLS_PEARSON;
+	private static final String DEFAULT_MIN_GENES_CELLS = // InputParameters.DEFAULT_MIN_GENES_CELLS_SIMPLE_SCORE + ","+
+			InputParameters.DEFAULT_MIN_GENES_CELLS_PEARSON + "";
 
 	private final TextField minScoreField = new TextField("Score threshold(s)", DEFAULT_MIN_SCORE);
 	private final TextField minGenesCellsField = new TextField("Minimum number of proteins per cell",
@@ -128,7 +128,7 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 			"Level of cell type classification");
 	private final ComboBox<InputDataType> inputDataTypeCombo = new ComboBox<InputDataType>("Type of input data");
 	private final NumberField minimumCorrelationBox = new NumberField("Minimum Pearson's correlation", "0");
-	private final MultiSelectListBox<ScoringMethod> scoringMethodCombo = new MultiSelectListBox<ScoringMethod>();
+	private final CheckboxGroup<ScoringMethod> scoringMethodCombo = new CheckboxGroup<ScoringMethod>();
 	private final TextField outputPrefixField = new TextField("Prefix for all output files", "experiment1");
 	private final EmailField emailField = new EmailField("Email", "your_email@domain.com");
 	private final IntegerField numPermutationsField = new IntegerField("Number of permutations", "1000");
@@ -282,9 +282,23 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 
 		// load scoring methods
 		scoringMethodCombo.setItems(ScoringMethod.values());
+
+		scoringMethodCombo.setItemEnabledProvider(item -> {
+			if (scoringMethodCombo.getValue().size() > 1 && !scoringMethodCombo.isSelected(item)) {
+				return false;
+			}
+			return true;
+		});
 		scoringMethodCombo.addValueChangeListener(event -> {
 			final Set<ScoringMethod> values = event.getValue();
 			if (values != null) {
+				// disable the rest when selecting two
+				if (scoringMethodCombo.getSelectedItems().size() == 2) {
+					scoringMethodCombo
+							.setItemEnabledProvider(item -> scoringMethodCombo.getSelectedItems().contains(item));
+				} else {
+					scoringMethodCombo.setItemEnabledProvider(item -> true);
+				}
 
 				if (values.stream().filter(sc -> !sc.isSupported()).findAny().isPresent()) {
 					final MyConfirmDialog dialog = new MyConfirmDialog("Scoring method not supported yet",
@@ -298,7 +312,7 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 							"The selected scoring method is still experimental", "OK");
 					dialog.open();
 				}
-
+//
 				if (!values.contains(ScoringMethod.PEARSONS_CORRELATION)
 						&& !values.contains(ScoringMethod.SIMPLE_SCORE)) {
 					minimumCorrelationBox.setEnabled(false);
@@ -314,16 +328,16 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 						+ ScoringMethod.PEARSONS_CORRELATION.getScoreName() + " or "
 						+ ScoringMethod.SIMPLE_SCORE.getScoreName());
 		//
-		scoringMethodCombo.setRenderer(new ComponentRenderer<VerticalLayout, ScoringMethod>(VerticalLayout::new,
-				(container, scoringMethod) -> {
-					final Label label = new Label(scoringMethod.getScoreName());
-					label.getStyle().set("font-weight", "bold");
-					final HorizontalLayout tag = new HorizontalLayout(
-							// new Icon(VaadinIcon.DATABASE),
-							label);
-					final HorizontalLayout name = new HorizontalLayout(new Label(scoringMethod.getDescription()));
-					container.add(tag, name);
-				}));
+//		scoringMethodCombo.setRenderer(new ComponentRenderer<VerticalLayout, ScoringMethod>(VerticalLayout::new,
+//				(container, scoringMethod) -> {
+//					final Label label = new Label(scoringMethod.getScoreName());
+//					label.getStyle().set("font-weight", "bold");
+//					final HorizontalLayout tag = new HorizontalLayout(
+//							// new Icon(VaadinIcon.DATABASE),
+//							label);
+//					final HorizontalLayout name = new HorizontalLayout(new Label(scoringMethod.getDescription()));
+//					container.add(tag, name);
+//				}));
 //
 		inputDataTypeCombo.setItems(InputDataType.values());
 		inputDataTypeCombo.setHelperText("For statistics use only");
@@ -814,7 +828,8 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 		//
 
 		minGenesCellsField.setValue(DEFAULT_MIN_GENES_CELLS);
-
+// 
+		minimumCorrelationBox.setValue(Double.valueOf(DEFAULT_MIN_SCORE));
 		//
 		numPermutationsField.setValue(1000);
 
@@ -834,10 +849,12 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 		//
 		//
 
-		scoringMethodCombo.select(ScoringMethod.SIMPLE_SCORE, ScoringMethod.PEARSONS_CORRELATION);
+		scoringMethodCombo.select(
+//				ScoringMethod.SIMPLE_SCORE, 
+				ScoringMethod.PEARSONS_CORRELATION);
 
 		//
-		inputDataTypeCombo.setValue(null);
+		inputDataTypeCombo.setValue(InputDataType.PROTEOME_OF_TISSUE);
 		//
 
 		//

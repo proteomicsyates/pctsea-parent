@@ -14,7 +14,7 @@ public class InputParameters {
 	public static final double DEFAULT_MIN_SCORE_SIMPLE_SCORE = 0;
 	public static final double DEFAULT_MIN_SCORE_PEARSON = 0.2;
 	public static final int DEFAULT_MIN_GENES_CELLS_SIMPLE_SCORE = 10;
-	public static final int DEFAULT_MIN_GENES_CELLS_PEARSON = 4;
+	public static final int DEFAULT_MIN_GENES_CELLS_PEARSON = 100;
 
 //	private String getSeparatedValueString(Set<String> datasets2, String separator) {
 //		final StringBuilder sb = new StringBuilder();
