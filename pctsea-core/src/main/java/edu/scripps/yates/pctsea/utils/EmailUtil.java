@@ -57,8 +57,9 @@ public class EmailUtil {
 		body.append("<li>" + InputParameters.LOAD_RANDOM + ": " + inputParameters.isLoadRandom() + "</li>");
 		body.append("<li>" + InputParameters.WRITE_SCORES + ": " + inputParameters.isWriteScoresFile() + "</li>");
 		body.append("<li>" + InputParameters.CREATE_ZIP_FILE + ": " + inputParameters.isCreateZipFile() + "</li>");
-		body.append("<li>" + InputParameters.UNIPROT_RELEASE + ": " + inputParameters.getUniprotRelease() + "</li>");
-
+//		body.append("<li>" + InputParameters.UNIPROT_RELEASE + ": " + inputParameters.getUniprotRelease() + "</li>");
+		body.append("<li>" + InputParameters.CELL_TYPES_CLASSIFICATION + ": " + inputParameters.getCellTypeBranch()
+				+ "</li>");
 		body.append("<li>" + InputParameters.MINIMUM_CORRELATION + ": " + inputParameters.getMinCorr() + "</li>");
 		int round = 1;
 		for (final ScoringSchema scoringSchema : inputParameters.getScoringSchemas()) {
