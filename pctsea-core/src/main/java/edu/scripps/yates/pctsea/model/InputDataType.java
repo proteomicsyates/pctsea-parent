@@ -1,8 +1,11 @@
 package edu.scripps.yates.pctsea.model;
 
 public enum InputDataType {
-	IP("IP"), PROTEOME_OF_CELL_LINE("Proteome of a cell line"), PROTEOME_OF_TISSUE("Proteome of a tissue"),
-	PARTIAL_PROTEOME_OF_CELL_LINE("Partial proteome of cell line"),
+	IP("Immunoprecipitation"), //
+	PROTEOME_OF_CELL_LINE("Proteome of a cell line"), //
+	PROTEOME_OF_SINGLE_CELL("Proteome of a single cell"), //
+	PROTEOME_OF_TISSUE("Proteome of a tissue"), //
+	PARTIAL_PROTEOME_OF_CELL_LINE("Partial proteome of cell line"), //
 	PARTIAL_PROTEOME_OF_TISSUE("Partial proteome of a tissue");
 
 	private final String description;
