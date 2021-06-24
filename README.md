@@ -12,6 +12,8 @@ Source code of PCTSEA can be found in this GitHub repository: https://github.com
  - [pctseaweb](https://github.com/proteomicsyates/pctsea-parent/tree/main/pctseaweb): web version of the tool  
    
    
-### BioRXiv publication: https://doi.org/10.1101/2021.02.16.431318 (Posted February 16, 2021)
+### BioRXiv publication:
+https://doi.org/10.1101/2021.02.16.431318   
+(Posted February 16, 2021)
 
 
