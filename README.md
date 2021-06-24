@@ -9,4 +9,9 @@ PCTSEA is also available as a command line at http://sealion.scripps.edu/pCtSEA/
 Source code of PCTSEA can be found in this GitHub repository: https://github.com/proteomicsyates/pctsea-parent   
  - [pctsea-core](https://github.com/proteomicsyates/pctsea-parent/tree/main/pctsea-core): source code of the core of its functionality
  - [pctsea-cl](https://github.com/proteomicsyates/pctsea-parent/tree/main/pctsea-cl): command-line version of the tool
- - [pctseaweb](https://github.com/proteomicsyates/pctsea-parent/tree/main/pctseaweb): web version of the tool
+ - [pctseaweb](https://github.com/proteomicsyates/pctsea-parent/tree/main/pctseaweb): web version of the tool  
+   
+   
+### BioRXiv publication: https://doi.org/10.1101/2021.02.16.431318 (Posted February 16, 2021)
+
+
