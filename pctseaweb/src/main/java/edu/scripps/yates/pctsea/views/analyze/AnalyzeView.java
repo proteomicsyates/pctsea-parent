@@ -34,6 +34,7 @@ import com.vaadin.flow.component.HtmlComponent;
 import com.vaadin.flow.component.ItemLabelGenerator;
 import com.vaadin.flow.component.Tag;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.UIDetachedException;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.CheckboxGroup;
@@ -74,7 +75,6 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.shared.Registration;
 
 import edu.scripps.yates.pctsea.PCTSEA;
-import edu.scripps.yates.pctsea.WebAppContextListener;
 import edu.scripps.yates.pctsea.db.CellTypeAndGeneMongoRepository;
 import edu.scripps.yates.pctsea.db.Dataset;
 import edu.scripps.yates.pctsea.db.DatasetMongoRepository;
@@ -105,7 +105,7 @@ import gnu.trove.set.hash.THashSet;
 @PageTitle("PCTSEA web - Analyze")
 @CssImport("./styles/views/analyze/analyze-view.css")
 public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
-	private final static Logger log = Logger.getLogger(WebAppContextListener.class);
+	private final static Logger log = Logger.getLogger(AnalyzeView.class);
 
 	/**
 	 * 
@@ -202,16 +202,26 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 
 			@Override
 			public void onStatusUpdate(String statusMessage, Boolean inNewLine) {
-				ui.access(() -> {
-					showMessage(statusMessage, inNewLine);
-				});
+				try {
+					ui.access(() -> {
+						showMessage(statusMessage, inNewLine);
+					});
+				} catch (final UIDetachedException e) {
+					e.printStackTrace();
+					log.error(e);
+				}
 			}
 
 			@Override
 			public void onStatusUpdate(String statusMessage) {
-				ui.access(() -> {
-					showMessage(statusMessage, true);
-				});
+				try {
+					ui.access(() -> {
+						showMessage(statusMessage, true);
+					});
+				} catch (final UIDetachedException e) {
+					e.printStackTrace();
+					log.error(e);
+				}
 			}
 		};
 	}
@@ -529,9 +539,16 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 							});
 						} catch (final Exception e) {
 							e.printStackTrace();
-							ui.access(() -> {
-								VaadinUtil.showErrorDialog("Error validating input file: " + e.getMessage());
-							});
+							if (!(e instanceof UIDetachedException)) {
+								try {
+									ui.access(() -> {
+										VaadinUtil.showErrorDialog("Error validating input file: " + e.getMessage());
+									});
+								} catch (final UIDetachedException e2) {
+									e.printStackTrace();
+									log.error(e);
+								}
+							}
 							inputFile = null;
 
 						}
@@ -753,17 +770,24 @@ public class AnalyzeView extends VerticalLayout implements BeforeLeaveObserver {
 
 				} catch (final Exception e) {
 					e.printStackTrace();
-					ui.access(() -> {
-						VaadinUtil.showErrorDialog("PCTSEA has stopped because: " + e.getMessage());
-						showMessage("PCTSEA has stopped.", true);
-					});
+					if (!(e instanceof UIDetachedException)) {
+						ui.access(() -> {
+							VaadinUtil.showErrorDialog("PCTSEA has stopped because: " + e.getMessage());
+							showMessage("PCTSEA has stopped.", true);
+						});
+					}
 				} finally {
 					isrunning = false;// turn flag off
-					ui.access(() -> {
-						setEnabledStatusAsReady();
-						// show again input parameters
-						inputParametersTabContent.setVisible(true);
-					});
+					try {
+						ui.access(() -> {
+							setEnabledStatusAsReady();
+							// show again input parameters
+							inputParametersTabContent.setVisible(true);
+						});
+					} catch (final UIDetachedException e) {
+						e.printStackTrace();
+						log.error(e);
+					}
 				}
 
 			}

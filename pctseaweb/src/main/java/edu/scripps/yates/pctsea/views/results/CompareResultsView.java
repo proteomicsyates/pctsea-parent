@@ -11,9 +11,12 @@ import java.util.concurrent.Executors;
 
 import javax.annotation.PostConstruct;
 
+import org.apache.log4j.Logger;
+
 import com.google.common.base.Charsets;
 import com.google.common.hash.Hashing;
 import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.UIDetachedException;
 import com.vaadin.flow.component.Unit;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dependency.CssImport;
@@ -31,6 +34,7 @@ import com.vaadin.flow.router.Route;
 import edu.scripps.yates.pctsea.comparator.PCTSEAMultipleResultsMerger;
 import edu.scripps.yates.pctsea.util.PCTSEALocalConfiguration;
 import edu.scripps.yates.pctsea.utils.CellTypesOutputTableColumns;
+import edu.scripps.yates.pctsea.views.analyze.AnalyzeView;
 import edu.scripps.yates.pctsea.views.analyze.MyConfirmDialog;
 import edu.scripps.yates.pctsea.views.main.MainView;
 
@@ -39,6 +43,7 @@ import edu.scripps.yates.pctsea.views.main.MainView;
 @PageTitle("PCTSEA web - Compare results")
 @CssImport("./styles/views/results/results-view.css")
 public class CompareResultsView extends VerticalLayout {
+	private final static Logger log = Logger.getLogger(AnalyzeView.class);
 
 	/**
 		 * 
@@ -157,10 +162,16 @@ public class CompareResultsView extends VerticalLayout {
 							});
 						} catch (final Exception e) {
 							e.printStackTrace();
+							log.error(e);
 						} finally {
-							ui.access(() -> {
-								progressBar.setValue(progressBar.getMax());
-							});
+							try {
+								ui.access(() -> {
+									progressBar.setValue(progressBar.getMax());
+								});
+							} catch (final UIDetachedException e) {
+								e.printStackTrace();
+								log.error(e);
+							}
 						}
 					}
 				};
