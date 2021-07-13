@@ -368,9 +368,10 @@ public class PCTSEA {
 
 					if (PCTSEA.SINGLE_CELL_TYPE_FOR_DEBUGGING == null
 							&& numCellsPassingScoreThreshold < MIN_CELLS_PASSING_SCORE_TRESHOLD) {
-						throw new IllegalArgumentException(
-								"There is not enough cells passing the " + scoringMethod.getScoreName() + " threshold:"
-										+ scoreThreshold + " (minimum is " + MIN_CELLS_PASSING_SCORE_TRESHOLD + ")");
+						throw new IllegalArgumentException("There is not enough cells passing the "
+								+ scoringMethod.getScoreName() + " threshold:" + scoreThreshold + " (only "
+								+ numCellsPassingScoreThreshold + " pass the threshold and the minimum is "
+								+ MIN_CELLS_PASSING_SCORE_TRESHOLD + ")");
 					}
 
 //					// discard single cells that have negative correlation if scoring is correlation
@@ -2255,14 +2256,14 @@ public class PCTSEA {
 	 * @param outputToLog
 	 * @param getExpressionsUsedForScore
 	 * @param takeZerosForCorrelation
-	 * @param minCorr
+	 * @param minCorrelation
 	 * @return the number of cells that pass the correlation threshold
 	 * @throws IOException
 	 */
 	private int calculateScoresToRankSingleCells(List<SingleCell> singleCellList,
 			InteractorsExpressionsRetriever interactorExpressions, ScoringSchema scoringSchema, boolean writeScoresFile,
-			boolean outputToLog, boolean getExpressionsUsedForScore, boolean takeZerosForCorrelation, double minCorr)
-			throws IOException {
+			boolean outputToLog, boolean getExpressionsUsedForScore, boolean takeZerosForCorrelation,
+			double minCorrelation) throws IOException {
 
 		final ScoringMethod scoringMethod = scoringSchema.getScoringMethod();
 		final File scoresOutputFile = getScoresOutputFile(scoringMethod);
@@ -2295,16 +2296,18 @@ public class PCTSEA {
 
 				switch (scoringMethod) {
 				case PEARSONS_CORRELATION:
-					singleCell.calculateCorrelation(interactorExpressions, getExpressionsUsedForScore, minCorr);
+					singleCell.calculateCorrelation(interactorExpressions, getExpressionsUsedForScore, minCorrelation);
 					break;
 				case SIMPLE_SCORE:
-					singleCell.calculateSimpleScore(interactorExpressions, getExpressionsUsedForScore, minCorr);
+					singleCell.calculateSimpleScore(interactorExpressions, getExpressionsUsedForScore, minCorrelation);
 					break;
 				case DOT_PRODUCT:
 					singleCell.calculateDotProductScore(interactorExpressions, takeZerosForCorrelation,
 							getExpressionsUsedForScore);
 					break;
-
+				case REGRESSION:
+					singleCell.calculateRegressionCoefficient(interactorExpressions, getExpressionsUsedForScore);
+					break;
 				default:
 					throw new IllegalArgumentException(
 							"Method " + scoringMethod.getScoreName() + " still not supported.");

@@ -18,7 +18,9 @@ public enum ScoringMethod {
 	QUICK_SCORE("Quick_score",
 			"For each cell type it is the product of a factor for each gene expressed which is the "
 					+ "number of cells in which the gene is detected divided by the number of cells of that type",
-			true, true);// , //
+			true, true),
+	REGRESSION("Linear Regression",
+			"R2 value of a linear regression between protein abundances and cell gene expressions", true, false);// , //
 //	LIBRARY("library-Xcorr", false, true), //
 //	MACHINE_LEARNING("ML-score", false, true); //
 

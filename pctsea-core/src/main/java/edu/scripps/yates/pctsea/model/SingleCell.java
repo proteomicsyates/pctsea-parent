@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.log4j.Logger;
 
 import edu.scripps.yates.pctsea.InteractorsExpressionsRetriever;
@@ -619,6 +620,84 @@ public class SingleCell {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public double calculateRegressionCoefficient(InteractorsExpressionsRetriever interactorExpressions,
+			boolean getExpressionsUsedForCorrelation) {
+		final TShortList geneIDs = interactorExpressions.getInteractorsGeneIDs();
+
+		final TDoubleList interactorsExpressionsToCorrelate = new TDoubleArrayList();
+		final TDoubleList genesExpressionsToCorrelate = new TDoubleArrayList();
+		final StringBuilder description = new StringBuilder();
+		genesUsedForScore = new ArrayList<String>();
+
+		for (final short geneID : geneIDs.toArray()) {
+
+			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID);
+//			final float geneExpressionInSingleCell = getGeneExpressionValue(geneID)interactorExpressions.getExpressionsOfGene(geneID)
+//					.getSingleCellExpression(this.getId());
+			final float interactorExpression = interactorExpressions.getInteractionExpressionInOurExperiment(geneID);
+			// get only pairs of values when both values are > 0.0
+			if (geneExpressionInSingleCell > 0.0f && interactorExpression > 0.0f) {
+
+				interactorsExpressionsToCorrelate.add(interactorExpression);
+				genesExpressionsToCorrelate.add(geneExpressionInSingleCell);
+				genesUsedForScore.add(interactorExpressions.getGeneName(geneID));
+			}
+
+		}
+		for (final String gene : genesUsedForScore) {
+			if (!"".equals(description.toString())) {
+				description.append(",");
+			}
+			description.append(gene);
+		}
+
+		if (getExpressionsUsedForCorrelation) {
+			expressionsUsedForScore = getExpressionsUsedForScore(genesExpressionsToCorrelate,
+					interactorsExpressionsToCorrelate);
+		} else {
+			expressionsUsedForScore = "";
+		}
+
+		scoreDescription = description.toString();
+
+		// check variance of gene expressions to correlate
+		geneExpressionVariance = Maths.var(genesExpressionsToCorrelate.toArray());
+		final double interactorsExpressionVariance = Maths.var(interactorsExpressionsToCorrelate.toArray());
+
+		if (Double.compare(geneExpressionVariance, 0.0) == 0) {
+
+			// we need to include some variance
+			for (int i = 0; i < genesExpressionsToCorrelate.size(); i++) {
+				final double delta = Math.random() / 1000000;
+				genesExpressionsToCorrelate.set(i, genesExpressionsToCorrelate.get(i) + delta);
+			}
+		}
+		if (Double.compare(interactorsExpressionVariance, 0.0) == 0) {
+
+			// we need to include some variance
+			for (int i = 0; i < interactorsExpressionsToCorrelate.size(); i++) {
+				final double delta = Math.random() / 1000000;
+				interactorsExpressionsToCorrelate.set(i, interactorsExpressionsToCorrelate.get(i) + delta);
+			}
+		}
+		final SimpleRegression regression = new SimpleRegression();
+		final double[][] data = new double[interactorsExpressionsToCorrelate.size()][2];
+		for (int i = 0; i < interactorsExpressionsToCorrelate.size(); i++) {
+			data[i][0] = interactorsExpressionsToCorrelate.get(i);
+			data[i][1] = genesExpressionsToCorrelate.get(i);
+		}
+		regression.addData(data);
+		final double score = regression.getRSquare();
+		if (!Double.isNaN(score)) {
+//				System.out.println("Correlations in cell " + getId() + " before was " + correlation + " and now is "
+//						+ correlation2);
+		}
+
+		setScore(score);
+
+		return score;
 	}
 
 }
