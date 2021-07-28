@@ -83,5 +83,5 @@ The "Analysis" page with the form to input the parameters and input file for ana
 ![Flow chart](https://github.com/proteomicsyates/pctsea-parent/raw/main/docs/flow_chart.png)
 
 Both command line and web version are coupled to the pctsea-core module where the ***PCTSEA.java*** class is defined and where the logic of the analysis is implemented.  
-For a more detailed description of how the analysis is implemented in this class go to: (PCTSEA for developers)[]
+For a more detailed description of how the analysis is implemented in this class go to: [PCTSEA for developers](https://github.com/proteomicsyates/pctsea-parent/wiki/AnalysisDescription)
 
