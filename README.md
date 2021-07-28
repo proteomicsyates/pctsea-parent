@@ -5,7 +5,7 @@ It compares publicly available RNAseq single cell datasets with the input protei
    
 ### Availability of the software:
 PCTSEA server can be found at http://pctsea.scripps.edu   
-PCTSEA is also available as a command line at http://sealion.scripps.edu/pCtSEA/
+PCTSEA is also available as a command line at http://sealion.scripps.edu/pCtSEA/  
 Source code of PCTSEA can be found in this GitHub repository: https://github.com/proteomicsyates/pctsea-parent   
  - [pctsea-core](https://github.com/proteomicsyates/pctsea-parent/tree/main/pctsea-core): source code of the core of its functionality
  - [pctsea-cl](https://github.com/proteomicsyates/pctsea-parent/tree/main/pctsea-cl): command-line version of the tool
