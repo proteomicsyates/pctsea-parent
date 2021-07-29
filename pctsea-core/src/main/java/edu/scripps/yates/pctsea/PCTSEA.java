@@ -137,7 +137,7 @@ public class PCTSEA {
 	private static final int threadCount = SystemCoreManager.getAvailableNumSystemCores() * 2;
 	private static final int MIN_CELLS_PASSING_SCORE_TRESHOLD = 1000;
 	private CellTypeBranch cellTypeBranch;
-	private InteractorsExpressionsRetriever interactorExpressions;
+	private GeneExpressionsRetriever geneExpressionsRetriever;
 	protected Future<?> savingFiles;
 	private boolean plotNegativeEnrichedCellTypes;
 
@@ -305,35 +305,44 @@ public class PCTSEA {
 		// create PCTSEAResult object
 		PCTSEAResult result = null;
 		try {
-
+			// set the log to be writable in a PCTSEAResult
 			result = new PCTSEAResult(runLog);
-
-//			// read input files
-//			final SingleCellsMetaInformationReader cellsInfo = new SingleCellsMetaInformationReader(
-//					this.singleCellsMetadataFile);
-//			final List<SingleCell> singleCellList = cellsInfo.getSingleCellList();
-//			updateSingleCellsType(cellsInfo, this.expressionMongoRepo);
-//			if (true) {
-//				return;
-//			}
+			// we read input file to know the number of proteins/genes we will have so that
+			// we can use that number to reserve at most that amount of memory per single
+			// cell
 			final int numGenes = (int) java.nio.file.Files.readAllLines(experimentExpressionFile.toPath()).stream()
 					.filter(f -> !"".equals(f.trim())).count();
+
+			// we load the whole single cell list from the database
+			// not that we dont load the expressions values of each single cell yet
 			final List<SingleCell> singleCellList = getSingleCellListFromDB(datasets, cellTypeBranch, numGenes);
 
-			interactorExpressions = new InteractorsExpressionsRetriever(mongoBaseService, experimentExpressionFile,
+			// This class GeneExpressionsRetriever will retrieve the expression values
+			// for all the single cells that have expressions in the input list of
+			// proteins/genes. It will also keep the values of expression of the input list
+			geneExpressionsRetriever = new GeneExpressionsRetriever(mongoBaseService, experimentExpressionFile,
 					datasets, uniprotRelease, runLog, singleCellList, statusListener, singleCellSet);
 
 			// we call this so that it output the log of looking for uniprot annotations and
 			// getting the expressions before going any further
-			interactorExpressions.getInteractorsGeneIDs();
+			geneExpressionsRetriever.getGeneIDs();
+
 			// we keep the number of cells that express the input genes
 			final int totalNumCellsInDB = singleCellList.size();
 
 			// log
-			runLog.setNumInputGenes(interactorExpressions.getInteractorsGeneIDs().size());
+			runLog.setNumInputGenes(geneExpressionsRetriever.getGeneIDs().size());
 
+			// we may have one or two scoring schemas. Each scoring schema defines the
+			// scoring method and thresholds associated to it.
+			// if we have two scoring schemas, it means we need to run the analysis twice,
+			// one per scoring schema, and then take the overlap of the cell types resulted
+			// from each run
 			log.info(singleCellList.size() + " cells");
 			log.info(sequentialScoringSchemas.size() + " scoring schemas");
+
+			// in CellTypeClassification we will store the cell types that has been scored
+			// in the analysis, some they will be significant and some not.
 			// here we store the cell types from each round
 			final List<List<CellTypeClassification>> cellTypesPerRound = new ArrayList<List<CellTypeClassification>>();
 			for (final ScoringSchema scoringSchema : sequentialScoringSchemas) {
@@ -343,29 +352,40 @@ public class PCTSEA {
 				// filter by the minimum number of genes expressed in each cell
 				// this will remove the cells from the list that don't pass the filter
 				final List<SingleCell> singleCellListForThisRound = filterByMinimumNumberOfGenesExpressedInEachCell(
-						singleCellList, interactorExpressions, scoringSchema.getMinGenesCells());
+						singleCellList, geneExpressionsRetriever, scoringSchema.getMinGenesCells());
 
+				// this is the scoring method from the scoring schema for this round
 				final ScoringMethod scoringMethod = scoringSchema.getScoringMethod();
+
+				// this will be the zip output file with all the output files on it.
 				final File zipOutputFile = getZipOutputFile(scoringMethod);
+				// we add it to the PCTSEAResult object
 				result.addResultsFile(zipOutputFile);
-				if (resultsViewerURL != null) {
+				if (resultsViewerURL != null) { // it might be null in case of command line run
 					final URL urlToViewer = new URL(resultsViewerURL + "/?results="
 							+ FilenameUtils.getBaseName(zipOutputFile.getAbsolutePath()));
 					result.addUrlToViewer(urlToViewer);
 					log.debug("Setting results URL at: " + urlToViewer.toString());
 				}
+				// threshold to apply to the scores
 				final ScoreThreshold scoreThreshold = scoringSchema.getScoringThreshold();
+
+				// in case of quick score, the flow is different.
+				// in case of not been quick score, we calculate the score
 				if (scoringMethod != ScoringMethod.QUICK_SCORE) {
 
-					// calculate correlations
+					// calculate score for each single cell, comparing the expression profile of the
+					// input data with the expression profiles of the single cells.
 					final int numCellsPassingScoreThreshold = calculateScoresToRankSingleCells(
-							singleCellListForThisRound, interactorExpressions, scoringSchema, writeScoresFile, true,
+							singleCellListForThisRound, geneExpressionsRetriever, scoringSchema, writeScoresFile, true,
 							true, takeZerosForCorrelation, minCorr);
-					// log
+					// log how many cells passes the score threshold
 					runLog.setNumCellsPassingScoreThreshold(numCellsPassingScoreThreshold);
 					// note that we still have all single cells in singleCellList also with the ones
 					// that dont pass the threshold
 
+					// throw error in case of the number of cells passing the score threshold
+					// but only if PCTSEA.SINGLE_CELL_TYPE_FOR_DEBUGGING is null
 					if (PCTSEA.SINGLE_CELL_TYPE_FOR_DEBUGGING == null
 							&& numCellsPassingScoreThreshold < MIN_CELLS_PASSING_SCORE_TRESHOLD) {
 						throw new IllegalArgumentException("There is not enough cells passing the "
@@ -374,21 +394,8 @@ public class PCTSEA {
 								+ MIN_CELLS_PASSING_SCORE_TRESHOLD + ")");
 					}
 
-//					// discard single cells that have negative correlation if scoring is correlation
-//					if (scoringMethod == ScoringMethod.PEARSONS_CORRELATION) {
-//						final Iterator<SingleCell> iterator = singleCellListForThisRound.iterator();
-//						while (iterator.hasNext()) {
-//
-//							final SingleCell cell = iterator.next();
-//							if (cell.getScoreForRanking() < 0) {
-////								iterator.remove();
-//							}
-//						}
-//						ConcurrentUtil.sleep(1L);
-//						logStatus(singleCellList.size() + " single cells have positive correlations (> 0)");
-//					}
 					// make a chart with the histogram of number of genes used to correlate for each
-					// cells with and without the threshold
+					// cells, with and without the threshold
 					createHistogramOfCorrelatingGenes(singleCellListForThisRound, null, scoringMethod);
 					createHistogramOfCorrelatingGenes(singleCellListForThisRound, scoreThreshold.getThresholdValue(),
 							scoringMethod);
@@ -401,28 +408,34 @@ public class PCTSEA {
 					}
 					ConcurrentUtil.sleep(1L);
 				}
+
 				// calculate hypergeometric statistics
-				// this creates the cell types that are part of the output
+				// this creates the cell types (CellTypeClassification objects) that are going
+				// to be the result
 				final List<CellTypeClassification> cellTypeClassificationsInRound = calculateHyperGeometricStatistics(
 						singleCellListForThisRound, scoreThreshold, scoringMethod);
 
-				// calculate enrichment scores with the Kolmogorov-Smirnov test
+				// once we have the CellTypeClassification list
+				// we can calculate the enrichment scores with the Kolmogorov-Smirnov test using
+				// only the single cells that pass the score threshold
 				List<SingleCell> singleCellsPassingScoreThreshold = scoreThreshold
 						.getSingleCellsPassingThresholdSortedByScore(singleCellListForThisRound);
 				singleCellsPassingScoreThreshold = singleCellsPassingScoreThreshold.subList(0,
 						Math.min(singleCellsPassingScoreThreshold.size() - 1, MAX_SINGLE_CELLS_FOR_SCORE));
 				if (scoringMethod != ScoringMethod.QUICK_SCORE) {
+					// calculate enrichment score
 					calculateEnrichmentScore(cellTypeClassificationsInRound, singleCellsPassingScoreThreshold, true,
 							true, false, plotNegativeEnrichedCellTypes, scoringMethod);
 
 					// calculate significance by cell types permutations
-					calculateSignificanceByCellTypesPermutations(interactorExpressions, cellTypeClassificationsInRound,
-							singleCellsPassingScoreThreshold, cellTypeBranch, maxIterations,
-							loadRandomDistributionsIfExist, plotNegativeEnrichedCellTypes, scoringMethod);
+					calculateSignificanceByCellTypesPermutations(geneExpressionsRetriever,
+							cellTypeClassificationsInRound, singleCellsPassingScoreThreshold, cellTypeBranch,
+							maxIterations, loadRandomDistributionsIfExist, plotNegativeEnrichedCellTypes,
+							scoringMethod);
 
 					// calculate significance by phenotype permutations
 					if (false) { // DISABLED since we used significance by cell types permutations
-						calculateSignificanceByPhenotypePermutations(interactorExpressions,
+						calculateSignificanceByPhenotypePermutations(geneExpressionsRetriever,
 								cellTypeClassificationsInRound, singleCellsPassingScoreThreshold, cellTypeBranch,
 								scoringSchema, loadRandomDistributionsIfExist, plotNegativeEnrichedCellTypes,
 								maxIterations, takeZerosForCorrelation, minCorr);
@@ -529,7 +542,7 @@ public class PCTSEA {
 	 * @param minNumberExpressedGenesInCells2
 	 */
 	private List<SingleCell> filterByMinimumNumberOfGenesExpressedInEachCell(List<SingleCell> singleCellList,
-			InteractorsExpressionsRetriever interactorExpressions, int minNumberExpressedGenesInCells) {
+			GeneExpressionsRetriever interactorExpressions, int minNumberExpressedGenesInCells) {
 		logStatus("Filtering by minimum number of genes expressed in each cell (" + minNumberExpressedGenesInCells
 				+ ")...");
 		final List<SingleCell> ret = new ArrayList<SingleCell>();
@@ -619,9 +632,9 @@ public class PCTSEA {
 				int numGenesSignificantInType = 0;
 
 				final long num_cells_type_total = singleCellMongoRepo.countByType(cellType.getName());
-				final TShortList geneIDs = interactorExpressions.getInteractorsGeneIDs();
+				final TShortList geneIDs = geneExpressionsRetriever.getGeneIDs();
 				for (final short geneID : geneIDs.toArray()) {
-					final String geneName = interactorExpressions.getGeneName(geneID);
+					final String geneName = geneExpressionsRetriever.getGeneName(geneID);
 					final long num_cells_gene_type = cellTypeandGenesDBUtil.countCellsByGeneAndCellType("HCL",
 							cellType.getName(), geneName);
 
@@ -664,8 +677,8 @@ public class PCTSEA {
 			float quickScore = 0;
 			for (final GeneOccurrence geneOccurrence : genes) {
 				final String geneName = geneOccurrence.getGene();
-				final short geneID = interactorExpressions.getGeneID(geneName);
-				final int num_cells = interactorExpressions.getExpressionsOfGene(geneID).getSingleCellsIDs().size();
+				final short geneID = geneExpressionsRetriever.getGeneID(geneName);
+				final int num_cells = geneExpressionsRetriever.getExpressionsOfGene(geneID).getSingleCellsIDs().size();
 				final int num_cells_of_type = geneOccurrence.getOccurrence();
 				final float p = 1.0f * num_cells / num_cells_of_type;
 				if (quickScore == 0) {
@@ -815,8 +828,8 @@ public class PCTSEA {
 				for (final GeneOccurrence geneOccurrence : geneOccurrences) {
 
 					final String gene = geneOccurrence.getGene();
-					final short geneID = interactorExpressions.getGeneID(gene);
-					final Gene geneObject = interactorExpressions.getExpressionsOfGene(geneID);
+					final short geneID = geneExpressionsRetriever.getGeneID(gene);
+					final Gene geneObject = geneExpressionsRetriever.getExpressionsOfGene(geneID);
 					final int numSingleCellsInWhichIsExpressed = geneObject
 							.getNumSingleCellsInWhichIsExpressed(cellType.getName());
 					final long numSingleCellsOfType = cellType.getNumCellsOfTypePassingCorrelationThreshold();
@@ -1364,7 +1377,7 @@ public class PCTSEA {
 	 * @param plotNegativeEnrichedCellTypes
 	 * @throws IOException
 	 */
-	private void calculateSignificanceByCellTypesPermutations(InteractorsExpressionsRetriever interactorExpressions,
+	private void calculateSignificanceByCellTypesPermutations(GeneExpressionsRetriever interactorExpressions,
 			List<CellTypeClassification> cellTypeClassifications, List<SingleCell> singleCellsPassingScoreThreshold,
 			CellTypeBranch cellTypeBranch, int maxIterations, boolean loadRandomDistributionsIfExist,
 			boolean plotNegativeEnrichedCellTypes, ScoringMethod scoringMethod) throws IOException {
@@ -1661,7 +1674,7 @@ public class PCTSEA {
 	 * @param minCorr
 	 * @throws IOException
 	 */
-	private void calculateSignificanceByPhenotypePermutations(InteractorsExpressionsRetriever interactorExpressions,
+	private void calculateSignificanceByPhenotypePermutations(GeneExpressionsRetriever interactorExpressions,
 			List<CellTypeClassification> cellTypeClassifications, List<SingleCell> singleCellList,
 			CellTypeBranch cellTypeBranch, ScoringSchema scoreSchema, boolean loadRandomDistributionsIfExist,
 			boolean plotNegativeEnrichedCellTypes, int maxIterations, boolean takeZerosForCorrelation, double minCorr)
@@ -2144,6 +2157,15 @@ public class PCTSEA {
 		return sb.toString();
 	}
 
+	/**
+	 * Creates the list of {@link CellTypeClassification} after calculating the
+	 * hypergeometric statistics for each cellType of the singleCellList
+	 * 
+	 * @param singleCellList
+	 * @param scoreThreshold
+	 * @param scoringMethod
+	 * @return
+	 */
 	private List<CellTypeClassification> calculateHyperGeometricStatistics(List<SingleCell> singleCellList,
 			ScoreThreshold scoreThreshold, ScoringMethod scoringMethod) {
 //		logStatus("Starting hyperG...");
@@ -2218,15 +2240,11 @@ public class PCTSEA {
 			if (p2 < 0.0) {
 				p2 = 0.0;
 			}
-//			System.out.println(p + "\t" + p2);
 			final String cellTypeName = CellTypes.getCellTypeNameByCellTypeID(cellTypeID);
 			final CellTypeClassification cellTypeClassification = new CellTypeClassification(cellTypeName, p);
 			cellTypeClassification.setNumCellsOfType(numCellsOfType);
 			cellTypeClassification.setNumCellsOfTypePassingCorrelationThreshold(numCellsOfTypeWithPositiveCorrelation);
 			cellTypeClassification.setSingleCells(cellsOfCellType);
-
-			// casimir's enrichment score
-			// log2((cells of type core >0.1/cells core >0.1)/(cells of type/total cells))
 
 			if (numCellsOfType > 0 && numSingleCellsPassingThreshold > 0) {
 				final double x = (1.0 * numCellsOfTypeWithPositiveCorrelation / numSingleCellsPassingThreshold)
@@ -2246,8 +2264,9 @@ public class PCTSEA {
 	}
 
 	/**
-	 * Calculate the score (correlation or Morpheus-like score, or dot-product)
-	 * between the expression of the experimental proteins and the single cells
+	 * Calculate the score (determined by the {@link ScoringMethod} in the
+	 * {@link ScoringSchema}) between the expression of the experimental proteins
+	 * and the single cells
 	 * 
 	 * @param singleCellList
 	 * @param interactorExpressions
@@ -2256,12 +2275,14 @@ public class PCTSEA {
 	 * @param outputToLog
 	 * @param getExpressionsUsedForScore
 	 * @param takeZerosForCorrelation
-	 * @param minCorrelation
+	 * @param minCorrelation             only used when using scoring that uses
+	 *                                   correlation, such as PEARSONS_CORRELATION
+	 *                                   or SIMPLE_SCORE
 	 * @return the number of cells that pass the correlation threshold
 	 * @throws IOException
 	 */
 	private int calculateScoresToRankSingleCells(List<SingleCell> singleCellList,
-			InteractorsExpressionsRetriever interactorExpressions, ScoringSchema scoringSchema, boolean writeScoresFile,
+			GeneExpressionsRetriever interactorExpressions, ScoringSchema scoringSchema, boolean writeScoresFile,
 			boolean outputToLog, boolean getExpressionsUsedForScore, boolean takeZerosForCorrelation,
 			double minCorrelation) throws IOException {
 
@@ -2314,12 +2335,8 @@ public class PCTSEA {
 
 				}
 
-//			if (Double.isNaN(singleCell.getGeneExpressionVariance())
-//					|| singleCell.getGeneExpressionVariance() < minCellsPerCellTypeForPDF) {
-//				numCellsDiscardedByMinimumVariance++;
-//				cellsIterator.remove();
-//				continue;
-//			}
+				// we check here if the single cell passes the scoring threshold and if it does,
+				// we increment the counter
 				if (scoringSchema.getScoringThreshold().passThreshold(singleCell)) {
 					numPassingThreshold++;
 				}
@@ -2336,7 +2353,7 @@ public class PCTSEA {
 			// we sort the single cell list to have them sorted by correlation
 			scoringSchema.getScoringThreshold().sortSingleCellsByScore(singleCellList);
 
-			// print to file and create chart
+			// print to file to then create chart
 			final TDoubleList scores = new TDoubleArrayList();
 			ConcurrentUtil.sleep(1L);
 

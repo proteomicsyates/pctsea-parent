@@ -6,7 +6,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +32,6 @@ import edu.scripps.yates.utilities.annotations.uniprot.xml.Entry;
 import edu.scripps.yates.utilities.dates.DatesUtil;
 import edu.scripps.yates.utilities.fasta.FastaParser;
 import edu.scripps.yates.utilities.pi.ConcurrentUtil;
-import edu.scripps.yates.utilities.strings.StringUtils;
 import edu.scripps.yates.utilities.swing.StatusListener;
 import edu.scripps.yates.utilities.util.Pair;
 import gnu.trove.list.TShortList;
@@ -51,10 +49,20 @@ import gnu.trove.set.hash.THashSet;
 import gnu.trove.set.hash.TIntHashSet;
 import gnu.trove.set.hash.TShortHashSet;
 
-public class InteractorsExpressionsRetriever {
-	private final static org.slf4j.Logger log = LoggerFactory.getLogger(InteractorsExpressionsRetriever.class);
+/**
+ * This class will keep access to the expression values of proteins/Genes from
+ * the input list and from the single cells that have expression values in the
+ * same proteins/genes than the input.<br>
+ * It will keep the indexes of all these sets trying to optimize memory and
+ * access time.
+ * 
+ * @author salvador
+ *
+ */
+public class GeneExpressionsRetriever {
+	private final static org.slf4j.Logger log = LoggerFactory.getLogger(GeneExpressionsRetriever.class);
 	private final TShortObjectMap<Gene> genesById = new TShortObjectHashMap<Gene>();
-	private final TShortFloatMap interactorExpressionsInOurExperiment = new TShortFloatHashMap();
+	private final TShortFloatMap geneExpressionsInOurExperiment = new TShortFloatHashMap();
 	private final TShortList geneIDs = new TShortArrayList();
 	private final List<String> genes;
 	private final TObjectShortMap<String> geneIDsByGeneNameMap = new TObjectShortHashMap<String>();
@@ -81,7 +89,7 @@ public class InteractorsExpressionsRetriever {
 	 * @param singleCellSet
 	 * @throws IOException
 	 */
-	public InteractorsExpressionsRetriever(MongoBaseService mongoBaseService, File experimentalExpressionsFile,
+	public GeneExpressionsRetriever(MongoBaseService mongoBaseService, File experimentalExpressionsFile,
 			Collection<Dataset> datasets, String uniprotRelease, PctseaRunLog runLog, List<SingleCell> singleCellList,
 			StatusListener<Boolean> statusListener, SingleCellSet singleCellSet) throws IOException {
 //		if (SingleCellsMetaInformationReader.singleCellIDsBySingleCellNameMap.isEmpty()) {
@@ -383,12 +391,11 @@ public class InteractorsExpressionsRetriever {
 				genes.add(geneName);
 				geneIDsByGeneNameMap.put(geneName, geneID);
 				geneNamesByGeneIDMap.put(geneID, geneName);
-				final float interactorExpressionInOurExperiment = Float.valueOf(split[1]);
-				interactorExpressionsInOurExperiment.put(geneID, interactorExpressionInOurExperiment);
+				final float geneExpressionInOurExperiment = Float.valueOf(split[1]);
+				geneExpressionsInOurExperiment.put(geneID, geneExpressionInOurExperiment);
 
 			}
-			final String message = "Information from " + interactorExpressionsInOurExperiment.size()
-					+ " genes/proteins read";
+			final String message = "Information from " + geneExpressionsInOurExperiment.size() + " genes/proteins read";
 			statusListener.onStatusUpdate(message);
 		} catch (final Exception e) {
 			e.printStackTrace();
@@ -408,7 +415,7 @@ public class InteractorsExpressionsRetriever {
 		return genesById.get(geneID);
 	}
 
-	public TShortList getInteractorsGeneIDs() {
+	public TShortList getGeneIDs() {
 
 		if (genesById.isEmpty()) {
 			getSingleCellExpressionsFromDB(genes);
@@ -417,8 +424,8 @@ public class InteractorsExpressionsRetriever {
 		return geneIDs;
 	}
 
-	public float getInteractionExpressionInOurExperiment(short geneID) {
-		return interactorExpressionsInOurExperiment.get(geneID);
+	public float getGeneExpressionInOurExperiment(short geneID) {
+		return geneExpressionsInOurExperiment.get(geneID);
 	}
 
 	public void permuteSingleCellExpressions(List<SingleCell> totalSingles) {
@@ -456,18 +463,6 @@ public class InteractorsExpressionsRetriever {
 			getSingleCellExpressionsFromDB(genes);
 		}
 		return geneIDsByGeneNameMap.get(geneName);
-	}
-
-	/**
-	 * Generates a unique key with the sorted list of genes. This key will be used
-	 * by the tool to avoid to calculate the correlations again
-	 * 
-	 * @return
-	 */
-	public String getInteractorsGeneNamesKey() {
-
-		Collections.sort(genes);
-		return StringUtils.getSortedSeparatedValueStringFromChars(genes, "-");
 	}
 
 }
