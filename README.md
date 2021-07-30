@@ -28,6 +28,8 @@ There is a database storing the single cell expression values, implemented in [M
 
 ## pctsea-cl, Command line version:  
 It is implemented with StringBoot framework. The class that contains the main method is PCTSEADbApplication.java that implements CommandLineRunner (SpringBoot).  
+In your IDE, you might have to run it as SpringBoot App
+![Run as Spring Boot App](https://github.com/proteomicsyates/pctsea-parent/raw/main/docs/runAsSpringBoot.png)
 Command line parameters are defined constants variables at InputParameters.java and used at PCTSEACommandLine.java where they are defined (*defineCommanLineOptions* method) and read (*initToolFromComamndLineOptions* method) so that they are passed to the *PCTSEA* object at *run* method. 
 
 Example of parameters:  
